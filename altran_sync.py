@@ -657,7 +657,7 @@ class Depth4Cameras(object):
             self.sensors[i].destroy()
             
     def toggle_camera(self):
-        return
+        self.transform_index = (self.transform_index + 1) % len(self._camera_transforms)
 
     def next_sensor(self):
         return
@@ -668,7 +668,7 @@ class Depth4Cameras(object):
         if not self:
             return
 
-        if (typeID == 'rgb' and index == 0):
+        if (typeID == 'rgb' and index == self.transform_index):
             image.convert(cc.Raw)
             array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
             array = np.reshape(array, (image.height, image.width, 4))
@@ -785,7 +785,7 @@ def main():
     argparser.add_argument(
         '--res',
         metavar='WIDTHxHEIGHT',
-        default='1280x720',
+        default='320x240',
         help='window resolution (default: 1280x720)')
     argparser.add_argument(
         '--filter',
