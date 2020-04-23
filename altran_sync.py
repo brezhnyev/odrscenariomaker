@@ -648,6 +648,25 @@ class AltranSimulatorManager(object):
                 self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 2))
             elif (i == 3):
                 self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 3))
+                
+        for i in range(0, len(self._camera_transforms)):
+            bp = bp_library.find('sensor.camera.semantic_segmentation')
+            bp.set_attribute('image_size_x', str(hud.dim[0]))
+            bp.set_attribute('image_size_y', str(hud.dim[1]))        
+            self.sensors.append(self._parent.get_world().spawn_actor(
+                bp,
+                self._camera_transforms[i],
+                attach_to=self._parent))
+            weak_self = weakref.ref(self)
+            # KB: Problem with capturing by value i, so literals are used
+            if (i == 0):
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'sem_seg', 0))
+            elif (i == 1):
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'sem_seg', 1))
+            elif (i == 2):
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'sem_seg', 2))
+            elif (i == 3):
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'sem_seg', 3))
         
     def toggle_recording(self):
         self.recording = not self.recording
@@ -663,6 +682,8 @@ class AltranSimulatorManager(object):
             
     def clean_sensors(self):
         for i in range(0, len(self.sensors)):
+            self.sensors[i].listen(lambda : ())
+            time.sleep(0.1)
             self.sensors[i].destroy()
             
     def toggle_camera(self):
@@ -678,7 +699,6 @@ class AltranSimulatorManager(object):
             return
 
         if (typeID == 'rgb' and index == self.transform_index):
-            image.convert(cc.Raw)
             array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
             array = np.reshape(array, (image.height, image.width, 4))
             array = array[:, :, :3]
@@ -686,6 +706,9 @@ class AltranSimulatorManager(object):
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
         if self.recording:
             image.save_to_disk('_out/' + typeID + '/' + str(index) + '/%08d' % image.frame)
+            if (typeID == 'sem_seg'):
+                image.convert(cc.CityScapesPalette)
+                image.save_to_disk('_out/' + typeID + '_color/' + str(index) + '/%08d' % image.frame)
             
             
 class CarlaSyncMode(object):
