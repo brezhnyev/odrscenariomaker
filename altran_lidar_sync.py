@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+# The code is modified automatic_control.py (use meld to compare)
+# 1) The Keyboard functionality extented (ex. recording)
+# 2) Driving control agent removed (used autopilot instead)
+# 3) LidarManager as independant Sensor added and used (i.e. outside of CameraManager)
+# 4) Sync mode used
+
 # Copyright (c) 2018 Intel Labs.
 # authors: German Ros (german.ros@intel.com)
 #
@@ -128,7 +134,7 @@ class World(object):
         self.collision_sensor = CollisionSensor(self.player, self.hud)
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
         self.gnss_sensor = GnssSensor(self.player)
-        self.camera_manager = Lidar(self.player, self.hud)
+        self.camera_manager = LidarManager(self.player, self.hud)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
         actor_type = get_actor_display_name(self.player)
@@ -581,105 +587,12 @@ class CameraManager(object):
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
         if self.recording:
             image.save_to_disk('_out/%08d' % image.frame)
-            
-            
-            
-class Depth4Cameras(object):
-    def __init__(self, parent_actor, hud):
-        self.surface = None
-        self._parent = parent_actor
-        self.hud = hud
-        self.recording = False
-        self._camera_transforms = [
-            carla.Transform(carla.Location(x=2,      z=1.7)),
-            carla.Transform(carla.Location(x=0, y=1, z=1.7),  carla.Rotation(yaw=90)),
-            carla.Transform(carla.Location(x=-2,     z=1.7),  carla.Rotation(yaw=180)),
-            carla.Transform(carla.Location(x=0, y=-1,z=1.7),  carla.Rotation(yaw=-90))
-            ]
-        self.transform_index = 1
-        self.sensors = []
-        world = self._parent.get_world()
-        bp_library = world.get_blueprint_library()
-        
-        for i in range(0, len(self._camera_transforms)):
-            bp = bp_library.find('sensor.camera.rgb')
-            bp.set_attribute('image_size_x', str(hud.dim[0]))
-            bp.set_attribute('image_size_y', str(hud.dim[1]))        
-            self.sensors.append(self._parent.get_world().spawn_actor(
-                bp,
-                self._camera_transforms[i],
-                attach_to=self._parent))
-            weak_self = weakref.ref(self)
-            # KB: Problem with capturing by reference i, so literals are used
-            if (i == 0):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'rgb', 0))
-            elif (i == 1):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'rgb', 1))
-            elif (i == 2):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'rgb', 2))
-            elif (i == 3):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'rgb', 3))
-            
-        for i in range(0, len(self._camera_transforms)):
-            bp = bp_library.find('sensor.camera.depth')
-            bp.set_attribute('image_size_x', str(hud.dim[0]))
-            bp.set_attribute('image_size_y', str(hud.dim[1]))
-            bp.set_attribute('fov', str(90)); # KB this is important for stitching 4 depth cameras
-            self.sensors.append(self._parent.get_world().spawn_actor(
-                bp,
-                self._camera_transforms[i],
-                attach_to=self._parent))
-            weak_self = weakref.ref(self)
-            # KB: Problem with capturing by reference i, so literals are used
-            if (i == 0):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'depth', 0))
-            elif (i == 1):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'depth', 1))
-            elif (i == 2):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'depth', 2))
-            elif (i == 3):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'depth', 3))
-        
-    def toggle_recording(self):
-        self.recording = not self.recording
-        self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
-        
-    def set_sensor(self, index, notify=True):
-        if notify:
-            self.hud.notification(self.sensors[index][2])        
 
-    def render(self, display):
-        if self.surface is not None:
-            display.blit(self.surface, (0, 0))
-            
-    def clean_sensors(self):
-        for i in range(0, len(self.sensors)):
-            self.sensors[i].destroy()
-            
-    def toggle_camera(self):
-        self.transform_index = (self.transform_index + 1) % len(self._camera_transforms)
+# ==============================================================================
+# -- LidarManager -------------------------------------------------------------
+# ==============================================================================
 
-    def next_sensor(self):
-        return
-
-    @staticmethod
-    def _parse_image(weak_self, image, typeID, index):
-        self = weak_self()
-        if not self:
-            return
-
-        if (typeID == 'rgb' and index == self.transform_index):
-            image.convert(cc.Raw)
-            array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-            array = np.reshape(array, (image.height, image.width, 4))
-            array = array[:, :, :3]
-            array = array[:, :, ::-1]
-            self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
-        if self.recording:
-            image.save_to_disk('_out/' + typeID + '/' + str(index) + '/%08d' % image.frame)
-            
-
-class Lidar(object):
+class LidarManager(object):
     def __init__(self, parent_actor, hud):
         self.surface = None
         self._parent = parent_actor
@@ -697,15 +610,13 @@ class Lidar(object):
         # Add a new LIDAR sensor to my ego
         # --------------
         lidar_bp = bp_library.find('sensor.lidar.ray_cast')
-        lidar_bp.set_attribute('channels',str(32))
-        #lidar_bp.set_attribute('upper_fov', str(35))
-        #lidar_bp.set_attribute('lower_fov', str(20))        
+        lidar_bp.set_attribute('channels',str(32)) 
         lidar_bp.set_attribute('points_per_second',str(90000))
         lidar_bp.set_attribute('rotation_frequency',str(30))
         lidar_bp.set_attribute('range',str(100))
         lidar_transform = carla.Transform(carla.Location(0,0,2), carla.Rotation(0,0,0))
         self.lidar = world.spawn_actor(lidar_bp,lidar_transform,attach_to=self._parent,attachment_type=carla.AttachmentType.Rigid)
-        self.lidar.listen(lambda point_cloud: Lidar._save_lidar(weak_self, point_cloud))
+        self.lidar.listen(lambda point_cloud: LidarManager._save_lidar(weak_self, point_cloud))
         
         cam_bp = bp_library.find('sensor.camera.rgb')
         cam_bp.set_attribute('image_size_x', str(hud.dim[0]))
@@ -714,7 +625,7 @@ class Lidar(object):
             cam_bp,
             carla.Transform(carla.Location(2,0,1.5), carla.Rotation(0,0,0)),
             attach_to=self._parent)
-        self.camera.listen(lambda image: Lidar._parse_image(weak_self, image))
+        self.camera.listen(lambda image: LidarManager._parse_image(weak_self, image))
         
     def toggle_recording(self):
         self.recording = not self.recording

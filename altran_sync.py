@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+# The code is modified automatic_control.py (use meld to compare)
+# 1) The Keyboard functionality extented (ex. recording)
+# 2) Driving control agent removed (used autopilot instead)
+# 3) AltranSimulatorManager added and used
+# 4) Sync mode used
+
 # Copyright (c) 2018 Intel Labs.
 # authors: German Ros (german.ros@intel.com)
 #
@@ -128,7 +134,7 @@ class World(object):
         self.collision_sensor = CollisionSensor(self.player, self.hud)
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
         self.gnss_sensor = GnssSensor(self.player)
-        self.camera_manager = Depth4Cameras(self.player, self.hud)
+        self.camera_manager = AltranSimulatorManager(self.player, self.hud)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
         actor_type = get_actor_display_name(self.player)
@@ -583,18 +589,21 @@ class CameraManager(object):
             image.save_to_disk('_out/%08d' % image.frame)
             
             
-            
-class Depth4Cameras(object):
+# ==============================================================================
+# -- AltranSimulatorManager ----------------------------------------------------
+# ==============================================================================
+
+class AltranSimulatorManager(object):
     def __init__(self, parent_actor, hud):
         self.surface = None
         self._parent = parent_actor
         self.hud = hud
         self.recording = False
         self._camera_transforms = [
-            carla.Transform(carla.Location(x=2,      z=1.7)),
-            carla.Transform(carla.Location(x=0, y=1, z=1.7),  carla.Rotation(yaw=90)),
-            carla.Transform(carla.Location(x=-2,     z=1.7),  carla.Rotation(yaw=180)),
-            carla.Transform(carla.Location(x=0, y=-1,z=1.7),  carla.Rotation(yaw=-90))
+            carla.Transform(carla.Location(x=0,      z=2)),
+            carla.Transform(carla.Location(x=0, y=0, z=2),  carla.Rotation(yaw=90)),
+            carla.Transform(carla.Location(x=0,      z=2),  carla.Rotation(yaw=180)),
+            carla.Transform(carla.Location(x=0, y=0, z=2),  carla.Rotation(yaw=-90))
             ]
         self.transform_index = 1
         self.sensors = []
@@ -610,15 +619,15 @@ class Depth4Cameras(object):
                 self._camera_transforms[i],
                 attach_to=self._parent))
             weak_self = weakref.ref(self)
-            # KB: Problem with capturing by reference i, so literals are used
+            # KB: Problem with capturing by value i, so literals are used
             if (i == 0):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'rgb', 0))
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'rgb', 0))
             elif (i == 1):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'rgb', 1))
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'rgb', 1))
             elif (i == 2):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'rgb', 2))
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'rgb', 2))
             elif (i == 3):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'rgb', 3))
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'rgb', 3))
             
         for i in range(0, len(self._camera_transforms)):
             bp = bp_library.find('sensor.camera.depth')
@@ -630,15 +639,15 @@ class Depth4Cameras(object):
                 self._camera_transforms[i],
                 attach_to=self._parent))
             weak_self = weakref.ref(self)
-            # KB: Problem with capturing by reference i, so literals are used
+            # KB: Problem with capturing by value i, so literals are used
             if (i == 0):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'depth', 0))
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 0))
             elif (i == 1):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'depth', 1))
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 1))
             elif (i == 2):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'depth', 2))
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 2))
             elif (i == 3):
-                self.sensors[-1].listen(lambda image: Depth4Cameras._parse_image(weak_self, image, 'depth', 3))
+                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 3))
         
     def toggle_recording(self):
         self.recording = not self.recording
@@ -732,9 +741,9 @@ def game_loop(args):
 
         clock = pygame.time.Clock()
 
-        # Async mode
+        # Sync mode
         with CarlaSyncMode(client.get_world(), fps=30) as sync_mode:
-            # Sync mode (above line should be commented)
+            # Async mode (above line should be commented)
             while True:
                 if controller.parse_events():
                     return
