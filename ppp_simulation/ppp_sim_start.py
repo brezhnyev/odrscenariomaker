@@ -29,7 +29,7 @@ import random
 import re
 import sys
 import weakref
-import ppps_sim_config
+import ppp_sim_config
 import subprocess
 import time
 import signal
@@ -759,7 +759,7 @@ def game_loop(gc, wc, sc):
         world.world.set_weather(weather)
         
         # spawner config
-        args = ['python','./altran_spawn_npc.py']
+        args = ['python','./ppp_sim_spawn.py']
         args.append('--host')
         args.append(sc.host)
         args.append('--port')
@@ -818,7 +818,7 @@ def game_loop(gc, wc, sc):
 
 def main():
     #general config
-    gc = ppps_sim_config.GenConfig()
+    gc = ppp_sim_config.GenConfig()
 
     log_level = logging.DEBUG if gc.verbose else logging.INFO
     logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
@@ -828,10 +828,10 @@ def main():
     print(__doc__)
     
     # weather config
-    wc = ppps_sim_config.WeatherConfig();
+    wc = ppp_sim_config.WeatherConfig();
     
     # spawner config
-    sc = ppps_sim_config.SpawnerConfig()
+    sc = ppp_sim_config.SpawnerConfig()
 
     try:
         game_loop(gc, wc, sc)
