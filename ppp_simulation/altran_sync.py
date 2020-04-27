@@ -29,6 +29,10 @@ import random
 import re
 import sys
 import weakref
+import ppps_sim_config
+import subprocess
+import time
+import signal
 
 try:
     import pygame
@@ -103,9 +107,6 @@ class World(object):
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
         self.recording_start = 0
-        #settings = carla_world.get_settings()
-        #settings.synchronous_mode = True
-        #carla_world.apply_settings(settings)
 
     def restart(self):
         # Keep same camera config if the camera manager exists.
@@ -129,7 +130,7 @@ class World(object):
             spawn_points = self.map.get_spawn_points()
             spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
-            self.player.set_autopilot(True) # KB: check the shutdown, exception is thrown
+        self.player.set_autopilot(True)
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
@@ -160,6 +161,7 @@ class World(object):
         self.camera_manager.index = None
 
     def destroy(self):
+        self.player.set_autopilot(False)
         actors = [
             self.collision_sensor.sensor,
             self.lane_invasion_sensor.sensor,
@@ -168,7 +170,7 @@ class World(object):
         for actor in actors:
             if actor is not None:
                 actor.destroy()
-        self.camera_manager.clean_sensors()
+        self.camera_manager.destroy_sensors()
 
 
 # ==============================================================================
@@ -618,17 +620,9 @@ class AltranSimulatorManager(object):
                 bp,
                 self._camera_transforms[i],
                 attach_to=self._parent))
-            weak_self = weakref.ref(self)
-            # KB: Problem with capturing by value i, so literals are used
-            if (i == 0):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'rgb', 0))
-            elif (i == 1):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'rgb', 1))
-            elif (i == 2):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'rgb', 2))
-            elif (i == 3):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'rgb', 3))
             
+            self.setCallback(self.sensors[-1], i, 'rgb')
+
         for i in range(0, len(self._camera_transforms)):
             bp = bp_library.find('sensor.camera.depth')
             bp.set_attribute('image_size_x', str(hud.dim[0]))
@@ -638,16 +632,8 @@ class AltranSimulatorManager(object):
                 bp,
                 self._camera_transforms[i],
                 attach_to=self._parent))
-            weak_self = weakref.ref(self)
-            # KB: Problem with capturing by value i, so literals are used
-            if (i == 0):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 0))
-            elif (i == 1):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 1))
-            elif (i == 2):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 2))
-            elif (i == 3):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'depth', 3))
+
+            self.setCallback(self.sensors[-1], i, 'depth')
                 
         for i in range(0, len(self._camera_transforms)):
             bp = bp_library.find('sensor.camera.semantic_segmentation')
@@ -657,16 +643,13 @@ class AltranSimulatorManager(object):
                 bp,
                 self._camera_transforms[i],
                 attach_to=self._parent))
-            weak_self = weakref.ref(self)
-            # KB: Problem with capturing by value i, so literals are used
-            if (i == 0):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'sem_seg', 0))
-            elif (i == 1):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'sem_seg', 1))
-            elif (i == 2):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'sem_seg', 2))
-            elif (i == 3):
-                self.sensors[-1].listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, 'sem_seg', 3))
+
+            self.setCallback(self.sensors[-1], i, 'sem_seg')
+                
+                
+    def setCallback(self, sensor, index, type):
+        weak_self = weakref.ref(self)
+        sensor.listen(lambda image: AltranSimulatorManager._parse_image(weak_self, image, type, index))
         
     def toggle_recording(self):
         self.recording = not self.recording
@@ -680,10 +663,8 @@ class AltranSimulatorManager(object):
         if self.surface is not None:
             display.blit(self.surface, (0, 0))
             
-    def clean_sensors(self):
+    def destroy_sensors(self):
         for i in range(0, len(self.sensors)):
-            self.sensors[i].listen(lambda : ())
-            time.sleep(0.1)
             self.sensors[i].destroy()
             
     def toggle_camera(self):
@@ -745,22 +726,60 @@ class CarlaSyncMode(object):
 # -- game_loop() ---------------------------------------------------------
 # ==============================================================================
 
-def game_loop(args):
+def game_loop(gc, wc, sc):
     pygame.init()
     pygame.font.init()
     world = None
 
     try:
-        client = carla.Client(args.host, args.port)
-        client.set_timeout(4.0)
+        client = carla.Client(gc.host, gc.port)
+        client.set_timeout(15.0)
 
+        # general config
         display = pygame.display.set_mode(
-            (args.width, args.height),
+            (gc.width, gc.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
-        hud = HUD(args.width, args.height)
-        world = World(client.get_world(), hud, args.filter)
+        hud = HUD(gc.width, gc.height)
+        world = World(client.get_world(), hud, gc.filter)
         controller = KeyboardControl(world)
+        
+        # weather config
+        weather = carla.WeatherParameters(
+            cloudiness=wc.cloudiness,
+            precipitation=wc.precipitation,
+            precipitation_deposits=wc.precipitation_deposits,
+            wind_intensity=wc.wind_intensity,
+            fog_density=wc.fog_density,
+            fog_distance=wc.fog_distance,
+            wetness=wc.wetness,
+            sun_azimuth_angle=wc.sun_azimuth_angle,
+            sun_altitude_angle=wc.sun_altitude_angle)
+          
+        world.world.set_weather(weather)
+        
+        # spawner config
+        args = ['python','./altran_spawn_npc.py']
+        args.append('--host')
+        args.append(sc.host)
+        args.append('--port')
+        args.append(str(sc.port))
+        args.append('-n')
+        args.append(str(sc.number_of_vehicles))
+        args.append('-w')
+        args.append(str(sc.number_of_walkers))
+        args.append('--safe')
+        args.append(str(sc.safe))
+        args.append('--filterv')
+        args.append(sc.filterv)
+        args.append('--filterw')
+        args.append(sc.filterw)
+        args.append('--tm-port')
+        args.append(str(sc.tm_port))
+        args.append('--sync')
+        args.append(str(sc.sync)) 
+        
+        popen = subprocess.Popen(args,shell=False,stdout=subprocess.PIPE)        
 
         clock = pygame.time.Clock()
 
@@ -786,7 +805,9 @@ def game_loop(args):
     finally:
         if world is not None:
             world.destroy()
+        popen.send_signal(signal.SIGINT)
 
+        print('Quitting ... bye')
         pygame.quit()
 
 
@@ -796,49 +817,24 @@ def game_loop(args):
 
 
 def main():
-    argparser = argparse.ArgumentParser(
-        description='CARLA Manual Control Client')
-    argparser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        dest='debug',
-        help='print debug information')
-    argparser.add_argument(
-        '--host',
-        metavar='H',
-        default='127.0.0.1',
-        help='IP of the host server (default: 127.0.0.1)')
-    argparser.add_argument(
-        '-p', '--port',
-        metavar='P',
-        default=2000,
-        type=int,
-        help='TCP port to listen to (default: 2000)')
-    argparser.add_argument(
-        '--res',
-        metavar='WIDTHxHEIGHT',
-        default='320x240',
-        help='window resolution (default: 1280x720)')
-    argparser.add_argument(
-        '--filter',
-        metavar='PATTERN',
-        default='vehicle.*',
-        help='actor filter (default: "vehicle.*")')
+    #general config
+    gc = ppps_sim_config.GenConfig()
 
-    args = argparser.parse_args()
-
-    args.width, args.height = [int(x) for x in args.res.split('x')]
-
-    log_level = logging.DEBUG if args.debug else logging.INFO
+    log_level = logging.DEBUG if gc.verbose else logging.INFO
     logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
 
-    logging.info('listening to server %s:%s', args.host, args.port)
+    logging.info('listening to server %s:%s', gc.host, gc.port)
 
     print(__doc__)
+    
+    # weather config
+    wc = ppps_sim_config.WeatherConfig();
+    
+    # spawner config
+    sc = ppps_sim_config.SpawnerConfig()
 
     try:
-
-        game_loop(args)
+        game_loop(gc, wc, sc)
 
     except KeyboardInterrupt:
         print('\nCancelled by user. Bye!')
