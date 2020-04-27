@@ -60,12 +60,12 @@ class GenConfig(object):
         
 class SensorsConfig(object):
     def __init__(self):
-        self.lidar_transform = carla.Transform(carla.Location(0,0,2))
-        self._camera_transforms = [
-            carla.Transform(carla.Location(x=2, y=0, z=0.5)),
-            carla.Transform(carla.Location(x=0, y=-1,z=1),  carla.Rotation(yaw=90)),
-            carla.Transform(carla.Location(x=-2,y=0, z=1),  carla.Rotation(yaw=180)),
-            carla.Transform(carla.Location(x=0, y=0, z=2),  carla.Rotation(yaw=-90))
+        self.lidar_location = carla.Location(0,0,2)
+        self.camera_transforms = [
+            carla.Transform(carla.Location(x=2.5, y=0, z=0.5)),
+            carla.Transform(carla.Location(x=0, y=1.2,z=1),  carla.Rotation(yaw=90)),
+            carla.Transform(carla.Location(x=-2.5,y=0, z=1),  carla.Rotation(yaw=180)),
+            carla.Transform(carla.Location(x=0, y=-1.2, z=1),  carla.Rotation(yaw=-90))
             ]        
 
 class WeatherConfig(object):

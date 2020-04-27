@@ -91,7 +91,7 @@ def get_actor_display_name(actor, truncate=250):
 # ==============================================================================
 
 class World(object):
-    def __init__(self, carla_world, hud, actor_filter):
+    def __init__(self, carla_world, hud, actor_filter, ssc):
         self.world = carla_world
         self.map = self.world.get_map()
         self.hud = hud
@@ -103,6 +103,7 @@ class World(object):
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
         self._actor_filter = actor_filter
+        self.ssc = ssc
         self.restart()
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
@@ -135,7 +136,7 @@ class World(object):
         self.collision_sensor = CollisionSensor(self.player, self.hud)
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
         self.gnss_sensor = GnssSensor(self.player)
-        self.camera_manager = AltranSimulatorManager(self.player, self.hud)
+        self.camera_manager = AltranSimulatorManager(self.player, self.hud, self.ssc)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
         actor_type = get_actor_display_name(self.player)
@@ -489,22 +490,32 @@ class GnssSensor(object):
         self.lat = event.latitude
         self.lon = event.longitude
 
-# ==============================================================================
-# -- CameraManager -------------------------------------------------------------
-# ==============================================================================
 
-
-class CameraManager(object):
+# ==============================================================================
+# -- SensorManager -------------------------------------------------------------
+# ==============================================================================
+class SensorManager(object):
     def __init__(self, parent_actor, hud):
         self.sensor = None
         self.surface = None
         self._parent = parent_actor
         self.hud = hud
         self.recording = False
+        self.sensors = []
         self._camera_transforms = [
             carla.Transform(carla.Location(x=-5.5, z=2.8), carla.Rotation(pitch=-15)),
             carla.Transform(carla.Location(x=1.6, z=1.7))]
         self.transform_index = 1
+        self.index = None
+
+# ==============================================================================
+# -- CameraManager -------------------------------------------------------------
+# ==============================================================================
+
+
+class CameraManager(SensorManager):
+    def __init__(self, parent_actor, hud):
+        super(CameraManager, self).__init__(parent_actor, hud)
         self.sensors = [
             ['sensor.camera.rgb', cc.Raw, 'Camera RGB'],
             ['sensor.camera.depth', cc.Raw, 'Camera Depth (Raw)'],
@@ -595,57 +606,31 @@ class CameraManager(object):
 # -- AltranSimulatorManager ----------------------------------------------------
 # ==============================================================================
 
-class AltranSimulatorManager(object):
-    def __init__(self, parent_actor, hud):
-        self.surface = None
-        self._parent = parent_actor
-        self.hud = hud
-        self.recording = False
-        self._camera_transforms = [
-            carla.Transform(carla.Location(x=0,      z=2)),
-            carla.Transform(carla.Location(x=0, y=0, z=2),  carla.Rotation(yaw=90)),
-            carla.Transform(carla.Location(x=0,      z=2),  carla.Rotation(yaw=180)),
-            carla.Transform(carla.Location(x=0, y=0, z=2),  carla.Rotation(yaw=-90))
-            ]
-        self.transform_index = 1
-        self.sensors = []
+class AltranSimulatorManager(SensorManager):
+    def __init__(self, parent_actor, hud, ssc):
+        super(AltranSimulatorManager, self).__init__(parent_actor, hud)
+        self._lidar_location = ssc.lidar_location
+        self._camera_transforms = ssc.camera_transforms
         world = self._parent.get_world()
-        bp_library = world.get_blueprint_library()
+        self.bp_library = world.get_blueprint_library()
+        self.hud = hud
         
+        # RGB cameras:
         for i in range(0, len(self._camera_transforms)):
-            bp = bp_library.find('sensor.camera.rgb')
-            bp.set_attribute('image_size_x', str(hud.dim[0]))
-            bp.set_attribute('image_size_y', str(hud.dim[1]))        
-            self.sensors.append(self._parent.get_world().spawn_actor(
-                bp,
-                self._camera_transforms[i],
-                attach_to=self._parent))
+            self.addSensor('sensor.camera.rgb', 'rgb', self._camera_transforms[i], i)
+            self.addSensor('sensor.camera.semantic_segmentation', 'rgb_sem', self._camera_transforms[i], i)
+            self.addSensor('sensor.camera.depth', 'depth', carla.Transform(self._lidar_location, carla.Rotation(yaw=i*90)), i)
+            self.addSensor('sensor.camera.semantic_segmentation', 'depth_sem', carla.Transform(self._lidar_location, carla.Rotation(yaw=i*90)), i)
             
-            self.setCallback(self.sensors[-1], i, 'rgb')
-
-        for i in range(0, len(self._camera_transforms)):
-            bp = bp_library.find('sensor.camera.depth')
-            bp.set_attribute('image_size_x', str(hud.dim[0]))
-            bp.set_attribute('image_size_y', str(hud.dim[1]))
-            bp.set_attribute('fov', str(90)); # KB this is important for stitching 4 depth cameras
-            self.sensors.append(self._parent.get_world().spawn_actor(
-                bp,
-                self._camera_transforms[i],
-                attach_to=self._parent))
-
-            self.setCallback(self.sensors[-1], i, 'depth')
-                
-        for i in range(0, len(self._camera_transforms)):
-            bp = bp_library.find('sensor.camera.semantic_segmentation')
-            bp.set_attribute('image_size_x', str(hud.dim[0]))
-            bp.set_attribute('image_size_y', str(hud.dim[1]))        
-            self.sensors.append(self._parent.get_world().spawn_actor(
-                bp,
-                self._camera_transforms[i],
-                attach_to=self._parent))
-
-            self.setCallback(self.sensors[-1], i, 'sem_seg')
-                
+    def addSensor(self, bp_name, type, transform, index):
+        bp = self.bp_library.find(bp_name)
+        bp.set_attribute('image_size_x', str(self.hud.dim[0]))
+        bp.set_attribute('image_size_y', str(self.hud.dim[1]))
+        self.sensors.append(self._parent.get_world().spawn_actor(
+            bp,
+            transform,
+            attach_to=self._parent))
+        self.setCallback(self.sensors[-1], index, type)
                 
     def setCallback(self, sensor, index, type):
         weak_self = weakref.ref(self)
@@ -687,10 +672,10 @@ class AltranSimulatorManager(object):
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
         if self.recording:
             image.save_to_disk('_out/' + typeID + '/' + str(index) + '/%08d' % image.frame)
-            if (typeID == 'sem_seg'):
+            if (typeID == 'rgb_sem' or typeID == 'depth_sem'):
                 image.convert(cc.CityScapesPalette)
                 image.save_to_disk('_out/' + typeID + '_color/' + str(index) + '/%08d' % image.frame)
-            
+
             
 class CarlaSyncMode(object):
     """
@@ -726,14 +711,14 @@ class CarlaSyncMode(object):
 # -- game_loop() ---------------------------------------------------------
 # ==============================================================================
 
-def game_loop(gc, wc, sc):
+def game_loop(gc, wc, sc, ssc):
     pygame.init()
     pygame.font.init()
     world = None
 
     try:
         client = carla.Client(gc.host, gc.port)
-        client.set_timeout(15.0)
+        client.set_timeout(5.0)
 
         # general config
         display = pygame.display.set_mode(
@@ -741,7 +726,7 @@ def game_loop(gc, wc, sc):
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
         hud = HUD(gc.width, gc.height)
-        world = World(client.get_world(), hud, gc.filter)
+        world = World(client.get_world(), hud, gc.filter, ssc)
         controller = KeyboardControl(world)
         
         # weather config
@@ -779,7 +764,7 @@ def game_loop(gc, wc, sc):
         args.append('--sync')
         args.append(str(sc.sync)) 
         
-        popen = subprocess.Popen(args,shell=False,stdout=subprocess.PIPE)        
+        popen = subprocess.Popen(args,shell=False,stdout=subprocess.PIPE)
 
         clock = pygame.time.Clock()
 
@@ -828,13 +813,16 @@ def main():
     print(__doc__)
     
     # weather config
-    wc = ppp_sim_config.WeatherConfig();
+    wc = ppp_sim_config.WeatherConfig()
     
     # spawner config
     sc = ppp_sim_config.SpawnerConfig()
+    
+    # sensors config
+    ssc = ppp_sim_config.SensorsConfig()
 
     try:
-        game_loop(gc, wc, sc)
+        game_loop(gc, wc, sc, ssc)
 
     except KeyboardInterrupt:
         print('\nCancelled by user. Bye!')
