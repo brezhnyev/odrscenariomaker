@@ -619,6 +619,8 @@ class AltranSimulatorManager(SensorManager):
         for i in range(0, len(self._camera_transforms)):
             self.addSensor('sensor.camera.rgb', 'rgb', self._camera_transforms[i], i)
             self.addSensor('sensor.camera.semantic_segmentation', 'rgb_sem', self._camera_transforms[i], i)
+
+        for i in range(0, 4):
             self.addSensor('sensor.camera.depth', 'depth', carla.Transform(self._lidar_location, carla.Rotation(yaw=i*90)), i)
             self.addSensor('sensor.camera.semantic_segmentation', 'depth_sem', carla.Transform(self._lidar_location, carla.Rotation(yaw=i*90)), i)
             
