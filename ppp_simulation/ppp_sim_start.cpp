@@ -6,6 +6,8 @@
 #include <thread>
 #include <tuple>
 
+#include <chrono>
+
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/BlueprintLibrary.h>
 #include <carla/client/Client.h>
@@ -17,6 +19,7 @@
 #include <carla/image/ImageIO.h>
 #include <carla/image/ImageView.h>
 #include <carla/sensor/data/Image.h>
+#include <carla/rpc/EpisodeSettings.h>
 
 namespace cc = carla::client;
 namespace cg = carla::geom;
@@ -24,6 +27,9 @@ namespace csd = carla::sensor::data;
 
 using namespace std::chrono_literals;
 using namespace std::string_literals;
+
+using namespace carla::rpc;
+using namespace std;
 
 #define EXPECT_TRUE(pred) if (!(pred)) { throw std::runtime_error(#pred); }
 
@@ -103,10 +109,11 @@ int main(int argc, const char *argv[]) {
     cc::Vehicle::Control control;
     control.throttle = 1.0f;
     vehicle->ApplyControl(control);
+    vehicle->SetAutopilot(true);
 
     // Move spectator so we can see the vehicle from the simulator window.
     auto spectator = world.GetSpectator();
-    transform.location += 32.0f * transform.GetForwardVector();
+    transform.location += 7.0f * transform.GetForwardVector();
     transform.location.z += 2.0f;
     transform.rotation.yaw += 180.0f;
     transform.rotation.pitch = -15.0f;
@@ -130,7 +137,17 @@ int main(int argc, const char *argv[]) {
       SaveSemSegImageToDisk(*image);
     });
 
-    std::this_thread::sleep_for(10s);
+    // Asynchronous mode:
+    //std::this_thread::sleep_for(100s);
+    // Synchronous mode:
+    EpisodeSettings wsettings(true, false, 1.0/30); // (doRender, isSynchrone, interval)
+    world.ApplySettings(wsettings);
+
+    for (int i = 0; i < 1000; ++i)
+    {
+      cout << "i : " << i << endl;
+      world.Tick(carla::time_duration(std::chrono::milliseconds(1000)));
+    }
 
     // Remove actors from the simulation.
     camera->Destroy();
