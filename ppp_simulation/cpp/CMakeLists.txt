@@ -4,6 +4,7 @@ project (ppp_carla_client)
 
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Wl,--unresolved-symbols=ignore-all")
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/boost)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/carla/)
 
@@ -11,7 +12,9 @@ link_directories(/usr/local/lib/)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/carla)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/boost)
 
-add_executable(${PROJECT_NAME} ../ppp_sim_start.cpp)
+set(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/ppp_sim_start.cpp ${CMAKE_CURRENT_SOURCE_DIR}/PPPScene.cpp)
+
+add_executable(${PROJECT_NAME} ${SOURCE})
 
 if(CMAKE_BUILD_TYPE MATCHES DEBUG)
 set(CLARA_LIB carla_client_debug)
@@ -20,4 +23,4 @@ else()
 set(CLARA_LIB carla_client)
 endif()
 
-target_link_libraries(${PROJECT_NAME} ${CLARA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+target_link_libraries(${PROJECT_NAME} ${CLARA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)

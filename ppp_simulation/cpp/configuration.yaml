@@ -1,0 +1,38 @@
+common :
+  width: 600
+  height: 400
+  verbose: false
+  host: "127.0.0.1"
+  port: 2000
+  filter: "vehicle.*"
+  town: "Town01"
+  fps: 30
+
+sensors :
+    lidar : {x: 0, y: 0, z: 2}
+    cameras : [
+      {x:  2.5, y:  0.0, z: 0.5, roll: 0, pitch: 0, yaw: 0  }, 
+      {x:  0.0, y:  1.2, z: 1.0, roll: 0, pitch: 0, yaw: 90 }, 
+      {x: -2.5, y:  0.0, z: 0.5, roll: 0, pitch: 0, yaw: 180}, 
+      {x:  0.0, y: -1.2, z: 1.0, roll: 0, pitch: 0, yaw: -90}
+    ]
+
+# weather :
+#     cloudness : 10.0
+#     precipitation : 10.0
+#     precipitation_deposits : 10.0
+#     wind_intensity : 10.0
+#     fog_density : 10.0
+#     fog_distance : 100.0
+#     wetness : 10.0
+#     sun_azimuth_angle : 40.0
+#     sun_altitude_angle : 90.0
+
+# spawner :
+#     number_of_vehicles : 10
+#     number_of_walkers : 10
+#     safe : true
+#     filterv : "vehicle.*"
+#     filterw : "walker.pedestrian.*"
+#     tm_port : 8000
+#     sync : true
