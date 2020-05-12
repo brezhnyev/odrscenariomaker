@@ -6,9 +6,6 @@
 #include <carla/client/Map.h>
 #include <carla/client/TimeoutException.h>
 #include <carla/geom/Transform.h>
-#include <carla/image/ImageIO.h>
-#include <carla/image/ImageView.h>
-#include <carla/sensor/data/Image.h>
 #include <carla/rpc/EpisodeSettings.h>
 
 #include <yaml-cpp/yaml.h>
@@ -50,14 +47,14 @@ static auto &RandomChoice(const RangeT &range, RNG &&generator)
 }
 
 /// Save a semantic segmentation image to disk converting to CityScapes palette.
-static void SaveImageToDisk(const csd::Image &image, int index, string type)
+void PPPScene::SaveImageToDisk(const csd::Image &image, int index, string type)
 {
     using namespace carla::image;
 
     char buffer[9u];
     std::snprintf(buffer, sizeof(buffer), "%08zu", image.GetFrame());
 
-    if (type == "sensor.camera.semantic_segmentation")
+    if (type == "rgb_ss" || type == "depth_ss")
     {
         auto filename = "_images/"s + type + "_color/" + to_string(index) + "/" + buffer + ".png";
         auto view = ImageView::MakeColorConvertedView(
@@ -76,18 +73,19 @@ PPPScene::PPPScene(string confname) : m_doRun(false)
 
     string host = config["common"]["host"].as<string>();
     uint16_t port = config["common"]["port"].as<int>();
+    m_timeout = config["common"]["timeout"].as<int>();
 
     std::mt19937_64 rng((std::random_device())());
 
     auto client = cc::Client(host, port);
-    client.SetTimeout(10s);
+    client.SetTimeout(carla::time_duration(std::chrono::seconds(m_timeout)));
 
     std::cout << "Client API version : " << client.GetClientVersion() << '\n';
     std::cout << "Server API version : " << client.GetServerVersion() << '\n';
 
     auto town_name = config["common"]["town"].as<string>();
     std::cout << "Loading world: " << town_name << std::endl;
-    m_world = new cc::World(move(client.LoadWorld(town_name)));
+    m_world = boost::make_shared<cc::World>(client.LoadWorld(town_name));
 
     // Get a random vehicle blueprint.
     auto blueprint_library = m_world->GetBlueprintLibrary();
@@ -126,8 +124,10 @@ PPPScene::PPPScene(string confname) : m_doRun(false)
     transform.rotation.pitch = -15.0f;
     spectator->SetTransform(transform);
 
-    setRGBCams(confname, m_RGBCams, "sensor.camera.rgb");
-    setRGBCams(confname, m_RGBCamsSS, "sensor.camera.semantic_segmentation");
+    setRGBCams(confname, m_RGBCams, "sensor.camera.rgb", "rbb");
+    setRGBCams(confname, m_RGBCamsSS, "sensor.camera.semantic_segmentation", "rgb_ss");
+    setDepthCams(confname, m_DepthCams, "sensor.camera.depth", "depth");
+    setDepthCams(confname, m_DepthCamsSS, "sensor.camera.semantic_segmentation", "depth_ss");
 
     // Synchronous mode:
     int fps = config["common"]["fps"].as<int>();
@@ -147,15 +147,19 @@ void PPPScene::start()
         // Synchronous mode:
         while (m_doRun)
         {
-            m_world->Tick(carla::time_duration(std::chrono::milliseconds(1000)));
+            m_world->Tick(carla::time_duration(std::chrono::seconds(m_timeout)));
         }
 
         for (auto && c : m_RGBCams) static_cast<cc::Sensor*>(c.get())->Stop();
-        usleep(1e6); // wait for all callback to finish
+        for (auto && c : m_RGBCamsSS) static_cast<cc::Sensor*>(c.get())->Stop();
+        for (auto && c : m_DepthCams) static_cast<cc::Sensor*>(c.get())->Stop();
+        for (auto && c : m_DepthCamsSS) static_cast<cc::Sensor*>(c.get())->Stop();
+        cout << "Waiting 10 seconds to stop the client (ensure last callbacks are processed)." << endl;
+        usleep(1e7); // wait for all callback to finish
     });
 }
 
-void PPPScene::setRGBCams(string confname, std::vector<ShrdPtrActor> & cams, string blueprintName)
+void PPPScene::setRGBCams(string confname, std::vector<ShrdPtrActor> & cams, string blueprintName, string outname)
 {
     auto blueprint_library = m_world->GetBlueprintLibrary();
     // Find a camera blueprint.
@@ -177,10 +181,40 @@ void PPPScene::setRGBCams(string confname, std::vector<ShrdPtrActor> & cams, str
     {
         auto camera = static_cast<cc::Sensor*>(cams[i].get());
         // Register a callback to save images to disk.
-        camera->Listen([i, blueprintName](auto data) {
+        camera->Listen([this, i, outname](auto data) {
             auto image = boost::static_pointer_cast<csd::Image>(data);
             EXPECT_TRUE(image != nullptr);
-            SaveImageToDisk(*image, i, blueprintName);
+            SaveImageToDisk(*image, i, outname);
+        });
+    }
+}
+
+void PPPScene::setDepthCams(string confname, std::vector<ShrdPtrActor> & cams, string blueprintName, string outname)
+{
+    auto blueprint_library = m_world->GetBlueprintLibrary();
+    // Find a camera blueprint.
+    auto camera_bp = blueprint_library->Find(blueprintName);
+    EXPECT_TRUE(camera_bp != nullptr);
+
+    YAML::Node config = YAML::LoadFile(confname.c_str());
+    auto lidarPos = config["sensors"]["lidar"];
+    for (int i = 0; i < 4; ++i)
+    {
+        auto camera_transform = cg::Transform{
+            cg::Location{lidarPos["x"].as<float>(), lidarPos["y"].as<float>(), lidarPos["z"].as<float>()},  // x, y, z.
+            cg::Rotation{0.0f, i*90.0f, 0.0f}}; // pitch, yaw, roll.
+
+        cams.push_back(m_world->SpawnActor(*camera_bp, camera_transform, m_actor.get()));
+    }
+
+    for (int i = 0; i < cams.size(); ++i)
+    {
+        auto camera = static_cast<cc::Sensor*>(cams[i].get());
+        // Register a callback to save images to disk.
+        camera->Listen([this, i, outname](auto data) {
+            auto image = boost::static_pointer_cast<csd::Image>(data);
+            EXPECT_TRUE(image != nullptr);
+            SaveImageToDisk(*image, i, outname);
         });
     }
 }
@@ -188,14 +222,15 @@ void PPPScene::setRGBCams(string confname, std::vector<ShrdPtrActor> & cams, str
 void PPPScene::stop()
 {
     m_doRun = false;
-    cout << "Waiting to stop the client" << endl;
     m_thread->join();
 
     // Remove actors from the simulation.
     for (auto && c : m_RGBCams) c.get()->Destroy();
+    for (auto && c : m_RGBCamsSS) c.get()->Destroy();
+    for (auto && c : m_DepthCams) c.get()->Destroy();
+    for (auto && c : m_DepthCamsSS) c.get()->Destroy();
     m_actor.get()->Destroy();
     m_world->ApplySettings(m_defaultSettings); // reset again to the asynchronous mode
-    delete m_world;
     delete m_thread;
     std::cout << "Actors destroyed." << std::endl;
 }
