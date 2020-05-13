@@ -124,10 +124,14 @@ PPPScene::PPPScene(string confname) : m_doRun(false)
     transform.rotation.pitch = -15.0f;
     spectator->SetTransform(transform);
 
-    setRGBCams(confname, m_RGBCams, "sensor.camera.rgb", "rbb");
+    // Set sensors:
+    setRGBCams(confname, m_RGBCams, "sensor.camera.rgb", "rgb");
     setRGBCams(confname, m_RGBCamsSS, "sensor.camera.semantic_segmentation", "rgb_ss");
     setDepthCams(confname, m_DepthCams, "sensor.camera.depth", "depth");
     setDepthCams(confname, m_DepthCamsSS, "sensor.camera.semantic_segmentation", "depth_ss");
+
+    // Set weather:
+    setWeather(confname);
 
     // Synchronous mode:
     int fps = config["common"]["fps"].as<int>();
@@ -241,4 +245,44 @@ void PPPScene::stop()
     m_world->ApplySettings(m_defaultSettings); // reset again to the asynchronous mode
     delete m_thread;
     std::cout << "Actors destroyed." << std::endl;
+}
+
+void PPPScene::setWeather(string confname)
+{
+    YAML::Node config = YAML::LoadFile(confname.c_str());
+    // Set weather:
+    auto wpreset = config["weather"]["_preset"];
+    if (!wpreset.IsNull())
+    {
+        if (wpreset.as<string>() == "Default") m_world->SetWeather(WeatherParameters::Default);
+        if (wpreset.as<string>() == "ClearNoon") m_world->SetWeather(WeatherParameters::ClearNoon);
+        if (wpreset.as<string>() == "CloudyNoon") m_world->SetWeather(WeatherParameters::CloudyNoon);
+        if (wpreset.as<string>() == "WetNoon") m_world->SetWeather(WeatherParameters::WetNoon);
+        if (wpreset.as<string>() == "WetCloudyNoon") m_world->SetWeather(WeatherParameters::WetCloudyNoon);
+        if (wpreset.as<string>() == "MidRainyNoon") m_world->SetWeather(WeatherParameters::MidRainyNoon);
+        if (wpreset.as<string>() == "HardRainNoon") m_world->SetWeather(WeatherParameters::HardRainNoon);
+        if (wpreset.as<string>() == "SoftRainNoon") m_world->SetWeather(WeatherParameters::SoftRainNoon);
+        if (wpreset.as<string>() == "ClearSunset") m_world->SetWeather(WeatherParameters::ClearSunset);
+        if (wpreset.as<string>() == "CloudySunset") m_world->SetWeather(WeatherParameters::CloudySunset);
+        if (wpreset.as<string>() == "WetSunset") m_world->SetWeather(WeatherParameters::WetSunset);
+        if (wpreset.as<string>() == "WetCloudySunset") m_world->SetWeather(WeatherParameters::WetCloudySunset);
+        if (wpreset.as<string>() == "MidRainSunset") m_world->SetWeather(WeatherParameters::MidRainSunset);
+        if (wpreset.as<string>() == "SoftRainSunset") m_world->SetWeather(WeatherParameters::SoftRainSunset);
+    }
+    else
+    {
+        auto weather = WeatherParameters
+        (
+            config["weather"]["cloudness"].as<float>(),
+            config["weather"]["precipitation"].as<float>(),
+            config["weather"]["precipitation_deposits"].as<float>(),
+            config["weather"]["wind_intensity"].as<float>(),
+            config["weather"]["sun_azimuth_angle"].as<float>(),
+            config["weather"]["sun_altitude_angle"].as<float>(),
+            config["weather"]["fog_density"].as<float>(),
+            config["weather"]["fog_distance"].as<float>(),
+            config["weather"]["wetness"].as<float>()
+        );
+        m_world->SetWeather(weather);
+    }
 }

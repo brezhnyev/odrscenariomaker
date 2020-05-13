@@ -6,7 +6,7 @@ common :
   host: "127.0.0.1"
   port: 2000
   filter: "vehicle.*"
-  town: "Town01"
+  town: "Town02"
   fps: 30
   timeout: 10
 
@@ -19,16 +19,17 @@ sensors :
       {x:  0.0, y: -1.2, z: 1.0, roll: 0, pitch: 0, yaw: -90}
     ]
 
-# weather :
-#     cloudness : 10.0
-#     precipitation : 10.0
-#     precipitation_deposits : 10.0
-#     wind_intensity : 10.0
-#     fog_density : 10.0
-#     fog_distance : 100.0
-#     wetness : 10.0
-#     sun_azimuth_angle : 40.0
-#     sun_altitude_angle : 90.0
+weather :
+    _preset: "SoftRainNoon" # if the _preset is NOT commented all settings below will be ignored
+    cloudness : 10.0
+    precipitation : 10.0
+    precipitation_deposits : 10.0
+    wind_intensity : 10.0
+    fog_density : 10.0
+    fog_distance : 100.0
+    wetness : 10.0
+    sun_azimuth_angle : 40.0
+    sun_altitude_angle : 90.0
 
 # spawner :
 #     number_of_vehicles : 10

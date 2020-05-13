@@ -23,7 +23,7 @@ public:
 private:
     void setRGBCams(std::string config, std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
     void setDepthCams(std::string config, std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
-    void setLidar(std::string config);
+    void setWeather(std::string config);
     void SaveImageToDisk(const carla::sensor::data::Image &image, int index, std::string type);
 
 private:
