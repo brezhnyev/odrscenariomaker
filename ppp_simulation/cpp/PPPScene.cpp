@@ -132,7 +132,7 @@ PPPScene::PPPScene(string confname) : m_doRun(false)
     // Synchronous mode:
     int fps = config["common"]["fps"].as<int>();
     m_defaultSettings = m_world->GetSettings();
-    EpisodeSettings wsettings(true, false, 1.0 / fps); // (doRender, isSynchrone, interval)
+    EpisodeSettings wsettings(true, false, 1.0 / fps); // (synchrone, noRender, interval)
     m_world->ApplySettings(wsettings);
 }
 
@@ -163,10 +163,14 @@ void PPPScene::setRGBCams(string confname, std::vector<ShrdPtrActor> & cams, str
 {
     auto blueprint_library = m_world->GetBlueprintLibrary();
     // Find a camera blueprint.
-    auto camera_bp = blueprint_library->Find(blueprintName);
+    auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find(blueprintName));
     EXPECT_TRUE(camera_bp != nullptr);
 
     YAML::Node config = YAML::LoadFile(confname.c_str());
+    camera_bp->SetAttribute("image_size_x", to_string(config["common"]["width"].as<int>()));
+    camera_bp->SetAttribute("image_size_y", to_string(config["common"]["height"].as<int>()));
+    camera_bp->SetAttribute("fov", to_string(config["common"]["fov"].as<int>()));
+
     auto yamlcams = config["sensors"]["cameras"];
     for (auto && c : yamlcams)
     {
@@ -193,10 +197,14 @@ void PPPScene::setDepthCams(string confname, std::vector<ShrdPtrActor> & cams, s
 {
     auto blueprint_library = m_world->GetBlueprintLibrary();
     // Find a camera blueprint.
-    auto camera_bp = blueprint_library->Find(blueprintName);
+    auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find(blueprintName));
     EXPECT_TRUE(camera_bp != nullptr);
 
     YAML::Node config = YAML::LoadFile(confname.c_str());
+    camera_bp->SetAttribute("image_size_x", to_string(config["common"]["width"].as<int>()));
+    camera_bp->SetAttribute("image_size_y", to_string(config["common"]["height"].as<int>()));
+    camera_bp->SetAttribute("fov", "90"); // set hard-coded 90 degrees, since 4x90=360 for depth cameras -> lidar
+
     auto lidarPos = config["sensors"]["lidar"];
     for (int i = 0; i < 4; ++i)
     {

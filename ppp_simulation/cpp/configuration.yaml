@@ -1,6 +1,7 @@
 common :
-  width: 600
-  height: 400
+  width: 320
+  height: 240
+  fov: 90
   verbose: false
   host: "127.0.0.1"
   port: 2000
