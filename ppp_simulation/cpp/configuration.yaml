@@ -31,11 +31,11 @@ weather :
     sun_azimuth_angle : 40.0
     sun_altitude_angle : 90.0
 
-# spawner :
-#     number_of_vehicles : 10
-#     number_of_walkers : 10
-#     safe : true
-#     filterv : "vehicle.*"
-#     filterw : "walker.pedestrian.*"
-#     tm_port : 8000
-#     sync : true
+spawner :
+    number_of_vehicles : 10
+    number_of_walkers : 10
+    safe : true
+    filterv : "vehicle.*"
+    filterw : "walker.pedestrian.*"
+    tm_port : 8000
+    sync : true

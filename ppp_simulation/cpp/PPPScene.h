@@ -24,6 +24,8 @@ private:
     void setRGBCams(std::string config, std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
     void setDepthCams(std::string config, std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
     void setWeather(std::string config);
+    void spawnVehicles(std::string config);
+    void spawnWalkers(std::string config);
     void SaveImageToDisk(const carla::sensor::data::Image &image, int index, std::string type);
 
 private:
@@ -35,6 +37,8 @@ private:
     carla::SharedPtr<carla::client::World>  m_world;
     carla::rpc::EpisodeSettings             m_defaultSettings;
     int                                     m_timeout;
+
+    std::vector<ShrdPtrActor>               m_vehicles;
 
     std::thread                            *m_thread;
     bool m_doRun;

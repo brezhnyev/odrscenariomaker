@@ -43,7 +43,7 @@ static auto &RandomChoice(const RangeT &range, RNG &&generator)
 {
     EXPECT_TRUE(range.size() > 0u);
     std::uniform_int_distribution<size_t> dist{0u, range.size() - 1u};
-    return range[dist(std::forward<RNG>(generator))];
+    return range[dist(std::forward<RNG>(generator))]; // KB: this can fail for map
 }
 
 /// Save a semantic segmentation image to disk converting to CityScapes palette.
@@ -87,42 +87,12 @@ PPPScene::PPPScene(string confname) : m_doRun(false)
     std::cout << "Loading world: " << town_name << std::endl;
     m_world = boost::make_shared<cc::World>(client.LoadWorld(town_name));
 
-    // Get a random vehicle blueprint.
-    auto blueprint_library = m_world->GetBlueprintLibrary();
-    auto vehicles = blueprint_library->Filter("vehicle");
-    auto blueprint = RandomChoice(*vehicles, rng);
+    auto traffic_manager = client.GetInstanceTM(); //KB: the port
+    traffic_manager.SetGlobalDistanceToLeadingVehicle(2.0);
+    traffic_manager.SetSynchronousMode(true);
 
-    // Randomize the blueprint.
-    if (blueprint.ContainsAttribute("color"))
-    {
-        auto &attribute = blueprint.GetAttribute("color");
-        blueprint.SetAttribute(
-            "color",
-            RandomChoice(attribute.GetRecommendedValues(), rng));
-    }
-
-    // Find a valid spawn point.
-    auto map = m_world->GetMap();
-    auto transform = RandomChoice(map->GetRecommendedSpawnPoints(), rng);
-
-    // Spawn the vehicle.
-    m_actor = m_world->SpawnActor(blueprint, transform);
-    std::cout << "Spawned " << m_actor->GetDisplayId() << '\n';
-    auto vehicle = static_cast<cc::Vehicle*>(m_actor.get());
-
-    // Apply control to vehicle.
-    cc::Vehicle::Control control;
-    control.throttle = 1.0f;
-    vehicle->ApplyControl(control);
-    vehicle->SetAutopilot(true);
-
-    // Move spectator so we can see the vehicle from the simulator window.
-    auto spectator = m_world->GetSpectator();
-    transform.location += 7.0f * transform.GetForwardVector();
-    transform.location.z += 2.0f;
-    transform.rotation.yaw += 180.0f;
-    transform.rotation.pitch = -15.0f;
-    spectator->SetTransform(transform);
+    // Spawn vehicles:
+    spawnVehicles(confname);
 
     // Set sensors:
     setRGBCams(confname, m_RGBCams, "sensor.camera.rgb", "rgb");
@@ -132,6 +102,7 @@ PPPScene::PPPScene(string confname) : m_doRun(false)
 
     // Set weather:
     setWeather(confname);
+
 
     // Synchronous mode:
     int fps = config["common"]["fps"].as<int>();
@@ -284,5 +255,65 @@ void PPPScene::setWeather(string confname)
             config["weather"]["wetness"].as<float>()
         );
         m_world->SetWeather(weather);
+    }
+}
+
+void PPPScene::spawnVehicles(string confname)
+{
+    YAML::Node config = YAML::LoadFile(confname.c_str());
+    string vfilter = config["spawner"]["filterv"].as<string>();
+    auto blueprints = m_world->GetBlueprintLibrary()->Filter(vfilter);
+    auto spawn_points = m_world->GetMap()->GetRecommendedSpawnPoints();
+    int number_of_vehicles = config["spawner"]["number_of_vehicles"].as<int>();
+    if (spawn_points.size() < number_of_vehicles)
+        cout << "Number of requested vehicle is larger than the maximum, that can be generated (" << spawn_points.size() << ")" << endl;
+    number_of_vehicles = min(number_of_vehicles, (int)spawn_points.size());
+    cout << "The " << number_of_vehicles << " vehicles will be spawned." << endl;
+    m_vehicles.reserve(number_of_vehicles);
+
+    std::mt19937_64 rng((std::random_device())());
+
+    for (int i = 0; i < number_of_vehicles; ++i)
+    {
+        try
+        {
+            auto blueprint = RandomChoice(*blueprints, rng);
+            // Find a valid spawn point.
+            auto transform = RandomChoice(spawn_points, rng);
+
+            // Randomize the blueprint.
+            if (blueprint.ContainsAttribute("color"))
+            {
+                auto &attribute = blueprint.GetAttribute("color");
+                blueprint.SetAttribute(
+                    "color",
+                    RandomChoice(attribute.GetRecommendedValues(), rng));
+            }
+
+            // Spawn the vehicle.
+            m_vehicles.push_back(m_world->SpawnActor(blueprint, transform));
+            auto vehicle = static_cast<cc::Vehicle*>(m_vehicles.back().get());
+
+            // Apply control to vehicle.
+            cc::Vehicle::Control control;
+            control.throttle = 1.0f;
+            vehicle->ApplyControl(control);
+            vehicle->SetAutopilot(true);
+
+            std::cout << "Spawned " << m_vehicles.back()->GetDisplayId() << '\n';
+        }
+        catch (...) {} // KB: ignore the collision exception
+    }
+    if (number_of_vehicles)
+    {
+        m_actor = m_vehicles[0];
+        // Move spectator so we can see the vehicle from the simulator window.
+        auto spectator = m_world->GetSpectator();
+        auto transform = m_actor->GetTransform();
+        transform.location += 7.0f * transform.GetForwardVector();
+        transform.location.z += 2.0f;
+        transform.rotation.yaw += 180.0f;
+        transform.rotation.pitch = -15.0f;
+        spectator->SetTransform(transform);
     }
 }
