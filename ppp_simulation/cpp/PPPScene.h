@@ -19,6 +19,7 @@ public:
     PPPScene(std::string config);
     void start();
     void stop();
+    bool isInitialized() { return m_isInitialized; }
 
 private:
     void setRGBCams(std::string config, std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
@@ -39,7 +40,10 @@ private:
     int                                     m_timeout;
 
     std::vector<ShrdPtrActor>               m_vehicles;
+    std::vector<ShrdPtrActor>               m_walkers;
+    std::vector<ShrdPtrActor>               m_wControllers;
 
     std::thread                            *m_thread;
     bool m_doRun;
+    bool m_isInitialized;
 };

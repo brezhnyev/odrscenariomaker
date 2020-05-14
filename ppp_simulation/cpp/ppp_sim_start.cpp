@@ -1,7 +1,5 @@
 #include "PPPScene.h"
 
-#include <carla/client/TimeoutException.h>
-
 #include <iostream>
 #include <condition_variable>
 #include <mutex>
@@ -35,24 +33,12 @@ int main(int argc, const char *argv[])
         cout << "Specify the configuration file" << endl;
         return 0;
     }
-    try
-    {
-        PPPScene scene(argv[1]);
-        scene.start();
-        unique_lock<mutex> lk(mtx);
-        cv.wait(lk, [](){ return isStopped; });
-        scene.stop();
-    }
-    catch (const carla::client::TimeoutException &e)
-    {
-        std::cout << '\n' << e.what() << std::endl;
-        return 1;
-    }
-    catch (const std::exception &e)
-    {
-        std::cout << "\nException: " << e.what() << std::endl;
-        return 2;
-    }
+    PPPScene scene(argv[1]);
+    if (!scene.isInitialized()) return 1;
+    scene.start();
+    unique_lock<mutex> lk(mtx);
+    cv.wait(lk, [](){ return isStopped; });
+    scene.stop();
 
     return 0;
 }

@@ -7,6 +7,7 @@
 #include <carla/client/TimeoutException.h>
 #include <carla/geom/Transform.h>
 #include <carla/rpc/EpisodeSettings.h>
+#include <carla/client/WalkerAIController.h>
 
 #include <yaml-cpp/yaml.h>
 
@@ -67,48 +68,61 @@ void PPPScene::SaveImageToDisk(const csd::Image &image, int index, string type)
 }
 
 
-PPPScene::PPPScene(string confname) : m_doRun(false)
+PPPScene::PPPScene(string confname) : m_doRun(false), m_isInitialized(false)
 {
-    YAML::Node config = YAML::LoadFile(confname.c_str());
+    try
+    {
+        YAML::Node config = YAML::LoadFile(confname.c_str());
 
-    string host = config["common"]["host"].as<string>();
-    uint16_t port = config["common"]["port"].as<int>();
-    m_timeout = config["common"]["timeout"].as<int>();
+        string host = config["common"]["host"].as<string>();
+        uint16_t port = config["common"]["port"].as<int>();
+        m_timeout = config["common"]["timeout"].as<int>();
 
-    std::mt19937_64 rng((std::random_device())());
+        std::mt19937_64 rng((std::random_device())());
 
-    auto client = cc::Client(host, port);
-    client.SetTimeout(carla::time_duration(std::chrono::seconds(m_timeout)));
+        auto client = cc::Client(host, port);
+        client.SetTimeout(carla::time_duration(std::chrono::seconds(m_timeout)));
 
-    std::cout << "Client API version : " << client.GetClientVersion() << '\n';
-    std::cout << "Server API version : " << client.GetServerVersion() << '\n';
+        std::cout << "Client API version : " << client.GetClientVersion() << '\n';
+        std::cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    auto town_name = config["common"]["town"].as<string>();
-    std::cout << "Loading world: " << town_name << std::endl;
-    m_world = boost::make_shared<cc::World>(client.LoadWorld(town_name));
+        auto town_name = config["common"]["town"].as<string>();
+        std::cout << "Loading world: " << town_name << std::endl;
+        m_world = boost::make_shared<cc::World>(client.LoadWorld(town_name));
 
-    auto traffic_manager = client.GetInstanceTM(); //KB: the port
-    traffic_manager.SetGlobalDistanceToLeadingVehicle(2.0);
-    traffic_manager.SetSynchronousMode(true);
+        auto traffic_manager = client.GetInstanceTM(); //KB: the port
+        traffic_manager.SetGlobalDistanceToLeadingVehicle(2.0);
+        traffic_manager.SetSynchronousMode(true);
 
-    // Spawn vehicles:
-    spawnVehicles(confname);
+        // Spawn vehicles:
+        spawnVehicles(confname);
+        spawnWalkers(confname);
 
-    // Set sensors:
-    setRGBCams(confname, m_RGBCams, "sensor.camera.rgb", "rgb");
-    setRGBCams(confname, m_RGBCamsSS, "sensor.camera.semantic_segmentation", "rgb_ss");
-    setDepthCams(confname, m_DepthCams, "sensor.camera.depth", "depth");
-    setDepthCams(confname, m_DepthCamsSS, "sensor.camera.semantic_segmentation", "depth_ss");
+        // // Set sensors:
+        // setRGBCams(confname, m_RGBCams, "sensor.camera.rgb", "rgb");
+        // setRGBCams(confname, m_RGBCamsSS, "sensor.camera.semantic_segmentation", "rgb_ss");
+        // setDepthCams(confname, m_DepthCams, "sensor.camera.depth", "depth");
+        // setDepthCams(confname, m_DepthCamsSS, "sensor.camera.semantic_segmentation", "depth_ss");
 
-    // Set weather:
-    setWeather(confname);
+        // Set weather:
+        setWeather(confname);
 
+        // Synchronous mode:
+        int fps = config["common"]["fps"].as<int>();
+        m_defaultSettings = m_world->GetSettings();
+        EpisodeSettings wsettings(true, false, 1.0 / fps); // (synchrone, noRender, interval)
+        m_world->ApplySettings(wsettings);
 
-    // Synchronous mode:
-    int fps = config["common"]["fps"].as<int>();
-    m_defaultSettings = m_world->GetSettings();
-    EpisodeSettings wsettings(true, false, 1.0 / fps); // (synchrone, noRender, interval)
-    m_world->ApplySettings(wsettings);
+        m_isInitialized = true;
+    }
+    catch (const carla::client::TimeoutException &e)
+    {
+        std::cout << '\n' << e.what() << std::endl;
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << "\nException: " << e.what() << std::endl;
+    }
 }
 
 void PPPScene::start()
@@ -120,15 +134,27 @@ void PPPScene::start()
         m_doRun = true;
 
         // Synchronous mode:
+
         while (m_doRun)
         {
-            m_world->Tick(carla::time_duration(std::chrono::seconds(m_timeout)));
+            try
+            {
+                m_world->Tick(carla::time_duration(std::chrono::seconds(m_timeout)));
+            }
+            catch (const std::exception &e)
+            {
+                std::cout << "\nException: " << e.what() << std::endl;
+                continue;
+            }
         }
 
-        for (auto && c : m_RGBCams) static_cast<cc::Sensor*>(c.get())->Stop();
-        for (auto && c : m_RGBCamsSS) static_cast<cc::Sensor*>(c.get())->Stop();
-        for (auto && c : m_DepthCams) static_cast<cc::Sensor*>(c.get())->Stop();
-        for (auto && c : m_DepthCamsSS) static_cast<cc::Sensor*>(c.get())->Stop();
+        for (auto s : m_RGBCams) static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_RGBCamsSS) static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_DepthCams) static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_DepthCamsSS) static_cast<cc::Sensor*>(s.get())->Stop();
+
+        for (auto s : m_wControllers) static_cast<cc::WalkerAIController*>(s.get())->Stop();
+        
         cout << "Waiting 10 seconds to stop the client (ensure last callbacks are processed)." << endl;
         usleep(1e7); // wait for all callback to finish
     });
@@ -207,11 +233,23 @@ void PPPScene::stop()
     m_doRun = false;
     m_thread->join();
 
-    // Remove actors from the simulation.
-    for (auto && c : m_RGBCams) c.get()->Destroy();
-    for (auto && c : m_RGBCamsSS) c.get()->Destroy();
-    for (auto && c : m_DepthCams) c.get()->Destroy();
-    for (auto && c : m_DepthCamsSS) c.get()->Destroy();
+    try
+    {
+        // Remove vehicles and walkers:
+        for (auto && c : m_vehicles) c.get()->Destroy();
+        for (auto && c : m_wControllers) c.get()->Destroy();    
+        for (auto && c : m_walkers) c.get()->Destroy();
+
+        // Remove sensors from the simulation.
+        for (auto && c : m_RGBCams) c.get()->Destroy();
+        for (auto && c : m_RGBCamsSS) c.get()->Destroy();
+        for (auto && c : m_DepthCams) c.get()->Destroy();
+        for (auto && c : m_DepthCamsSS) c.get()->Destroy();
+    }
+    catch(...)
+    {
+        cout << "Exception thrown during destroying objects. Ignored." << endl;
+    }
     m_actor.get()->Destroy();
     m_world->ApplySettings(m_defaultSettings); // reset again to the asynchronous mode
     delete m_thread;
@@ -261,10 +299,10 @@ void PPPScene::setWeather(string confname)
 void PPPScene::spawnVehicles(string confname)
 {
     YAML::Node config = YAML::LoadFile(confname.c_str());
-    string vfilter = config["spawner"]["filterv"].as<string>();
-    auto blueprints = m_world->GetBlueprintLibrary()->Filter(vfilter);
+    string filter = config["spawner"]["vehicles"]["filter"].as<string>();
+    auto blueprints = m_world->GetBlueprintLibrary()->Filter(filter);
     auto spawn_points = m_world->GetMap()->GetRecommendedSpawnPoints();
-    int number_of_vehicles = config["spawner"]["number_of_vehicles"].as<int>();
+    int number_of_vehicles = config["spawner"]["vehicles"]["number"].as<int>();
     if (spawn_points.size() < number_of_vehicles)
         cout << "Number of requested vehicle is larger than the maximum, that can be generated (" << spawn_points.size() << ")" << endl;
     number_of_vehicles = min(number_of_vehicles, (int)spawn_points.size());
@@ -273,36 +311,46 @@ void PPPScene::spawnVehicles(string confname)
 
     std::mt19937_64 rng((std::random_device())());
 
-    for (int i = 0; i < number_of_vehicles; ++i)
+    int fails = 0;
+    const int MAXFAILS = 10;
+    for (int i = 0; i < number_of_vehicles;)
     {
-        try
+        if (fails > MAXFAILS)
         {
-            auto blueprint = RandomChoice(*blueprints, rng);
-            // Find a valid spawn point.
-            auto transform = RandomChoice(spawn_points, rng);
-
-            // Randomize the blueprint.
-            if (blueprint.ContainsAttribute("color"))
-            {
-                auto &attribute = blueprint.GetAttribute("color");
-                blueprint.SetAttribute(
-                    "color",
-                    RandomChoice(attribute.GetRecommendedValues(), rng));
-            }
-
-            // Spawn the vehicle.
-            m_vehicles.push_back(m_world->SpawnActor(blueprint, transform));
-            auto vehicle = static_cast<cc::Vehicle*>(m_vehicles.back().get());
-
-            // Apply control to vehicle.
-            cc::Vehicle::Control control;
-            control.throttle = 1.0f;
-            vehicle->ApplyControl(control);
-            vehicle->SetAutopilot(true);
-
-            std::cout << "Spawned " << m_vehicles.back()->GetDisplayId() << '\n';
+            cout << "Too many fails spawning vehicles. Breaking spawning." << endl;
+            break;
         }
-        catch (...) {} // KB: ignore the collision exception
+        auto blueprint = RandomChoice(*blueprints, rng);
+        // Find a valid spawn point.
+        auto transform = RandomChoice(spawn_points, rng);
+
+        // Randomize the blueprint.
+        if (blueprint.ContainsAttribute("color"))
+        {
+            auto &attribute = blueprint.GetAttribute("color");
+            blueprint.SetAttribute("color", RandomChoice(attribute.GetRecommendedValues(), rng));
+            blueprint.SetAttribute("role_name", "autopilot");
+        }
+
+        // Spawn the vehicle.
+        auto actor = m_world->TrySpawnActor(blueprint, transform);
+        if (!actor)
+        {
+            ++fails;
+            cout << "Failed to spawn vehicle. Lets try again." << endl;
+            continue;
+        }
+        // Finish and store the vehicle
+        m_vehicles.push_back(actor);
+        auto vehicle = static_cast<cc::Vehicle*>(actor.get());
+        // Apply control to vehicle.
+        cc::Vehicle::Control control;
+        control.throttle = 1.0f;
+        vehicle->ApplyControl(control);
+        vehicle->SetAutopilot(true);
+        ++i;
+        fails = 0;
+        std::cout << "Spawned " << m_vehicles.back()->GetDisplayId() << '\n';
     }
     if (number_of_vehicles)
     {
@@ -315,5 +363,79 @@ void PPPScene::spawnVehicles(string confname)
         transform.rotation.yaw += 180.0f;
         transform.rotation.pitch = -15.0f;
         spectator->SetTransform(transform);
+    }
+}
+
+void PPPScene::spawnWalkers(string confname)
+{
+    YAML::Node config = YAML::LoadFile(confname.c_str());
+    int number_of_walkers = config["spawner"]["walkers"]["number"].as<int>();
+
+    int percentagePedestriansRunning = config["spawner"]["walkers"]["running"].as<int>();       // how many pedestrians will run
+    int percentagePedestriansCrossing = config["spawner"]["walkers"]["crossingRoad"].as<int>(); // how many pedestrians will walk through the road
+
+    // Spawn the walker object.
+    m_walkers.reserve(number_of_walkers);
+    string filter = config["spawner"]["walkers"]["filter"].as<string>();
+    auto w_bp = m_world->GetBlueprintLibrary()->Filter(filter); // "Filter" returns BluePrintLibrary (i.e. wrapper about container of ActorBlueprints)
+    auto wc_bp = m_world->GetBlueprintLibrary()->Find("controller.ai.walker"); // "Find" returns pointer to the ActorBlueprint
+
+    std::mt19937_64 rng((std::random_device())());
+
+    vector<float> speeds; speeds.reserve(number_of_walkers);
+
+    int fails = 0;
+    const int MAXFAILS = 10;
+    for (int i = 0; i < number_of_walkers; )
+    {
+        if (fails > MAXFAILS)
+        {
+            cout << "Too many fails spawning walkers. Breaking spawning." << endl;
+            break;
+        }
+        auto location = m_world->GetRandomLocationFromNavigation();
+        if (!location.has_value())
+        {
+            ++fails;
+            continue;
+        }
+        auto walker_bp = RandomChoice(*w_bp, rng);
+        //if (walker_bp.ContainsAttribute("is_invincible")) walker_bp.SetAttribute("is_invincible", "false");
+        walker_bp.SetAttribute("is_invincible", "false");
+        auto walker = m_world->TrySpawnActor(walker_bp, location.value());
+        if (walker)
+        {
+            auto controller = m_world->TrySpawnActor(*wc_bp, cg::Transform(), walker.get());
+            if (!controller)
+            {
+                walker.get()->Destroy();
+                ++fails;
+                cout << "Failed to spawn walker. Lets try again." << endl;
+                continue;
+            }
+            else
+            {
+                // Store the walker and its controller
+                m_walkers.push_back(walker);
+                speeds.push_back(atof(walker_bp.GetAttribute("speed").GetRecommendedValues()[1].c_str()));
+                m_wControllers.push_back(controller);
+                ++i;
+                fails = 0;
+                std::cout << "Spawned " << m_walkers.back()->GetDisplayId() << '\n';
+            }
+        }
+        else
+        {
+            ++fails;
+            cout << "Failed to spawn walker. Lets try again." << endl;
+            continue;
+        }
+    }
+
+    for (int i = 0; i < m_wControllers.size(); ++i)
+    {
+        // KB: important! First Start then any settings like max speed.
+        static_cast<cc::WalkerAIController*>(m_wControllers[i].get())->Start();
+        static_cast<cc::WalkerAIController*>(m_wControllers[i].get())->SetMaxSpeed(speeds[i]);
     }
 }

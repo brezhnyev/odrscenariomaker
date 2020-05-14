@@ -11,31 +11,33 @@ common :
   timeout: 10
 
 sensors :
-    lidar : {x: 0, y: 0, z: 2}
-    cameras : [
-      {x:  2.5, y:  0.0, z: 0.5, roll: 0, pitch: 0, yaw: 0  }, 
-      {x:  0.0, y:  1.2, z: 1.0, roll: 0, pitch: 0, yaw: 90 }, 
-      {x: -2.5, y:  0.0, z: 0.5, roll: 0, pitch: 0, yaw: 180}, 
-      {x:  0.0, y: -1.2, z: 1.0, roll: 0, pitch: 0, yaw: -90}
-    ]
+  lidar : {x: 0, y: 0, z: 2}
+  cameras : [
+    {x:  2.5, y:  0.0, z: 0.5, roll: 0, pitch: 0, yaw: 0  }, 
+    {x:  0.0, y:  1.2, z: 1.0, roll: 0, pitch: 0, yaw: 90 }, 
+    {x: -2.5, y:  0.0, z: 0.5, roll: 0, pitch: 0, yaw: 180}, 
+    {x:  0.0, y: -1.2, z: 1.0, roll: 0, pitch: 0, yaw: -90}
+  ]
 
 weather :
-    _preset: "SoftRainNoon" # if the _preset is NOT commented all settings below will be ignored
-    cloudness : 10.0
-    precipitation : 10.0
-    precipitation_deposits : 10.0
-    wind_intensity : 10.0
-    fog_density : 10.0
-    fog_distance : 100.0
-    wetness : 10.0
-    sun_azimuth_angle : 40.0
-    sun_altitude_angle : 90.0
+  _preset: "SoftRainNoon" # if the _preset is NOT commented all settings below will be ignored
+  cloudness : 10.0
+  precipitation : 10.0
+  precipitation_deposits : 10.0
+  wind_intensity : 10.0
+  fog_density : 10.0
+  fog_distance : 100.0
+  wetness : 10.0
+  sun_azimuth_angle : 40.0
+  sun_altitude_angle : 90.0
 
 spawner :
-    number_of_vehicles : 10
-    number_of_walkers : 10
-    safe : true
-    filterv : "vehicle.*"
-    filterw : "walker.pedestrian.*"
-    tm_port : 8000
-    sync : true
+  tm_port : 8000
+  vehicles:
+    number : 10
+    filter : "vehicle.*"
+  walkers:
+    running: 0 # percents
+    crossingRoad: 10 # percents
+    filter : "walker.pedestrian.*"
+    number : 10
