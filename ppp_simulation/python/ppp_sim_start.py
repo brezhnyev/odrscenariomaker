@@ -728,7 +728,8 @@ def game_loop(gc, wc, sc, ssc):
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
         hud = HUD(gc.width, gc.height)
-        world = World(client.get_world(), hud, gc.filter, ssc)
+        cworld = client.load_world(gc.town)
+        world = World(cworld, hud, gc.filter, ssc)
         controller = KeyboardControl(world)
         
         # weather config

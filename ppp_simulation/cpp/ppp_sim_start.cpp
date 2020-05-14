@@ -37,8 +37,21 @@ int main(int argc, const char *argv[])
     if (!scene.isInitialized()) return 1;
     scene.start();
     unique_lock<mutex> lk(mtx);
+    // wait for Ctrl+C signal:
     cv.wait(lk, [](){ return isStopped; });
+
+    cout << "Waiting 10 seconds to stop the client (ensure last callbacks are processed)." << endl;
+    // If quitting lasts longer than 10 seconds, then ubnormally quit
+    // This can happen ex. when the server is closed/crashed
+    bool doGraceFulQuit = false;
+    thread t([&]()
+    { 
+        sleep(10); 
+        if (!doGraceFulQuit) exit(1); 
+    });
     scene.stop();
+    doGraceFulQuit = true;
+    t.join();
 
     return 0;
 }

@@ -152,11 +152,8 @@ void PPPScene::start()
         for (auto s : m_RGBCamsSS) static_cast<cc::Sensor*>(s.get())->Stop();
         for (auto s : m_DepthCams) static_cast<cc::Sensor*>(s.get())->Stop();
         for (auto s : m_DepthCamsSS) static_cast<cc::Sensor*>(s.get())->Stop();
-
         for (auto s : m_wControllers) static_cast<cc::WalkerAIController*>(s.get())->Stop();
-        
-        cout << "Waiting 10 seconds to stop the client (ensure last callbacks are processed)." << endl;
-        usleep(1e7); // wait for all callback to finish
+        sleep(9);
     });
 }
 
@@ -250,7 +247,6 @@ void PPPScene::stop()
     {
         cout << "Exception thrown during destroying objects. Ignored." << endl;
     }
-    m_actor.get()->Destroy();
     m_world->ApplySettings(m_defaultSettings); // reset again to the asynchronous mode
     delete m_thread;
     std::cout << "Actors destroyed." << std::endl;
@@ -329,8 +325,11 @@ void PPPScene::spawnVehicles(string confname)
         {
             auto &attribute = blueprint.GetAttribute("color");
             blueprint.SetAttribute("color", RandomChoice(attribute.GetRecommendedValues(), rng));
-            blueprint.SetAttribute("role_name", "autopilot");
         }
+        if (i==0)
+            blueprint.SetAttribute("role_name", "hero");
+        else
+            blueprint.SetAttribute("role_name", "autopilot");
 
         // Spawn the vehicle.
         auto actor = m_world->TrySpawnActor(blueprint, transform);
@@ -342,15 +341,19 @@ void PPPScene::spawnVehicles(string confname)
         }
         // Finish and store the vehicle
         m_vehicles.push_back(actor);
-        auto vehicle = static_cast<cc::Vehicle*>(actor.get());
-        // Apply control to vehicle.
-        cc::Vehicle::Control control;
-        control.throttle = 1.0f;
-        vehicle->ApplyControl(control);
-        vehicle->SetAutopilot(true);
         ++i;
         fails = 0;
         std::cout << "Spawned " << m_vehicles.back()->GetDisplayId() << '\n';
+    }
+
+    // Apply control to vehicle.
+    cc::Vehicle::Control control;
+    for (auto actor : m_vehicles)
+    {
+        auto vehicle = static_cast<cc::Vehicle*>(actor.get());
+        //control.throttle = 1.0f;
+        vehicle->ApplyControl(control);
+        vehicle->SetAutopilot(true);
     }
     if (number_of_vehicles)
     {
@@ -400,8 +403,7 @@ void PPPScene::spawnWalkers(string confname)
             continue;
         }
         auto walker_bp = RandomChoice(*w_bp, rng);
-        //if (walker_bp.ContainsAttribute("is_invincible")) walker_bp.SetAttribute("is_invincible", "false");
-        walker_bp.SetAttribute("is_invincible", "false");
+        walker_bp.SetAttribute("is_invincible", "true");
         auto walker = m_world->TrySpawnActor(walker_bp, location.value());
         if (walker)
         {
@@ -431,6 +433,8 @@ void PPPScene::spawnWalkers(string confname)
             continue;
         }
     }
+
+    m_world->Tick(carla::time_duration(std::chrono::seconds(m_timeout)));
 
     for (int i = 0; i < m_wControllers.size(); ++i)
     {
