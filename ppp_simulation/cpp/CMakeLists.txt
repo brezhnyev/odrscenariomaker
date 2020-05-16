@@ -24,3 +24,6 @@ set(CLARA_LIB carla_client)
 endif()
 
 target_link_libraries(${PROJECT_NAME} ${CLARA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
+
+add_executable(testing ./test.cpp)
+target_link_libraries(testing ${CLARA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)

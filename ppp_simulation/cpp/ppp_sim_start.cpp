@@ -6,6 +6,7 @@
 #include <signal.h>
 
 using namespace std;
+using namespace std::chrono_literals;
 
 mutex mtx;
 condition_variable cv;
@@ -16,9 +17,18 @@ void sighandler(int sig)
     switch(sig)
     {
         case SIGINT:
-        cout << "\nGracefully quitting the client" << endl;
-        isStopped = true;
-        cv.notify_all();
+        if (isStopped)
+        {
+            cout << "\n***Handling Ctrl+C signal is in progress. Wait.***" << endl;
+        }
+        else
+        {
+            cout << "\n***Handling Ctrl+C signal...***" << endl;
+            cout.flush();
+            if (!isStopped)
+            isStopped = true;
+            cv.notify_all();
+        }
         break;
     }
 }
@@ -30,27 +40,30 @@ int main(int argc, const char *argv[])
 
     if (argc < 2)
     {
-        cout << "Specify the configuration file" << endl;
+        cout << "***Specify the configuration file.***" << endl;
         return 0;
     }
     PPPScene scene(argv[1]);
     if (!scene.isInitialized()) return 1;
     scene.start();
-    unique_lock<mutex> lk(mtx);
-    // wait for Ctrl+C signal:
-    cv.wait(lk, [](){ return isStopped; });
+    {
+        unique_lock<mutex> lk(mtx);
+        // wait for Ctrl+C signal:
+        cv.wait(lk, [](){ return isStopped; });
+    }
 
-    cout << "Waiting 10 seconds to stop the client (ensure last callbacks are processed)." << endl;
-    // If quitting lasts longer than 10 seconds, then ubnormally quit
-    // This can happen ex. when the server is closed/crashed
-    bool doGraceFulQuit = false;
+    // If quitting lasts longer than 10 seconds, then abnormally quit
+    // This can happen ex. when the server is closed/crashed/down
+    bool doGracefulQuit = false;
     thread t([&]()
-    { 
-        sleep(10); 
-        if (!doGraceFulQuit) exit(1); 
+    {
+        unique_lock<mutex> lk(mtx);
+        cv.wait_for(lk, 10s, [&](){ return doGracefulQuit; });
+        if (!doGracefulQuit) scene.stop(true);
     });
-    scene.stop();
-    doGraceFulQuit = true;
+    scene.stop(false);
+    doGracefulQuit = true;
+    cv.notify_all();
     t.join();
 
     return 0;

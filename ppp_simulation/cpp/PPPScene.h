@@ -18,7 +18,7 @@ class PPPScene
 public:
     PPPScene(std::string config);
     void start();
-    void stop();
+    void stop(bool abort = false);
     bool isInitialized() { return m_isInitialized; }
 
 private:

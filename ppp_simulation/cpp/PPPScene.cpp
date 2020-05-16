@@ -94,24 +94,24 @@ PPPScene::PPPScene(string confname) : m_doRun(false), m_isInitialized(false)
         traffic_manager.SetGlobalDistanceToLeadingVehicle(2.0);
         traffic_manager.SetSynchronousMode(true);
 
-        // Spawn vehicles:
-        spawnVehicles(confname);
-        spawnWalkers(confname);
-
-        // // Set sensors:
-        // setRGBCams(confname, m_RGBCams, "sensor.camera.rgb", "rgb");
-        // setRGBCams(confname, m_RGBCamsSS, "sensor.camera.semantic_segmentation", "rgb_ss");
-        // setDepthCams(confname, m_DepthCams, "sensor.camera.depth", "depth");
-        // setDepthCams(confname, m_DepthCamsSS, "sensor.camera.semantic_segmentation", "depth_ss");
-
-        // Set weather:
-        setWeather(confname);
-
         // Synchronous mode:
         int fps = config["common"]["fps"].as<int>();
         m_defaultSettings = m_world->GetSettings();
         EpisodeSettings wsettings(true, false, 1.0 / fps); // (synchrone, noRender, interval)
         m_world->ApplySettings(wsettings);
+
+        // Spawn vehicles:
+        spawnVehicles(confname);
+        spawnWalkers(confname);
+
+        // // Set sensors:
+        setRGBCams(confname, m_RGBCams, "sensor.camera.rgb", "rgb");
+        setRGBCams(confname, m_RGBCamsSS, "sensor.camera.semantic_segmentation", "rgb_ss");
+        setDepthCams(confname, m_DepthCams, "sensor.camera.depth", "depth");
+        setDepthCams(confname, m_DepthCamsSS, "sensor.camera.semantic_segmentation", "depth_ss");
+
+        // Set weather:
+        setWeather(confname);
 
         m_isInitialized = true;
     }
@@ -153,7 +153,6 @@ void PPPScene::start()
         for (auto s : m_DepthCams) static_cast<cc::Sensor*>(s.get())->Stop();
         for (auto s : m_DepthCamsSS) static_cast<cc::Sensor*>(s.get())->Stop();
         for (auto s : m_wControllers) static_cast<cc::WalkerAIController*>(s.get())->Stop();
-        sleep(9);
     });
 }
 
@@ -225,10 +224,22 @@ void PPPScene::setDepthCams(string confname, std::vector<ShrdPtrActor> & cams, s
     }
 }
 
-void PPPScene::stop()
+void PPPScene::stop(bool abort)
 {
-    m_doRun = false;
-    m_thread->join();
+    if (!abort)
+    {   // Gracefull quit
+        cout << "***Trying to gracefully quit: waiting to stop the client (ensure last callbacks are processed).***" << endl;
+        m_doRun = false;
+        m_thread->join();
+        usleep(100000);
+    }
+    else
+    {
+        // Most probably the server is down here, so no problem of abnormal exit.
+        cout << "***Gracefull quit failed. Abnormally exiting application.***" << endl;
+    }
+    // KB: ApplySettings must be called before deleting the actors, otherwise crash
+    m_world->ApplySettings(m_defaultSettings); // reset again to the asynchronous mode
 
     try
     {
@@ -247,7 +258,6 @@ void PPPScene::stop()
     {
         cout << "Exception thrown during destroying objects. Ignored." << endl;
     }
-    m_world->ApplySettings(m_defaultSettings); // reset again to the asynchronous mode
     delete m_thread;
     std::cout << "Actors destroyed." << std::endl;
 }
@@ -340,21 +350,15 @@ void PPPScene::spawnVehicles(string confname)
             continue;
         }
         // Finish and store the vehicle
+        static_cast<cc::Vehicle*>(actor.get())->SetAutopilot(true);
         m_vehicles.push_back(actor);
         ++i;
         fails = 0;
         std::cout << "Spawned " << m_vehicles.back()->GetDisplayId() << '\n';
     }
 
-    // Apply control to vehicle.
-    cc::Vehicle::Control control;
-    for (auto actor : m_vehicles)
-    {
-        auto vehicle = static_cast<cc::Vehicle*>(actor.get());
-        //control.throttle = 1.0f;
-        vehicle->ApplyControl(control);
-        vehicle->SetAutopilot(true);
-    }
+    m_world->Tick(carla::time_duration(std::chrono::seconds(m_timeout)));
+
     if (number_of_vehicles)
     {
         m_actor = m_vehicles[0];
@@ -400,10 +404,12 @@ void PPPScene::spawnWalkers(string confname)
         if (!location.has_value())
         {
             ++fails;
+            cout << "Failed to locate walker. Lets try again." << endl;
             continue;
         }
         auto walker_bp = RandomChoice(*w_bp, rng);
         walker_bp.SetAttribute("is_invincible", "true");
+        //if (walker_bp.ContainsAttribute("is_invincible")) walker_bp.SetAttribute("is_invincible", "false");
         auto walker = m_world->TrySpawnActor(walker_bp, location.value());
         if (walker)
         {
