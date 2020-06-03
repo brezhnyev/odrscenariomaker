@@ -12,7 +12,10 @@ Briefly steps to compile Carla 0.9.9 and the Examples/CppClient
 5.4. cmake .. -DCMAKE_BUILD_TYPE=Client -DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/home/kbrezhnyev/BUILDS/boost_1_73_0  
 where the DCMAKE_BUILD_TYPE can be Server (not relevant in our case) and
 DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES the path to the boost_1_73_0
-6. To build the Client application:  
-6.1. cd Examples/CppClient  
-6.2. g++ main.cpp -o clientExample -I ~/BUILDS/carla/LibCarla/source/ -I ~/BUILDS/boost_1_73_0/ -L/home/kbrezhnyev/BUILDS/carla/Build/LibCarla/cmake/client/ -lcarla_client_debug  -L/usr/lib/x86_64-linux-gnu/ -lpng -ljpeg -ltiff -lrt -lpthread -L/usr/local/lib/ -lrpc -lDetour -lDetourCrowd -L/~tools/boost_1_73_0/libs/ -lboost_filesystem -Wl,--unresolved-symbols=ignore-all -g -O3  
+6. To build the Client application cd Examples/CppClient/ppp_simulation/cpp:
+* Debug:   mkdir debug, cd debug, cmake .. -DCMAKE_BUILD_TYPE=Debug
+* Release: mkdir release,  cd release, cmake .. -DCMAKE_BUILD_TYPE=Release
+There should be two soft links in the include folder:
+boost -> /path/to/boost/boost_1_73_0
+carla -> /path/to/carla/carla/LibCarla/source/
 7. Start the ./CarlaUE4.sh and then ./clientExample
