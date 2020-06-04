@@ -16,14 +16,18 @@ set(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/ppp_sim_start.cpp ${CMAKE_CURRENT_SOURCE_
 
 add_executable(${PROJECT_NAME} ${SOURCE})
 
-if(CMAKE_BUILD_TYPE MATCHES DEBUG)
-set(CLARA_LIB carla_client_debug)
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} " -g -O0")
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+set(CARLA_LIB carla_client_debug)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
 else()
-set(CLARA_LIB carla_client)
+set(CARLA_LIB carla_client)
 endif()
 
-target_link_libraries(${PROJECT_NAME} ${CLARA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
+message("CARLA_LIB: ${CARLA_LIB}")
+target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
 
 add_executable(testing ./test.cpp)
-target_link_libraries(testing ${CLARA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
+target_link_libraries(testing ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
+
+add_executable(originalExample ./originalExample.cpp)
+target_link_libraries(originalExample ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
