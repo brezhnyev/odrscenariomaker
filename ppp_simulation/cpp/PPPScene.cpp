@@ -68,7 +68,7 @@ void PPPScene::SaveImageToDisk(const csd::Image &image, int index, string type)
 }
 
 
-PPPScene::PPPScene(string confname) : m_doRun(false), m_isInitialized(false)
+PPPScene::PPPScene(string confname) : m_doRun(false), m_isInitialized(false), m_confname(confname)
 {
     try
     {
@@ -101,17 +101,11 @@ PPPScene::PPPScene(string confname) : m_doRun(false), m_isInitialized(false)
         m_world->ApplySettings(wsettings);
 
         // Spawn vehicles:
-        spawnVehicles(confname);
-        spawnWalkers(confname);
-
-        // // Set sensors:
-        setRGBCams(confname, m_RGBCams, "sensor.camera.rgb", "rgb");
-        setRGBCams(confname, m_RGBCamsSS, "sensor.camera.semantic_segmentation", "rgb_ss");
-        setDepthCams(confname, m_DepthCams, "sensor.camera.depth", "depth");
-        setDepthCams(confname, m_DepthCamsSS, "sensor.camera.semantic_segmentation", "depth_ss");
+        spawnVehicles();
+        spawnWalkers();
 
         // Set weather:
-        setWeather(confname);
+        setWeather();
 
         m_isInitialized = true;
     }
@@ -148,22 +142,22 @@ void PPPScene::start()
             }
         }
 
-        for (auto s : m_RGBCams) static_cast<cc::Sensor*>(s.get())->Stop();
-        for (auto s : m_RGBCamsSS) static_cast<cc::Sensor*>(s.get())->Stop();
-        for (auto s : m_DepthCams) static_cast<cc::Sensor*>(s.get())->Stop();
-        for (auto s : m_DepthCamsSS) static_cast<cc::Sensor*>(s.get())->Stop();
-        for (auto s : m_wControllers) static_cast<cc::WalkerAIController*>(s.get())->Stop();
+        for (auto s : m_RGBCams)        static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_RGBCamsSS)      static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_DepthCams)      static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_DepthCamsSS)    static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_wControllers)   static_cast<cc::WalkerAIController*>(s.get())->Stop();
     });
 }
 
-void PPPScene::setRGBCams(string confname, std::vector<ShrdPtrActor> & cams, string blueprintName, string outname)
+void PPPScene::setRGBCams(std::vector<ShrdPtrActor> & cams, string blueprintName, string outname)
 {
     auto blueprint_library = m_world->GetBlueprintLibrary();
     // Find a camera blueprint.
     auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find(blueprintName));
     EXPECT_TRUE(camera_bp != nullptr);
 
-    YAML::Node config = YAML::LoadFile(confname.c_str());
+    YAML::Node config = YAML::LoadFile(m_confname.c_str());
     camera_bp->SetAttribute("image_size_x", to_string(config["common"]["width"].as<int>()));
     camera_bp->SetAttribute("image_size_y", to_string(config["common"]["height"].as<int>()));
     camera_bp->SetAttribute("fov", to_string(config["common"]["fov"].as<int>()));
@@ -190,14 +184,14 @@ void PPPScene::setRGBCams(string confname, std::vector<ShrdPtrActor> & cams, str
     }
 }
 
-void PPPScene::setDepthCams(string confname, std::vector<ShrdPtrActor> & cams, string blueprintName, string outname)
+void PPPScene::setDepthCams(std::vector<ShrdPtrActor> & cams, string blueprintName, string outname)
 {
     auto blueprint_library = m_world->GetBlueprintLibrary();
     // Find a camera blueprint.
     auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find(blueprintName));
     EXPECT_TRUE(camera_bp != nullptr);
 
-    YAML::Node config = YAML::LoadFile(confname.c_str());
+    YAML::Node config = YAML::LoadFile(m_confname.c_str());
     camera_bp->SetAttribute("image_size_x", to_string(config["common"]["width"].as<int>()));
     camera_bp->SetAttribute("image_size_y", to_string(config["common"]["height"].as<int>()));
     camera_bp->SetAttribute("fov", "90"); // set hard-coded 90 degrees, since 4x90=360 for depth cameras -> lidar
@@ -231,7 +225,6 @@ void PPPScene::stop(bool abort)
         cout << "***Trying to gracefully quit: waiting to stop the client (ensure last callbacks are processed).***" << endl;
         m_doRun = false;
         m_thread->join();
-        usleep(100000);
     }
     else
     {
@@ -244,15 +237,15 @@ void PPPScene::stop(bool abort)
     try
     {
         // Remove vehicles and walkers:
-        for (auto && c : m_vehicles) c.get()->Destroy();
-        for (auto && c : m_wControllers) c.get()->Destroy();    
-        for (auto && c : m_walkers) c.get()->Destroy();
+        for (auto && c : m_vehicles)        destroyIfAlive(c);
+        for (auto && c : m_wControllers)    destroyIfAlive(c);
+        for (auto && c : m_walkers)         destroyIfAlive(c);
 
         // Remove sensors from the simulation.
-        for (auto && c : m_RGBCams) c.get()->Destroy();
-        for (auto && c : m_RGBCamsSS) c.get()->Destroy();
-        for (auto && c : m_DepthCams) c.get()->Destroy();
-        for (auto && c : m_DepthCamsSS) c.get()->Destroy();
+        for (auto && c : m_RGBCams)         destroyIfAlive(c);
+        for (auto && c : m_RGBCamsSS)       destroyIfAlive(c);
+        for (auto && c : m_DepthCams)       destroyIfAlive(c);
+        for (auto && c : m_DepthCamsSS)     destroyIfAlive(c);
     }
     catch(...)
     {
@@ -262,27 +255,27 @@ void PPPScene::stop(bool abort)
     std::cout << "Actors destroyed." << std::endl;
 }
 
-void PPPScene::setWeather(string confname)
+void PPPScene::setWeather()
 {
-    YAML::Node config = YAML::LoadFile(confname.c_str());
+    YAML::Node config = YAML::LoadFile(m_confname.c_str());
     // Set weather:
     auto wpreset = config["weather"]["_preset"];
     if (!wpreset.IsNull())
     {
-        if (wpreset.as<string>() == "Default") m_world->SetWeather(WeatherParameters::Default);
-        if (wpreset.as<string>() == "ClearNoon") m_world->SetWeather(WeatherParameters::ClearNoon);
-        if (wpreset.as<string>() == "CloudyNoon") m_world->SetWeather(WeatherParameters::CloudyNoon);
-        if (wpreset.as<string>() == "WetNoon") m_world->SetWeather(WeatherParameters::WetNoon);
-        if (wpreset.as<string>() == "WetCloudyNoon") m_world->SetWeather(WeatherParameters::WetCloudyNoon);
-        if (wpreset.as<string>() == "MidRainyNoon") m_world->SetWeather(WeatherParameters::MidRainyNoon);
-        if (wpreset.as<string>() == "HardRainNoon") m_world->SetWeather(WeatherParameters::HardRainNoon);
-        if (wpreset.as<string>() == "SoftRainNoon") m_world->SetWeather(WeatherParameters::SoftRainNoon);
-        if (wpreset.as<string>() == "ClearSunset") m_world->SetWeather(WeatherParameters::ClearSunset);
-        if (wpreset.as<string>() == "CloudySunset") m_world->SetWeather(WeatherParameters::CloudySunset);
-        if (wpreset.as<string>() == "WetSunset") m_world->SetWeather(WeatherParameters::WetSunset);
-        if (wpreset.as<string>() == "WetCloudySunset") m_world->SetWeather(WeatherParameters::WetCloudySunset);
-        if (wpreset.as<string>() == "MidRainSunset") m_world->SetWeather(WeatherParameters::MidRainSunset);
-        if (wpreset.as<string>() == "SoftRainSunset") m_world->SetWeather(WeatherParameters::SoftRainSunset);
+        if (wpreset.as<string>() == "Default")          m_world->SetWeather(WeatherParameters::Default);
+        if (wpreset.as<string>() == "ClearNoon")        m_world->SetWeather(WeatherParameters::ClearNoon);
+        if (wpreset.as<string>() == "CloudyNoon")       m_world->SetWeather(WeatherParameters::CloudyNoon);
+        if (wpreset.as<string>() == "WetNoon")          m_world->SetWeather(WeatherParameters::WetNoon);
+        if (wpreset.as<string>() == "WetCloudyNoon")    m_world->SetWeather(WeatherParameters::WetCloudyNoon);
+        if (wpreset.as<string>() == "MidRainyNoon")     m_world->SetWeather(WeatherParameters::MidRainyNoon);
+        if (wpreset.as<string>() == "HardRainNoon")     m_world->SetWeather(WeatherParameters::HardRainNoon);
+        if (wpreset.as<string>() == "SoftRainNoon")     m_world->SetWeather(WeatherParameters::SoftRainNoon);
+        if (wpreset.as<string>() == "ClearSunset")      m_world->SetWeather(WeatherParameters::ClearSunset);
+        if (wpreset.as<string>() == "CloudySunset")     m_world->SetWeather(WeatherParameters::CloudySunset);
+        if (wpreset.as<string>() == "WetSunset")        m_world->SetWeather(WeatherParameters::WetSunset);
+        if (wpreset.as<string>() == "WetCloudySunset")  m_world->SetWeather(WeatherParameters::WetCloudySunset);
+        if (wpreset.as<string>() == "MidRainSunset")    m_world->SetWeather(WeatherParameters::MidRainSunset);
+        if (wpreset.as<string>() == "SoftRainSunset")   m_world->SetWeather(WeatherParameters::SoftRainSunset);
     }
     else
     {
@@ -302,9 +295,9 @@ void PPPScene::setWeather(string confname)
     }
 }
 
-void PPPScene::spawnVehicles(string confname)
+void PPPScene::spawnVehicles()
 {
-    YAML::Node config = YAML::LoadFile(confname.c_str());
+    YAML::Node config = YAML::LoadFile(m_confname.c_str());
     string filter = config["spawner"]["vehicles"]["filter"].as<string>();
     auto blueprints = m_world->GetBlueprintLibrary()->Filter(filter);
     auto spawn_points = m_world->GetMap()->GetRecommendedSpawnPoints();
@@ -373,9 +366,9 @@ void PPPScene::spawnVehicles(string confname)
     }
 }
 
-void PPPScene::spawnWalkers(string confname)
+void PPPScene::spawnWalkers()
 {
-    YAML::Node config = YAML::LoadFile(confname.c_str());
+    YAML::Node config = YAML::LoadFile(m_confname.c_str());
     int number_of_walkers = config["spawner"]["walkers"]["number"].as<int>();
 
     int percentagePedestriansRunning = config["spawner"]["walkers"]["running"].as<int>();       // how many pedestrians will run
@@ -447,5 +440,33 @@ void PPPScene::spawnWalkers(string confname)
         // KB: important! First Start then any settings like max speed.
         static_cast<cc::WalkerAIController*>(m_wControllers[i].get())->Start();
         static_cast<cc::WalkerAIController*>(m_wControllers[i].get())->SetMaxSpeed(speeds[i]);
+    }
+}
+
+void PPPScene::doRecording(bool record)
+{
+    // It turned out to be more efficient to create new sensors once the recording is required
+    // since existing sensors (even without recording files to disk) consume too much of the CPU for being rendered
+    if (record)
+    {
+        // Set sensors:
+        setRGBCams  (m_RGBCams,         "sensor.camera.rgb", "rgb");
+        setRGBCams  (m_RGBCamsSS,       "sensor.camera.semantic_segmentation", "rgb_ss");
+        setDepthCams(m_DepthCams,       "sensor.camera.depth", "depth");
+        setDepthCams(m_DepthCamsSS,     "sensor.camera.semantic_segmentation", "depth_ss");
+    }
+    else
+    {
+        // KB: it may be reasonable to check if the stopping is haning
+        // and also try-catch for Destroy() function
+        for (auto s : m_RGBCams)        static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_RGBCamsSS)      static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_DepthCams)      static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_DepthCamsSS)    static_cast<cc::Sensor*>(s.get())->Stop();
+
+        for (auto && c : m_RGBCams)     destroyIfAlive(c); m_RGBCams.clear();
+        for (auto && c : m_RGBCamsSS)   destroyIfAlive(c); m_RGBCamsSS.clear();
+        for (auto && c : m_DepthCams)   destroyIfAlive(c); m_DepthCams.clear();
+        for (auto && c : m_DepthCamsSS) destroyIfAlive(c); m_DepthCamsSS.clear();
     }
 }

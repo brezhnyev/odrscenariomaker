@@ -19,15 +19,20 @@ public:
     PPPScene(std::string config);
     void start();
     void stop(bool abort = false);
+    void doRecording(bool record);
     bool isInitialized() { return m_isInitialized; }
 
 private:
-    void setRGBCams(std::string config, std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
-    void setDepthCams(std::string config, std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
-    void setWeather(std::string config);
-    void spawnVehicles(std::string config);
-    void spawnWalkers(std::string config);
+    void setRGBCams(std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
+    void setDepthCams(std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
+    void setWeather();
+    void spawnVehicles();
+    void spawnWalkers();
     void SaveImageToDisk(const carla::sensor::data::Image &image, int index, std::string type);
+    void destroyIfAlive(ShrdPtrActor actor)
+    {
+        if (actor.get()->IsAlive()) actor.get()->Destroy();
+    }
 
 private:
     ShrdPtrActor                            m_actor;
@@ -44,6 +49,7 @@ private:
     std::vector<ShrdPtrActor>               m_wControllers;
 
     std::thread                            *m_thread;
-    bool m_doRun;
-    bool m_isInitialized;
+    bool                                    m_doRun;
+    bool                                    m_isInitialized;
+    std::string                             m_confname;
 };

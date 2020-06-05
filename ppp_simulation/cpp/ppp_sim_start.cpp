@@ -38,33 +38,59 @@ int main(int argc, const char *argv[])
     isStopped = false;
     signal(SIGINT, sighandler);
 
-    if (argc < 2)
+    if (argc < 1)
     {
         cout << "***Specify the configuration file.***" << endl;
         return 0;
     }
-    PPPScene scene(argv[1]);
+    PPPScene scene("../configuration.yaml");
     if (!scene.isInitialized()) return 1;
+
+    thread keyboard(
+        [&]()
+        {
+            bool isRecording = false;
+            while (true)
+            {
+                char key;
+                cin >> key;
+                if (key == 'r')
+                {
+                    isRecording = !isRecording;
+                    if (isRecording) cout << "Recording is started!" << endl;
+                    else cout << "Recording is stopped!" << endl;
+                    cout.flush();
+                    scene.doRecording(isRecording);
+                }
+            }
+        }
+    );
+    keyboard.detach(); // this is safe, since only waiting for key input. The thread will be destroyed on exit.
+
     scene.start();
     {
         unique_lock<mutex> lk(mtx);
-        // wait for Ctrl+C signal:
+        // MAIN THREAD: wait for Ctrl+C signal:
         cv.wait(lk, [](){ return isStopped; });
     }
 
     // If quitting lasts longer than 10 seconds, then abnormally quit
     // This can happen ex. when the server is closed/crashed/down
     bool doGracefulQuit = false;
-    thread t([&]()
+    thread quittimer([&]()
     {
         unique_lock<mutex> lk(mtx);
         cv.wait_for(lk, 10s, [&](){ return doGracefulQuit; });
-        if (!doGracefulQuit) scene.stop(true);
+        if (!doGracefulQuit)
+        {
+            scene.stop(true);
+            return 1;
+        }
     });
-    scene.stop(false);
+    scene.stop(false); // if this lasts longer than 10 seconds the quittimer will fire and exit
     doGracefulQuit = true;
     cv.notify_all();
-    t.join();
+    quittimer.join();
 
     return 0;
 }

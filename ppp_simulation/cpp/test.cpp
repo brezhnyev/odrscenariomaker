@@ -60,7 +60,7 @@ static auto &RandomChoice(const RangeT &range, RNG &&generator)
 int main(int argc, const char *argv[])
 {
     isStopped = false;
-    signal(SIGABRT, SIG_IGN);
+    signal(SIGINT, sighandler);
 
     mt19937_64 rng((random_device())());
 
@@ -163,8 +163,6 @@ int main(int argc, const char *argv[])
         }
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
-
-    usleep(100000);
 
     m_world.ApplySettings(defaultSettings);
     for (auto v : vehicles) v->Destroy();
