@@ -38,12 +38,12 @@ int main(int argc, const char *argv[])
     isStopped = false;
     signal(SIGINT, sighandler);
 
-    if (argc < 1)
+    if (argc < 2)
     {
         cout << "***Specify the configuration file.***" << endl;
         return 0;
     }
-    PPPScene scene("../configuration.yaml");
+    PPPScene scene(argv[1]);
     if (!scene.isInitialized()) return 1;
 
     thread keyboard(
