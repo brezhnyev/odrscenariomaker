@@ -14,13 +14,13 @@ The Build folder after running "make rebuild" and "cmake .." as above:
 kbrezhnyev@kbrezhnyev-Precision-7510:~/BUILDS/carla/Build$ tree . -L 1
 .
 ├── boost-1.72.0-c8-install
-├── CMakeCache.txt            <--- this is generaged by "cmake .."
-├── CMakeFiles                <--- this is generaged by "cmake .."
-├── cmake_install.cmake       <--- this is generaged by "cmake .."
+├── CMakeCache.txt            // this is generaged by "cmake .."
+├── CMakeFiles                // this is generaged by "cmake .."
+├── cmake_install.cmake       // this is generaged by "cmake .."
 ├── CMakeLists.txt.in
 ├── gtest-1.8.1-c8-libcxx-install
 ├── gtest-1.8.1-c8-libstdcxx-install
-├── LibCarla                  <--- this is generaged by "cmake .."
+├── LibCarla                  // this is generaged by "cmake .."
 ├── libcarla-client-build.debug
 ├── libcarla-client-build.release
 ├── libcarla-server-build.debug
@@ -39,8 +39,8 @@ Suggested is to run "make rebuild" **at least once** to let the configuration pr
 **The "make rebuild" and "cmake .." commands will place the resulting libcarla_client_debug.a and libcarla_client.a libraries into different folders!**
 <pre>
 kbrezhnyev@kbrezhnyev-Precision-7510:~/BUILDS/carla/Build$ find . -iname libcarla_client_debug.a
-./libcarla-client-build.debug/LibCarla/cmake/client/libcarla_client_debug.a          <----- built with the "make rebuild" command
-./LibCarla/cmake/client/libcarla_client_debug.a                                      <------build "with cmake .." command
+./libcarla-client-build.debug/LibCarla/cmake/client/libcarla_client_debug.a          // built with the "make rebuild" command
+./LibCarla/cmake/client/libcarla_client_debug.a                                      // build "with cmake .." command
 </pre>
 
 ## Alternative way (outdated). The following alternative will need to install the required components manually and avoid installing clang and ninja.
