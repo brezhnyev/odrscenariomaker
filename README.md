@@ -1,5 +1,6 @@
 # Steps to compile Carla 0.9.9 and the Examples/CppClient.<br>
-## The legacy way would require clang and ninja installed on the system.
+## Legacy way.
+This would require clang and ninja installed on the system.
 1. Checkout the Carla 0.9.9. **Important!** The master branch has now a bug in commit c45614c983fa72b971dde1964b85aeb15e5a4ac7 that will crash any client. So use the above 0.9.9 tag! The bug was reported to the author.
 2. Apply the provided patch for carla. This is apparently a bug in the Carla tag 0.9.9. This bug will NOT produce a crash BUT will make the cars "blind to see" the walkers **on (re)loading a map** which causes too many accidents. This bug is reported as merge request to the main Carla branch. However before the request is merged there is no handy way to provide this change other than using the patch.
 3. run "make rebuild" from the root folder. Follow the error messages about the missing components (ex. clang and ninja).
@@ -43,7 +44,8 @@ kbrezhnyev@kbrezhnyev-Precision-7510:~/BUILDS/carla/Build$ find . -iname libcarl
 ./LibCarla/cmake/client/libcarla_client_debug.a                                      // build "with cmake .." command
 </pre>
 
-## Alternative way (outdated). The following alternative will need to install the required components manually and avoid installing clang and ninja.
+## Alternative way (outdated).
+The following alternative will need to install the required components manually and avoid installing clang and ninja.
 1. Download rpclib. git clone https://github.com/rpclib/rpclib.git, build as usual and sudo checkinstall
 2. Download recastnavigation. git clone https://github.com/carla-simulator/recastnavigation.git, build as usual and sudo checkinstall
 **Important!** the recastnavigation exists as forks in different repos in internet. **Important to use the one for carla + "recast_builder" branch.**
@@ -62,18 +64,17 @@ DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES the path to the boost_1_73_0
 
 # Building Client application
 To build the Client application cd ppp_simulation/cpp:
-1. Make the debug and/or release directories:
-* Debug:   mkdir debug, cd debug, cmake .. -DCMAKE_BUILD_TYPE=Debug
-* Release: mkdir release,  cd release, cmake .. -DCMAKE_BUILD_TYPE=Release
-2. Make include directory with mkdir include. There should be two soft links in the include folder:<br>
+1. Make include directory with mkdir include. There should be two soft links in the include folder:<br>
 * boost -> /path/to/carla_repo/Build/boost-1.72.0-c8-install/include
 * carla -> /path/to/carla_repo/LibCarla/source/
-3. Make lib folder. There should be the following soft links int the lib folder:<br>
+2. Make lib folder. There should be the following soft links int the lib folder:<br>
 * boost -> /path/to/carla_repo/Build/boost-1.72.0-c8-install/lib/
 * carla_debug -> /path/to/carla_repo/Build/<libcarla-client-build.debug>/LibCarla/cmake/client  (libcarla-client-build.debug is optional)
 * carla_release -> /path/to/carla_repo/Build/<libcarla-client-build.release>/LibCarla/cmake/client (libcarla-client-build.debug is optional)
-4. cd release or debug. Run "cmake .."
-5. Start the ./CarlaUE4.sh and then ./clientExample in two different terminals
+3. Make the debug and/or release directories:
+* Debug:   mkdir debug, cd debug, cmake .. -DCMAKE_BUILD_TYPE=Debug
+* Release: mkdir release,  cd release, cmake .. -DCMAKE_BUILD_TYPE=Release
+4. Start the ./CarlaUE4.sh and then ./clientExample in two different terminals
 
 Example of the files structure in the ppp_simulation/cpp folder:
 <pre>
