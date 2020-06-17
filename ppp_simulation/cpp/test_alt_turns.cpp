@@ -7,6 +7,7 @@
 #include <carla/client/WalkerAIController.h>
 #include <carla/geom/Transform.h>
 #include <carla/rpc/EpisodeSettings.h>
+#include <carla/rpc/WheelPhysicsControl.h>
 
 #include <chrono>
 #include <iostream>
@@ -140,13 +141,13 @@ int main(int argc, const char *argv[])
     }
 
     cg::Transform transform(cg::Location(193.699, 270, 0), cg::Rotation(0,-90,0));
-    //cg::Transform transform(cg::Location(173.699, 241, 0), cg::Rotation(0,0,0));
+    //cg::Transform transform(cg::Location(173.699, 237, 0), cg::Rotation(0,-180,0));
     vehicles[0]->SetTransform(transform);
     auto spectator = m_world.GetSpectator();
-    transform.location -= 10.0f * transform.GetForwardVector();
-    transform.location.z += 20.0f;
+    //transform.location -= 10.0f * transform.GetForwardVector();
+    transform.location.z += 50.0f;
     //transform.rotation.yaw += 180.0f;
-    transform.rotation.pitch = -45.0f;
+    transform.rotation.pitch = -60.0f;
     spectator->SetTransform(transform);
 
     auto vehicle = static_cast<cc::Vehicle*>(vehicles[0].get());
@@ -154,13 +155,57 @@ int main(int argc, const char *argv[])
     control.throttle = 1.0f;
     vehicle->ApplyControl(control);
 
+    // auto traffic_manager = client.GetInstanceTM(8000); //KB: the port
+    // traffic_manager.SetGlobalDistanceToLeadingVehicle(2.0);
+    // traffic_manager.SetSynchronousMode(true);
+    // traffic_manager.RegisterVehicles(vehicles);
+
+    // adding physics control
+    // auto physics = vehicle->GetPhysicsControl();
+    // vector<crpc::WheelPhysicsControl>wheels(4);
+    // //physics.wheels = wheels;
+    // physics.moi = 1.0;
+    // physics.damping_rate_full_throttle = 0.0;
+    // physics.use_gear_autobox = true;
+    // physics.gear_switch_time = 0.5;
+    // physics.clutch_strength = 10;
+    // physics.mass = 5000;
+    // physics.drag_coefficient = 0.25;
+    // vehicle->ApplyPhysicsControl(physics);
+
+
+    // PYTHON example:
+    // front_left_wheel  = carla.WheelPhysicsControl(tire_friction=4.5, damping_rate=1.0, max_steer_angle=70.0, radius=30.0)
+    // front_right_wheel = carla.WheelPhysicsControl(tire_friction=2.5, damping_rate=1.5, max_steer_angle=70.0, radius=25.0)
+    // rear_left_wheel   = carla.WheelPhysicsControl(tire_friction=1.0, damping_rate=0.2, max_steer_angle=0.0,  radius=15.0)
+    // rear_right_wheel  = carla.WheelPhysicsControl(tire_friction=1.5, damping_rate=1.3, max_steer_angle=0.0,  radius=20.0)
+
+    // wheels = [front_left_wheel, front_right_wheel, rear_left_wheel, rear_right_wheel]
+
+    // # Change Vehicle Physics Control parameters of the vehicle
+    // physics_control = vehicle.get_physics_control()
+
+    // physics_control.torque_curve = [carla.Vector2D(x=0, y=400), carla.Vector2D(x=1300, y=600)]
+    // physics_control.max_rpm = 10000
+    // physics_control.moi = 1.0
+    // physics_control.damping_rate_full_throttle = 0.0
+    // physics_control.use_gear_autobox = True
+    // physics_control.gear_switch_time = 0.5
+    // physics_control.clutch_strength = 10
+    // physics_control.mass = 10000
+    // physics_control.drag_coefficient = 0.25
+    // physics_control.steering_curve = [carla.Vector2D(x=0, y=1), carla.Vector2D(x=100, y=1), carla.Vector2D(x=300, y=1)]
+    // physics_control.wheels = wheels
+
     m_world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
 
-    const float SPEED = 10.0f;
+    float SPEED = 10.0f;
     map<int, std::vector<carla::SharedPtr<cc::Waypoint>>> paths;
     int pathID = -1;
-    const float DIST = 5.0f; // how far away we scan the waypoints ahead of the vehicle
+    const float DIST = 6.0f; // how far away we scan the waypoints ahead of the vehicle
     bool turnLeft = true;
+
+    vehicle->SetSimulatePhysics();
 
     // Comments to the below block:
     // The GetWaypoint(position) returns the closest waypoint to the requested position
@@ -181,6 +226,17 @@ int main(int argc, const char *argv[])
             auto waypoint = m_world.GetMap()->GetWaypoint(vehicle->GetLocation());
             auto trf = vehicle->GetTransform();
             auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
+            auto speed =  vehicle->GetVelocity().Length();
+            if (speed > SPEED)
+            {
+                control.throttle = 0.5f;
+                vehicle->ApplyControl(control);
+            }
+            else
+            {
+                control.brake = 0.0f;
+                vehicle->ApplyControl(control);
+            }
 
             // vehicle enters the junction, figure out which of the alternative ways is the turn to the left
             if (waypoint->IsJunction() && pathID == -1)
@@ -203,6 +259,8 @@ int main(int argc, const char *argv[])
                 pathID = -1;
                 paths.clear();
                 turnLeft = !turnLeft; // alternate turn left and turn right
+                control.brake = 0.0f;
+                vehicle->ApplyControl(control);
             }
 
             // If the vehicle in the junction: the m_world.GetMap()->GetWaypoint(vehicle->GetLocation())
@@ -236,23 +294,38 @@ int main(int argc, const char *argv[])
                 auto dir = (p->GetTransform().location - trf.location).MakeUnitVector();
                 auto z = dir.x * heading.y - dir.y * heading.x;
                 indices[z] = i;
-                if (p->IsJunction()) paths[p->GetRoadId()].push_back(p);
+                if (p->IsJunction())
+                {
+                    paths[p->GetRoadId()].push_back(p);
+                }
             }
 
-            // we choose the left most point to compute the direction of movement and the angular speed:
+            // // we choose the left most point to compute the direction of movement and the angular speed:
             auto p = waypoints[indices.rbegin()->second]; // turn left
             if (!turnLeft) p = waypoints[indices.begin()->second]; // turn right
             auto dir = (p->GetTransform().location - trf.location).MakeUnitVector();
-            vehicle->SetVelocity(dir*SPEED);
+            // vehicle->SetVelocity(dir*SPEED);
             auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
             auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
-            vehicle->SetAngularVelocity(cg::Vector3D(0.0f,0.0f, SPEED * sign * arc.Length()/0.0333));
+            // vehicle->SetAngularVelocity(cg::Vector3D(0.0f,0.0f, SPEED * sign * arc.Length()/0.0333));
 
             // COMMENT:
             // here the p MAY happen to be a waypoint from a IMPROPER track!!!
             // This is especially possible when the waypoints are very close to the beginning of the junction
             // where the tracks are almost overlapping
             // This is NOT critical for heading the vehicle at this moment since the vehicle is now ~DIST meters away from the junction
+
+            control.steer = sign * arc.Length();
+            vehicle->ApplyControl(control);
+
+            // The stronger is the curvature the lower speed:
+            // get centrifusual acceleration:
+            auto ac = speed*arc.Length();
+            control.brake = ac/30;
+            cout << control.brake << endl;
+            // However not lower than 1/10 th of the speed:
+            if (vehicle->GetVelocity().Length() < 0.5*SPEED) control.brake = 0.0f;
+            vehicle->ApplyControl(control);
             
             m_world.Tick(carla::time_duration(1s));
         }
