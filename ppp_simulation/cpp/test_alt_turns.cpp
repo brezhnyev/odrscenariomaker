@@ -8,6 +8,7 @@
 #include <carla/geom/Transform.h>
 #include <carla/rpc/EpisodeSettings.h>
 #include <carla/rpc/WheelPhysicsControl.h>
+#include <carla/rpc/VehicleLightState.h>
 
 #include <chrono>
 #include <iostream>
@@ -219,6 +220,30 @@ int main(int argc, const char *argv[])
     // 3. waypoints are the next waypoints from the waypoint DIST away ahead from it. Should be array of size 1 if the scan is NOT in junction.
     // 4. paths is a container of possible paths (i.e. waypoints) in the junction
 
+    auto brake = [&](float strength, cc::Vehicle* vehicle)
+    {
+        auto ls = vehicle->GetLightState();
+        auto speed =  vehicle->GetVelocity().Length();
+        const float threshold = 0.05f;
+
+        if (strength < threshold && speed < SPEED)
+        {
+            control.brake = 0.0f;
+            control.throttle = 0.5f;
+            ls = crpc::VehicleLightState::LightState::None;
+        }
+        else
+        {
+            strength = max(strength, threshold);
+            control.brake = strength;
+            control.throttle = 0.0f;
+            ls = crpc::VehicleLightState::LightState::Brake;
+        }
+
+        vehicle->SetLightState(ls);
+        vehicle->ApplyControl(control);
+    };
+
     while (!isStopped)
     {
         try
@@ -227,16 +252,8 @@ int main(int argc, const char *argv[])
             auto trf = vehicle->GetTransform();
             auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
             auto speed =  vehicle->GetVelocity().Length();
-            if (speed > SPEED)
-            {
-                control.throttle = 0.5f;
-                vehicle->ApplyControl(control);
-            }
-            else
-            {
-                control.brake = 0.0f;
-                vehicle->ApplyControl(control);
-            }
+
+            cout << speed << endl;
 
             // vehicle enters the junction, figure out which of the alternative ways is the turn to the left
             if (waypoint->IsJunction() && pathID == -1)
@@ -297,6 +314,8 @@ int main(int argc, const char *argv[])
                 if (p->IsJunction())
                 {
                     paths[p->GetRoadId()].push_back(p);
+                    control.throttle = 0.0f;
+                    vehicle->ApplyControl(control);
                 }
             }
 
@@ -321,11 +340,7 @@ int main(int argc, const char *argv[])
             // The stronger is the curvature the lower speed:
             // get centrifusual acceleration:
             auto ac = speed*arc.Length();
-            control.brake = ac/30;
-            cout << control.brake << endl;
-            // However not lower than 1/10 th of the speed:
-            if (vehicle->GetVelocity().Length() < 0.5*SPEED) control.brake = 0.0f;
-            vehicle->ApplyControl(control);
+            brake(ac/30, vehicle);
             
             m_world.Tick(carla::time_duration(1s));
         }
