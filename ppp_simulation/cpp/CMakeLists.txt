@@ -35,3 +35,6 @@ target_link_libraries(originalExample ${CARLA_LIB} png jpeg tiff rt pthread rpc 
 
 add_executable(test_left_turns ./test_left_turns.cpp)
 target_link_libraries(test_left_turns ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+
+add_executable(test_alt_turns ./test_alt_turns.cpp)
+target_link_libraries(test_alt_turns ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
