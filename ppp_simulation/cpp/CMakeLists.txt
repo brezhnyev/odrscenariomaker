@@ -30,11 +30,17 @@ target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc 
 add_executable(originalExample ./originalExample.cpp)
 target_link_libraries(originalExample ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
-add_executable(test_spawn ./scenarios//test_spawn.cpp)
+add_executable(test_spawn ./tests//test_spawn.cpp)
 target_link_libraries(test_spawn ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
-add_executable(test_left_turns ./scenarios/test_left_turns.cpp)
+add_executable(test_left_turns ./tests/test_left_turns.cpp)
 target_link_libraries(test_left_turns ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
-add_executable(test_alt_turns ./scenarios/test_alt_turns.cpp)
+add_executable(test_alt_turns ./tests/test_alt_turns.cpp)
 target_link_libraries(test_alt_turns ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+
+add_executable(test_walker ./tests/test_walker.cpp)
+target_link_libraries(test_walker ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+
+add_executable(scenario_01 ./scenarios/scenario_01.cpp)
+target_link_libraries(scenario_01 ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)

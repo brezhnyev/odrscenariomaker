@@ -119,7 +119,7 @@ int main(int argc, const char *argv[])
     spectator->SetTransform(transform);
 
     auto walker = static_cast<cc::Walker*>(walkers[0].get());
-    auto control = walker->GetWalkerControl();
+    auto wcontrol = walker->GetWalkerControl();
 
     m_world.SetPedestriansCrossFactor(0.0f);
 
@@ -132,9 +132,9 @@ int main(int argc, const char *argv[])
             // wbc.bone_transforms.push_back(btd);
             // walker->ApplyControl(wbc);
             
-            control.speed = 1.5f;
-            control.direction = cg::Vector3D(0,-1,0);
-            walker->ApplyControl(control);
+            wcontrol.speed = 1.5f;
+            wcontrol.direction = cg::Vector3D(0,-1,0);
+            walker->ApplyControl(wcontrol);
             m_world.Tick(carla::time_duration(1s));
         }
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
