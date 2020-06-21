@@ -10,9 +10,10 @@ using namespace carla::geom;
 using namespace carla::client;
 using namespace std;
 
-PVehicle::PVehicle(carla::client::World & world, Transform trf) : PActor(world)
+PVehicle::PVehicle(carla::client::World & world, std::string name, carla::geom::Transform trf, float speed, std::vector<string> behaviour) 
+: PActor(world, name, trf, speed, behaviour)
 {
-    auto blueprints = world.GetBlueprintLibrary()->Filter("vehicle.volkswagen.t2");
+    auto blueprints = world.GetBlueprintLibrary()->Filter(name);
     if (!blueprints->empty())
     {
         auto blueprint = (*blueprints)[0];
@@ -34,13 +35,12 @@ PVehicle::PVehicle(carla::client::World & world, Transform trf) : PActor(world)
         auto vehicle = static_cast<Vehicle*>(m_actor.get());
         //m_control = vehicle->GetControl(); // KB: Control should be used created by default c-tor, otherwise the vehicle does not move
         m_control.throttle = 1.0f;
+        vehicle->ApplyControl(m_control);
         vehicle->SetSimulatePhysics();
         
-        m_speed = 10.0f;
         m_pathID = -1;
         m_dist = 5.0f; // how far away we scan the waypoints ahead of the vehicle
         m_turnLeft = true;
-
     }
 }
 
@@ -161,6 +161,4 @@ void PVehicle::Tick()
     float R = abs(3 * tan(M_PI_2 - m_control.steer)); // 3 is the ~length between axes
     float acc = speed * speed / R;                  // get centrifusual acceleration
     brake(0.01f * acc, vehicle);
-    if (p->IsJunction())
-        m_control.throttle = 0.0f;
 }

@@ -9,9 +9,10 @@ using namespace carla::geom;
 using namespace carla::client;
 using namespace std;
 
-PWalker::PWalker(carla::client::World & world, Transform trf) : PActor(world)
+PWalker::PWalker(carla::client::World & world, std::string name, carla::geom::Transform trf, float speed, std::vector<string> behaviour) 
+: PActor(world, name, trf, speed, behaviour)
 {
-    auto blueprints = world.GetBlueprintLibrary()->Filter("walker.pedestrian.0004");
+    auto blueprints = world.GetBlueprintLibrary()->Filter(name);
     if (!blueprints->empty())
     {
         auto blueprint = (*blueprints)[0];
@@ -29,7 +30,8 @@ PWalker::PWalker(carla::client::World & world, Transform trf) : PActor(world)
 
 void PWalker::Tick()
 {
-    m_control.speed = 1.5f;
-    m_control.direction = Vector3D(0,-1,0);
+    m_control.speed = m_speed;
+    float yaw = m_trf.rotation.yaw*M_PI/180;
+    m_control.direction = Vector3D(cos(yaw), sin(yaw),0);
     static_cast<Walker*>(m_actor.get())->ApplyControl(m_control);
 }

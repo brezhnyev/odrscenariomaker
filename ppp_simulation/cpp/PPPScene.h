@@ -1,4 +1,3 @@
-#include <string>
 #include <carla/client/Actor.h>
 #include <carla/client/Sensor.h>
 #include <carla/client/World.h>
@@ -7,7 +6,7 @@
 #include <carla/image/ImageView.h>
 #include <carla/sensor/data/Image.h>
 
-
+#include <string>
 #include <thread>
 #include <vector>
 

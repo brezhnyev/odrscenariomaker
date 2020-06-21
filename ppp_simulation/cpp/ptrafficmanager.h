@@ -3,15 +3,12 @@
 class PTrafficManager
 {
 public:
+    PTrafficManager(carla::client::World & world, std::string confname);
     ~PTrafficManager() { for (auto && a : m_actors) delete a; }
-    void AddActor(PActor * actor)
-    {
-        m_actors.push_back(actor);
-    }
-    void Setup();
     void Tick()
     {
         for (auto && a : m_actors) a->Tick();
     }
+private:
     std::vector<PActor*> m_actors;
 };
