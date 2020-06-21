@@ -129,7 +129,6 @@ int main(int argc, const char *argv[])
     vector<ShrdPtrActor> walkers; walkers.reserve(number_of_walkers);
 
     auto w_bp = m_world.GetBlueprintLibrary()->Filter("walker.pedestrian.0004"); // "Filter" returns BluePrintLibrary (i.e. wrapper about container of ActorBlueprints)
-    auto wc_bp = m_world.GetBlueprintLibrary()->Find("controller.ai.walker"); // "Find" returns pointer to the ActorBlueprint
 
     for (int i = 0; i < number_of_walkers;)
     {
