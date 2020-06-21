@@ -3,6 +3,7 @@
 class PTrafficManager
 {
 public:
+    ~PTrafficManager() { for (auto && a : m_actors) delete a; }
     void AddActor(PActor * actor)
     {
         m_actors.push_back(actor);

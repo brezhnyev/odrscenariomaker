@@ -1,30 +1,12 @@
-#include <carla/client/ActorBlueprint.h>
-#include <carla/client/BlueprintLibrary.h>
-#include <carla/client/Client.h>
-#include <carla/client/detail/Client.h>
-#include <carla/client/Map.h>
-#include <carla/client/TimeoutException.h>
-#include <carla/client/WalkerAIController.h>
-#include <carla/geom/Transform.h>
-#include <carla/rpc/EpisodeSettings.h>
-#include <carla/rpc/WheelPhysicsControl.h>
-#include <carla/rpc/VehicleLightState.h>
-#include <carla/rpc/WalkerBoneControl.h>
-
 #include "ptrafficmanager.h"
 
-#include <chrono>
+#include <carla/client/Client.h>
+#include <carla/client/TimeoutException.h>
+#include <carla/rpc/EpisodeSettings.h>
+
 #include <iostream>
-#include <random>
-#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <thread>
-#include <tuple>
-#include <vector>
-#include <fstream>
-#include <map>
-#include <deque>
 
 #include <iostream>
 #include <signal.h>
@@ -54,27 +36,15 @@ void sighandler(int sig)
     cout << sig << endl;
 }
 
-/// Pick a random element from @a range.
-template <typename RangeT, typename RNG>
-static auto &RandomChoice(const RangeT &range, RNG &&generator)
-{
-    assert(range.size() > 0u);
-    uniform_int_distribution<size_t> dist{0u, range.size() - 1u};
-    return range[dist(forward<RNG>(generator))]; // KB: this can fail for map
-}
-
 int main(int argc, const char *argv[])
 {
     // This test is adopted for Town02 so any other one will place the vehicle in improper position
+    string config;
     string town_name = "Town02";
-    if (argc > 1)
-    {
-        string town_name = argv[1];
-    }
+    if (argc > 1) town_name = argv[1];
+    
     isStopped = false;
     signal(SIGINT, sighandler);
-
-    mt19937_64 rng((random_device())());
 
     auto client = cc::Client("127.0.0.1", 2000);
     client.SetTimeout(10s);
@@ -83,7 +53,6 @@ int main(int argc, const char *argv[])
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
     auto m_world = client.LoadWorld(town_name);
-    auto waypoint_topology = m_world.GetMap()->GetTopology();
     
     // Synchronous mode:
     auto defaultSettings = m_world.GetSettings();
