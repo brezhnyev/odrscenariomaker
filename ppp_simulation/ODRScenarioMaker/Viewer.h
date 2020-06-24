@@ -2,6 +2,7 @@
 
 #include "Canvas.h"
 #include "Waypath.h"
+#include "scenario.h"
 
 #include <QGLViewer/qglviewer.h>
 
@@ -9,22 +10,22 @@ class Viewer : public QGLViewer
 {
     Q_OBJECT
 public:
-    Viewer();
+    Viewer(Scenario & scenario);
     ~Viewer() override {};
     void draw() override;
     void drawWithNames() override;
     void init() override;
     void postSelection(const QPoint &point) override;
-    void addWaypath();
-    void addWaypoint(Eigen::Vector3f);
-    void delWaypath(int id);
-    void delWaypoint();
-    void setActivePath(int id) { if (id < m_waypaths.size()) m_activeWaypath = id;  }
-    void selectWaypoint(int id);
+
+signals:
+    void signal_addWaypath(int);
+    void signal_addWaypoint(int);
+    void signal_delWaypath(int);
+    void signal_delWaypoint(int);
+    void signal_setActiveWaypath(int);
+    void signal_setlectWaypoint(int);
 
 private:
     Canvas m_canvas;
-    std::vector<Waypath>    m_waypaths;
-    int                     m_activeWaypath;
-    int                     m_activeWaypoint;
+    Scenario & m_scenario;
 };

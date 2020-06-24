@@ -69,6 +69,7 @@ public:
     QVariant data(int column) const;
     int row() const;
     TreeItem *parentItem();
+    QVector<TreeItem*> children() { return m_childItems; }
 
 private:
     QVector<TreeItem*> m_childItems;

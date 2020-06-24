@@ -76,6 +76,12 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
+    void addWaypath(int);
+    void addWaypoint(int, int);
+    void delWaypath(int);
+    void delWaypoint(int);
+    
+
 private:
     void setupModelData(const QStringList &lines, TreeItem *parent);
 

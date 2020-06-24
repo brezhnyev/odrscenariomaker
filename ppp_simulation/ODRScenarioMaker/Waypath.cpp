@@ -2,6 +2,8 @@
 
 using namespace Eigen;
 
+int Waypath::s_counter = 0;
+
 void Waypath::draw()
 {
     for (auto && wp : m_wpoints) wp.draw();

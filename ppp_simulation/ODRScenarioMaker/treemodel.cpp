@@ -60,12 +60,14 @@
 
 #include <QStringList>
 
+#include <cassert>
+
 //! [0]
 TreeModel::TreeModel(const QString &data, QObject *parent)
     : QAbstractItemModel(parent)
 {
-    rootItem = new TreeItem({tr("Name"), tr("Summary")});
-    setupModelData(data.split('\n'), rootItem);
+    rootItem = new TreeItem({tr("Type"), tr("Id")});
+    //setupModelData(data.split('\n'), rootItem);
 }
 //! [0]
 
@@ -221,4 +223,25 @@ void TreeModel::setupModelData(const QStringList &lines, TreeItem *parent)
         }
         ++number;
     }
+}
+
+void TreeModel::addWaypath(int id)
+{
+    assert(rootItem->childCount() == id);
+
+    QVector<QVariant> columnData;
+    columnData << "Waypath" << QString::number(id);
+    rootItem->appendChild(new TreeItem(columnData, rootItem));
+    emit layoutChanged();
+}
+
+void TreeModel::addWaypoint(int pathIndex, int pointIndex)
+{
+    auto path = rootItem->children()[pathIndex];
+    assert(path->childCount() == pointIndex);
+
+    QVector<QVariant> columnData;
+    columnData << "Waypoint" << QString::number(pointIndex);
+    path->appendChild(new TreeItem(columnData, path));
+    emit layoutChanged();
 }

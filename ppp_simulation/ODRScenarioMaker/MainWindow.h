@@ -1,8 +1,9 @@
-#include <QtWidgets/QMainWindow>
-#include <QtWidgets/QTreeView>
+#include "treeview.h"
 #include "treemodel.h"
 
 #include "Viewer.h"
+
+#include <QtWidgets/QMainWindow>
 
 class MainWindow : public QMainWindow
 {
@@ -12,6 +13,6 @@ public:
 
 private:
     Viewer      *m_viewer;
-    QTreeView   *m_treeView;
-    TreeModel   *m_treeModel;
+    TreeView    *m_treeView;
+    Scenario     m_scenario;
 };

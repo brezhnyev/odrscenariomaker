@@ -8,8 +8,7 @@ using namespace std;
 using namespace qglviewer;
 using namespace Eigen;
 
-Viewer::Viewer() : m_canvas("../data/Town02.jpg", QRect(-30, 90, 230, 230)),
-m_activeWaypath(-1)
+Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-30, 90, 230, 230)), m_scenario(scenario)
 {
     cout << "Version: " << glGetString(GL_VERSION) << endl;
     cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
@@ -22,52 +21,20 @@ m_activeWaypath(-1)
 void Viewer::init()
 {
     m_canvas.init();
+    m_scenario.addWaypath();
+    emit signal_addWaypath(0); // must be done over gui later
 }
 
 void Viewer::draw()
 {
     m_canvas.draw();
-    for (auto && wp : m_waypaths) wp.draw();
+    m_scenario.draw();
 }
 
 void Viewer::drawWithNames()
 {
     m_canvas.drawWithNames();
-    for (auto && wp : m_waypaths) wp.drawWithNames();
-}
-
-void Viewer::addWaypath()
-{
-    m_waypaths.push_back(Waypath());
-    m_activeWaypath = m_waypaths.size() - 1;
-}
-
-void Viewer::delWaypath(int id)
-{
-    if (id < m_waypaths.size()) return;
-    if (m_waypaths.empty()) return;
-    auto it = m_waypaths.begin();
-    std::advance(it, id);
-    m_waypaths.erase(it);
-    m_activeWaypath = -1;
-}
-
-void Viewer::addWaypoint(Eigen::Vector3f p)
-{
-    m_waypaths[m_activeWaypath].pushWaypoint(p);
-}
-
-void Viewer::delWaypoint()
-{
-    m_waypaths[m_activeWaypath].popWaypoint();
-}
-
-void Viewer::selectWaypoint(int id)
-{
-    // first deselect
-    for (auto && wpath : m_waypaths) wpath.selectWaypoint(-1);
-    // then select the id:
-    m_waypaths[m_activeWaypath].selectWaypoint(id);
+    m_scenario.drawWithNames();
 }
 
 void Viewer::postSelection(const QPoint &point)
@@ -83,10 +50,11 @@ void Viewer::postSelection(const QPoint &point)
 
     if (selectedName() == -1) return;
 
-    if (m_waypaths.empty()) addWaypath();
-
     if (selectedName() == 255) // put a new waypoint
-        addWaypoint(Vector3f(sp.x, sp.y, sp.z));
+    {
+        int id = m_scenario.addWaypoint(Vector3f(sp.x, sp.y, sp.z));
+        emit signal_addWaypoint(id);
+    }
     else
-        selectWaypoint(selectedName());
+        m_scenario.selectWaypoint(selectedName());
 }
