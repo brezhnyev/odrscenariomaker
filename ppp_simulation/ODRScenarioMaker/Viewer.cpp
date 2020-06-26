@@ -21,8 +21,8 @@ Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-30, 
 void Viewer::init()
 {
     m_canvas.init();
-    m_scenario.addWaypath();
-    emit signal_addWaypath(0); // must be done over gui later
+    int id = m_scenario.addWaypath();
+    emit signal_addWaypath(id); // must be done over gui later
 }
 
 void Viewer::draw()
@@ -50,11 +50,15 @@ void Viewer::postSelection(const QPoint &point)
 
     if (selectedName() == -1) return;
 
-    if (selectedName() == 255) // put a new waypoint
+    if (selectedName() == 0) // put a new waypoint
     {
         int id = m_scenario.addWaypoint(Vector3f(sp.x, sp.y, sp.z));
         emit signal_addWaypoint(id);
     }
     else
-        m_scenario.selectWaypoint(selectedName());
+    {
+        int id = selectedName();
+        m_scenario.selectWaypoint(id);
+        emit signal_select(id);
+    }
 }

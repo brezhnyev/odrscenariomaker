@@ -19,6 +19,8 @@ public:
     void delWaypoint();
     void setActiveWaypath(int id);
     void selectWaypoint(int id);
+    Waypoint * getActiveWaypoint();
+    Waypath  * getActiveWaypath();
 
 public:
     int m_activeWaypath;

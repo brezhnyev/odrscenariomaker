@@ -2,6 +2,7 @@
 #include "treemodel.h"
 
 #include "Viewer.h"
+#include "WaypointProps.h"
 
 #include <QtWidgets/QMainWindow>
 
@@ -15,4 +16,5 @@ private:
     Viewer      *m_viewer;
     TreeView    *m_treeView;
     Scenario     m_scenario;
+    WaypointProps *m_wpProps;
 };

@@ -1,18 +1,32 @@
 #pragma once
 
+#include <atomic>
+
 #include <eigen3/Eigen/Eigen>
 
-class Waypoint
+class BaseObject
 {
 public:
-    Waypoint(Eigen::Vector3f pos, float speed, int id) : m_pos(pos), m_speed(speed), m_id(id), m_selected(false) {}
+    BaseObject() : m_selected(false) { ++s_ID; m_id = s_ID; }
+    int getID() { return m_id; }
+protected:
+    static int          s_ID;
+    int                 m_id;
+    bool                m_selected;
+};
+
+class Waypoint : public BaseObject
+{
+public:
+    Waypoint(Eigen::Vector3f pos, float speed) : BaseObject(), m_pos(pos), m_speed(speed) {}
     void draw();
     void drawWithNames();
     void select(bool flag) { m_selected = flag; }
+    Eigen::Vector3f getPosition() { return m_pos; }
+    void  setPosition(Eigen::Vector3f val) { m_pos = val; }
+    float getSpeed() { return m_speed; }
 
 private:
     Eigen::Vector3f     m_pos;
     float               m_speed;
-    int                 m_id;
-    bool                m_selected;
 };

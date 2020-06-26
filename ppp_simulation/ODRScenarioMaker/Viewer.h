@@ -22,8 +22,8 @@ signals:
     void signal_addWaypoint(int);
     void signal_delWaypath(int);
     void signal_delWaypoint(int);
-    void signal_setActiveWaypath(int);
-    void signal_setlectWaypoint(int);
+    void signal_select(int);
+    
 
 private:
     Canvas m_canvas;

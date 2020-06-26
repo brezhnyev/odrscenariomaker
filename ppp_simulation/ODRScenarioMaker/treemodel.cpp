@@ -227,21 +227,28 @@ void TreeModel::setupModelData(const QStringList &lines, TreeItem *parent)
 
 void TreeModel::addWaypath(int id)
 {
-    assert(rootItem->childCount() == id);
-
     QVector<QVariant> columnData;
     columnData << "Waypath" << QString::number(id);
-    rootItem->appendChild(new TreeItem(columnData, rootItem));
+    auto item = new TreeItem(columnData, rootItem, id);
+    rootItem->appendChild(item);
+    m_itemsMap.insert(std::pair<int, TreeItem*>(id, item));
     emit layoutChanged();
 }
 
-void TreeModel::addWaypoint(int pathIndex, int pointIndex)
+void TreeModel::addWaypoint(int pathIndex, int id)
 {
     auto path = rootItem->children()[pathIndex];
-    assert(path->childCount() == pointIndex);
 
     QVector<QVariant> columnData;
-    columnData << "Waypoint" << QString::number(pointIndex);
-    path->appendChild(new TreeItem(columnData, path));
+    columnData << "Waypoint" << QString::number(id);
+    auto item = new TreeItem(columnData, path, id);
+    path->appendChild(item);
+    m_itemsMap.insert(std::pair<int, TreeItem*>(id, item));
     emit layoutChanged();
+}
+
+QModelIndex TreeModel::getIndexById(int id)
+{
+    auto treeItem = m_itemsMap[id];
+    return createIndex(treeItem->row(), 0, treeItem);
 }

@@ -3,7 +3,7 @@
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QDockWidget>
 
-MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
+MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_wpProps(nullptr)
 {
     m_viewer = new Viewer(m_scenario);
     setCentralWidget(m_viewer);
@@ -17,6 +17,16 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
     connect(m_viewer, SIGNAL(signal_addWaypoint(int)), m_treeView, SLOT(slot_addWaypoint(int)));
     connect(m_viewer, SIGNAL(signal_delWaypath(int)), m_treeView, SLOT(slot_delWaypath(int)));
     connect(m_viewer, SIGNAL(signal_delWaypoint(int)), m_treeView, SLOT(slot_delWaypoint(int)));
-    connect(m_viewer, SIGNAL(signal_setActiveWaypath(int)), m_treeView, SLOT(slot_setActiveWaypath(int)));
-    connect(m_viewer, SIGNAL(signal_setlectWaypoint(int)), m_treeView, SLOT(slot_setActiveWaypoint(int)));
+    connect(m_viewer, SIGNAL(signal_select(int)), m_treeView, SLOT(slot_select(int)));
+
+    QDockWidget * propsDock = new QDockWidget(tr("Waypoint props"), this);
+    addDockWidget(Qt::RightDockWidgetArea, propsDock);
+    connect(m_viewer, &Viewer::signal_select, 
+    [&, this, propsDock](){
+        delete m_wpProps;
+        m_wpProps = new WaypointProps(*m_scenario.getActiveWaypoint());
+        propsDock->setWidget(m_wpProps);
+        connect(m_wpProps, &WaypointProps::update, [this](){m_viewer->update(); });
+    }
+    );
 }

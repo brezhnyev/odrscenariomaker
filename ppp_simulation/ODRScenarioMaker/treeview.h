@@ -15,8 +15,10 @@ public slots:
     void slot_addWaypoint(int);
     void slot_delWaypath(int);
     void slot_delWaypoint(int);
-    void slot_setActiveWaypath(int);
-    void slot_setlectWaypoint(int);
+    void slot_select(int);
+
+signals:
+    void signal_select(int idpath, int idpoint);
 
 private:
     TreeModel   * m_treeModel;

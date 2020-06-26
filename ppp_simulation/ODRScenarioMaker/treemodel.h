@@ -55,6 +55,8 @@
 #include <QModelIndex>
 #include <QVariant>
 
+#include <map>
+
 class TreeItem;
 
 //! [0]
@@ -80,12 +82,12 @@ public:
     void addWaypoint(int, int);
     void delWaypath(int);
     void delWaypoint(int);
-    
+    QModelIndex getIndexById(int);
 
 private:
     void setupModelData(const QStringList &lines, TreeItem *parent);
-
     TreeItem *rootItem;
+    std::map<int, TreeItem*> m_itemsMap;
 };
 //! [0]
 

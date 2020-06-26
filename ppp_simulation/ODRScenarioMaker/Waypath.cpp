@@ -2,8 +2,6 @@
 
 using namespace Eigen;
 
-int Waypath::s_counter = 0;
-
 void Waypath::draw()
 {
     for (auto && wp : m_wpoints) wp.draw();
@@ -21,11 +19,10 @@ void Waypath::popWaypoint()
     m_wpoints.pop_back();
 }
 
-bool Waypath::pushWaypoint(Vector3f p)
+int Waypath::pushWaypoint(Vector3f p)
 {
-    // TODO: find out if the waypoint is already there
-    Waypoint wp(p, 0, m_wpoints.size());
-    m_wpoints.push_back(wp);
+    m_wpoints.emplace_back(p, 0);
+    return m_wpoints.back().getID();
 }
 
 void Waypath::selectWaypoint(int id)
@@ -34,5 +31,9 @@ void Waypath::selectWaypoint(int id)
     for (auto && w : m_wpoints) w.select(false);
 
     if (id != -1)
-        m_wpoints[id].select(true);
+    {
+        auto it = find_if(m_wpoints.begin(), m_wpoints.end(), [&](Waypoint & wp){ return (wp.getID() == id); });
+        if (it != m_wpoints.end())
+            it->select(true);
+    }
 }

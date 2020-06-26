@@ -14,7 +14,7 @@ int Scenario::addWaypath()
 {
     m_waypaths.push_back(Waypath());
     m_activeWaypath = m_waypaths.size() - 1;
-    return Waypath::counter();
+    return m_waypaths.back().getID();
 }
 
 void Scenario::delWaypath(int id)
@@ -28,8 +28,8 @@ void Scenario::delWaypath(int id)
 
 int Scenario::addWaypoint(Eigen::Vector3f p)
 {
-    m_waypaths[m_activeWaypath].pushWaypoint(p);
-    return (m_waypaths[m_activeWaypath].size() - 1);
+    int id = m_waypaths[m_activeWaypath].pushWaypoint(p);
+    return id;
 }
 
 void Scenario::delWaypoint()
@@ -49,4 +49,14 @@ void Scenario::selectWaypoint(int id)
     // then select the id:
     m_waypaths[m_activeWaypath].selectWaypoint(id);
     m_activeWaypoint = id;
+}
+
+Waypath * Scenario::getActiveWaypath()
+{
+    return &m_waypaths[m_activeWaypath];
+}
+
+Waypoint * Scenario::getActiveWaypoint()
+{
+    return m_waypaths[m_activeWaypath].getWaypoint(m_activeWaypoint);
 }

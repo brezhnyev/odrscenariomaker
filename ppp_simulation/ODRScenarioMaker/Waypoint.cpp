@@ -2,6 +2,10 @@
 
 #include <GL/gl.h>
 
+using namespace std;
+
+int BaseObject::s_ID = 0;
+
 void Waypoint::draw()
 {
     glDisable(GL_TEXTURE_2D);

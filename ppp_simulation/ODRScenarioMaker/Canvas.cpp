@@ -48,7 +48,7 @@ void Canvas::draw()
 
 void Canvas::drawWithNames()
 {
-    glPushName(255);
+    glPushName(0);
     draw();
     glPopName();
 }
