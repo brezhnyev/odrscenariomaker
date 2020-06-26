@@ -1,5 +1,8 @@
 #include "scenario.h"
 
+using namespace std;
+using namespace Eigen;
+
 void Scenario::draw()
 {
     for (auto && wp : m_waypaths) wp.second.draw();
@@ -26,7 +29,7 @@ void Scenario::delWaypath(int id)
     m_activeWaypath = 0;
 }
 
-int Scenario::addWaypoint(Eigen::Vector3f p)
+int Scenario::addWaypoint(Vector3f p)
 {
     int id = m_waypaths[m_activeWaypath].pushWaypoint(p);
     return id;

@@ -26,6 +26,7 @@ signals:
 
 public slots:
     void slot_select(int);
+    void slot_play();
 
 private:
     Canvas m_canvas;

@@ -2,6 +2,7 @@
 
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QDockWidget>
+#include <QtWidgets/QPushButton>
 
 MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_wpProps(nullptr)
 {
@@ -9,9 +10,9 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_wpProps(nullpt
     setCentralWidget(m_viewer);
 
     m_treeView = new TreeView(m_scenario);
-    QDockWidget *dock = new QDockWidget(tr("Paths"), this);
-    addDockWidget(Qt::LeftDockWidgetArea, dock);
-    dock->setWidget(m_treeView);
+    QDockWidget *treeDock = new QDockWidget(tr("Paths"), this);
+    addDockWidget(Qt::LeftDockWidgetArea, treeDock);
+    treeDock->setWidget(m_treeView);
 
     connect(m_viewer, SIGNAL(signal_addWaypath(int)), m_treeView, SLOT(slot_addWaypath(int)));
     connect(m_viewer, SIGNAL(signal_addWaypoint(int)), m_treeView, SLOT(slot_addWaypoint(int)));
@@ -30,4 +31,11 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_wpProps(nullpt
         connect(m_wpProps, &WaypointProps::update, [this](){m_viewer->update(); });
     }
     );
+
+    QDockWidget *playDock = new QDockWidget();
+    QPushButton *playButton = new QPushButton(playDock);
+    playButton->setText("Play");
+    playDock->setWidget(playButton);
+    addDockWidget(Qt::BottomDockWidgetArea, playDock);
+    connect(playButton, SIGNAL(pressed()), m_viewer, SLOT(slot_play()));
 }

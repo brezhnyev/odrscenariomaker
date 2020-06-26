@@ -20,6 +20,9 @@ public:
         if (it != m_wpoints.end()) return &(*it);
         return nullptr;
     }
+    bool getNext(Eigen::Vector3f & pos);
+    std::string serialize();
+
 private:
     std::vector<Waypoint> m_wpoints;
 };

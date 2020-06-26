@@ -8,6 +8,7 @@ using namespace std;
 using namespace qglviewer;
 using namespace Eigen;
 
+
 Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-30, 90, 230, 230)), m_scenario(scenario)
 {
     cout << "Version: " << glGetString(GL_VERSION) << endl;
@@ -66,6 +67,13 @@ void Viewer::postSelection(const QPoint &point)
 void Viewer::slot_select(int id)
 {
     m_scenario.select(id); // in the tree we can select both waypoint and waypath
-     emit signal_select(id);
-     update();
+    emit signal_select(id);
+    update();
+}
+
+void Viewer::slot_play()
+{
+    Waypath & wp = *m_scenario.getActiveWaypath();
+    string s = wp.serialize();
+    system((string("./client/client ") + s).c_str());
 }
