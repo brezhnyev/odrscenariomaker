@@ -237,7 +237,7 @@ void TreeModel::addWaypath(int id)
 
 void TreeModel::addWaypoint(int pathIndex, int id)
 {
-    auto path = rootItem->children()[pathIndex];
+    TreeItem * path = m_itemsMap[pathIndex];
 
     QVector<QVariant> columnData;
     columnData << "Waypoint" << QString::number(id);

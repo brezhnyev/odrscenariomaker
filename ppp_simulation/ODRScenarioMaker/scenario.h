@@ -17,8 +17,7 @@ public:
     int addWaypoint(Eigen::Vector3f);
     void delWaypath(int id);
     void delWaypoint();
-    void setActiveWaypath(int id);
-    void selectWaypoint(int id);
+    void select(int id);
     Waypoint * getActiveWaypoint();
     Waypath  * getActiveWaypath();
 
@@ -27,5 +26,5 @@ public:
     int m_activeWaypoint;
 
 private:
-    std::vector<Waypath>    m_waypaths;
-};
+    std::map<int, Waypath>    m_waypaths;
+};  

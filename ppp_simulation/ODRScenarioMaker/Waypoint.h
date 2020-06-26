@@ -25,6 +25,7 @@ public:
     Eigen::Vector3f getPosition() { return m_pos; }
     void  setPosition(Eigen::Vector3f val) { m_pos = val; }
     float getSpeed() { return m_speed; }
+    float setSpeed(float speed) { m_speed = speed; }
 
 private:
     Eigen::Vector3f     m_pos;

@@ -2,6 +2,7 @@
 
 #include "Waypoint.h"
 
+#include <vector>
 #include <deque>
 
 class Waypath : public BaseObject
@@ -11,7 +12,7 @@ public:
     void popWaypoint();
     void draw();
     void drawWithNames();
-    void selectWaypoint(int id);
+    bool select(int id);
     size_t size() { return m_wpoints.size(); }
     Waypoint * getWaypoint(int id)
     { 
@@ -20,5 +21,5 @@ public:
         return nullptr;
     }
 private:
-    std::deque<Waypoint> m_wpoints;
+    std::vector<Waypoint> m_wpoints;
 };

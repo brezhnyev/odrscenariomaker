@@ -58,7 +58,7 @@
 
 //! [0]
 TreeItem::TreeItem(const QVector<QVariant> &data, TreeItem *parent, int id)
-    : m_itemData(data), m_parentItem(parent)
+    : m_itemData(data), m_parentItem(parent), m_ID(id)
 {}
 //! [0]
 

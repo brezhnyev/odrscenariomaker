@@ -2,27 +2,27 @@
 
 void Scenario::draw()
 {
-    for (auto && wp : m_waypaths) wp.draw();
+    for (auto && wp : m_waypaths) wp.second.draw();
 }
 
 void Scenario::drawWithNames()
 {
-    for (auto && wp : m_waypaths) wp.drawWithNames();
+    for (auto && wp : m_waypaths) wp.second.drawWithNames();
 }
 
 int Scenario::addWaypath()
 {
-    m_waypaths.push_back(Waypath());
-    m_activeWaypath = m_waypaths.size() - 1;
-    return m_waypaths.back().getID();
+    Waypath w;
+    m_waypaths[w.getID()] = w; // KB: disadvantage: copy assignment we skip one id
+    m_activeWaypath = w.getID();
+    return m_activeWaypath;
 }
 
 void Scenario::delWaypath(int id)
 {
-    if (id < m_waypaths.size()) return;
     if (m_waypaths.empty()) return;
-    auto it = m_waypaths.begin() + id;
-    m_waypaths.erase(it);
+
+    m_waypaths.erase(id);
     m_activeWaypath = 0;
 }
 
@@ -37,18 +37,19 @@ void Scenario::delWaypoint()
     m_waypaths[m_activeWaypath].popWaypoint();
 }
 
-void Scenario::setActiveWaypath(int id)
-{
-    if (id < m_waypaths.size()) m_activeWaypath = id;
-}
-
-void Scenario::selectWaypoint(int id)
+void Scenario::select(int id)
 {
     // first deselect
-    for (auto && wpath : m_waypaths) wpath.selectWaypoint(-1);
+    for (auto && wpath : m_waypaths) wpath.second.select(-1);
     // then select the id:
-    m_waypaths[m_activeWaypath].selectWaypoint(id);
-    m_activeWaypoint = id;
+    for (auto && wpath : m_waypaths)
+    {
+        if (wpath.second.select(id))
+        {
+            m_activeWaypath = wpath.second.getID();
+            if (id != m_activeWaypath) m_activeWaypoint = id;
+        }
+    }
 }
 
 Waypath * Scenario::getActiveWaypath()

@@ -18,6 +18,7 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_wpProps(nullpt
     connect(m_viewer, SIGNAL(signal_delWaypath(int)), m_treeView, SLOT(slot_delWaypath(int)));
     connect(m_viewer, SIGNAL(signal_delWaypoint(int)), m_treeView, SLOT(slot_delWaypoint(int)));
     connect(m_viewer, SIGNAL(signal_select(int)), m_treeView, SLOT(slot_select(int)));
+    connect(m_treeView, SIGNAL(signal_select(int)), m_viewer, SLOT(slot_select(int)));
 
     QDockWidget * propsDock = new QDockWidget(tr("Waypoint props"), this);
     addDockWidget(Qt::RightDockWidgetArea, propsDock);

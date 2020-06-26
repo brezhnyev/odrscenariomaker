@@ -21,19 +21,28 @@ void Waypath::popWaypoint()
 
 int Waypath::pushWaypoint(Vector3f p)
 {
+    auto s = m_wpoints.size();
     m_wpoints.emplace_back(p, 0);
     return m_wpoints.back().getID();
 }
 
-void Waypath::selectWaypoint(int id)
+bool Waypath::select(int id)
 {
     // deselect all first:
     for (auto && w : m_wpoints) w.select(false);
 
-    if (id != -1)
+    if (id == m_id)
     {
-        auto it = find_if(m_wpoints.begin(), m_wpoints.end(), [&](Waypoint & wp){ return (wp.getID() == id); });
-        if (it != m_wpoints.end())
-            it->select(true);
+        for (auto && p : m_wpoints) p.select(true);
+        return true;
     }
+
+    auto it = find_if(m_wpoints.begin(), m_wpoints.end(), [&](Waypoint & wp){ return (wp.getID() == id); });
+    if (it != m_wpoints.end())
+    {
+        it->select(true);
+        return true;
+    }
+
+    return false;
 }

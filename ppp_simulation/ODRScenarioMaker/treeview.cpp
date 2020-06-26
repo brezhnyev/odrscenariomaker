@@ -9,10 +9,13 @@ TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
     setModel(m_treeModel);
     connect(selectionModel(), &QItemSelectionModel::selectionChanged, 
     [this](const QItemSelection & sel, const QItemSelection & desel){
-        auto sellist = sel.indexes();
+        auto sellist = selectionModel()->selection().indexes();
         if (sellist.empty()) return; // KB: IMHO should not happen. However happens due to slot_select (blockSignals do not help)
+        int s = sellist.size();
         auto treeItem = static_cast<TreeItem*>(sellist[0].internalPointer());
-        emit signal_select(treeItem->parentItem()->getID(), treeItem->getID());
+        auto ti2 = static_cast<TreeItem*>(sellist[1].internalPointer());
+        selectionModel()->selection();
+        emit signal_select(treeItem->getID());
     });
 }
 
@@ -30,7 +33,6 @@ void TreeView::slot_delWaypath(int) {}
 void TreeView::slot_delWaypoint(int) {}
 void TreeView::slot_select(int id)
 {
-    assert(id == m_scenario.m_activeWaypoint);
     selectionModel()->clear();
     blockSignals(true);
     selectionModel()->select(m_treeModel->getIndexById(id), QItemSelectionModel::Rows | QItemSelectionModel::Select);

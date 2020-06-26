@@ -58,7 +58,14 @@ void Viewer::postSelection(const QPoint &point)
     else
     {
         int id = selectedName();
-        m_scenario.selectWaypoint(id);
+        m_scenario.select(id); // In graphics we can only select waypoint
         emit signal_select(id);
     }
+}
+
+void Viewer::slot_select(int id)
+{
+    m_scenario.select(id); // in the tree we can select both waypoint and waypath
+     emit signal_select(id);
+     update();
 }

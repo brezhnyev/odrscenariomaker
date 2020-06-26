@@ -18,7 +18,7 @@ public slots:
     void slot_select(int);
 
 signals:
-    void signal_select(int idpath, int idpoint);
+    void signal_select(int id);
 
 private:
     TreeModel   * m_treeModel;

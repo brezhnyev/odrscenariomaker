@@ -23,7 +23,9 @@ signals:
     void signal_delWaypath(int);
     void signal_delWaypoint(int);
     void signal_select(int);
-    
+
+public slots:
+    void slot_select(int);
 
 private:
     Canvas m_canvas;
