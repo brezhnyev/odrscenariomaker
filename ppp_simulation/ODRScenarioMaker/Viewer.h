@@ -3,6 +3,7 @@
 #include "Canvas.h"
 #include "Waypath.h"
 #include "scenario.h"
+#include "Vehicle.h"
 
 #include <QGLViewer/qglviewer.h>
 
@@ -16,6 +17,7 @@ public:
     void drawWithNames() override;
     void init() override;
     void postSelection(const QPoint &point) override;
+    void listenForResponse();
 
 signals:
     void signal_addWaypath(int);
@@ -23,6 +25,7 @@ signals:
     void signal_delWaypath(int);
     void signal_delWaypoint(int);
     void signal_select(int);
+    void signal_setVehicle(Eigen::Vector3f, float yaw);
 
 public slots:
     void slot_select(int);
@@ -31,4 +34,6 @@ public slots:
 private:
     Canvas m_canvas;
     Scenario & m_scenario;
+    Vehicle m_vehicle;
+    bool m_isconnected;
 };
