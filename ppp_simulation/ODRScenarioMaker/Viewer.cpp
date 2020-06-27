@@ -9,7 +9,7 @@ using namespace qglviewer;
 using namespace Eigen;
 
 
-Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-30, 90, 230, 230)), m_scenario(scenario)
+Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-27, 92, 239, 237)), m_scenario(scenario)
 {
     cout << "Version: " << glGetString(GL_VERSION) << endl;
     cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
@@ -74,6 +74,6 @@ void Viewer::slot_select(int id)
 void Viewer::slot_play()
 {
     Waypath & wp = *m_scenario.getActiveWaypath();
-    string s = wp.serialize();
-    system((string("./client/client ") + s).c_str());
+    string command = "./client/client \"" + wp.serialize() + "\" &";
+    system(command.c_str());
 }

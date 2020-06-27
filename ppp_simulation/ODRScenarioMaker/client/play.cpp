@@ -51,7 +51,7 @@ int main(int argc, char ** argv)
         while(ss >> val)
         {
             if (counter%3 == 0) v.x() = val;
-            if (counter%3 == 1) v.y() = val;
+            if (counter%3 == 1) v.y() =-val;
             if (counter%3 == 2) 
             {
                 v.z() = val;
@@ -82,7 +82,11 @@ int main(int argc, char ** argv)
     auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
     auto blueprint = (*blueprints)[0];
     // Spawn the vehicle.
-    cg::Transform transform(cg::Location(191.468, 253.606, 0.3), cg::Rotation(0,-90,0));
+    auto wp1 = waypath.getWaypoints()[0];
+    auto wp2 = waypath.getWaypoints()[2];
+    auto dir = wp2.getPosition() - wp1.getPosition();
+    auto yaw = (atan2(dir.y(), dir.x()))*90/M_PI_2;
+    cg::Transform transform(cg::Location(wp1.getPosition().x(), wp1.getPosition().y(), wp1.getPosition().z()), cg::Rotation(0,yaw,0));
     ShrdPtrActor actor = world.TrySpawnActor(blueprint, spawn_points[0]);
     if (!actor) return 1;
     // Finish and store the vehicle

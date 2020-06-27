@@ -21,6 +21,7 @@ public:
         return nullptr;
     }
     bool getNext(Eigen::Vector3f & pos);
+    std::vector<Waypoint> getWaypoints() { return m_wpoints; }
     std::string serialize();
 
 private:

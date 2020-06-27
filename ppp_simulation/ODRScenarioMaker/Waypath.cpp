@@ -98,7 +98,7 @@ string Waypath::serialize()
     for (auto && point : m_wpoints)
     {
         auto p = point.getPosition();
-        ss << p.x() << " " << p.y() << " " << p.z();
+        ss << p.x() << " " << p.y() << " " << p.z() << " ";
     }
     return ss.str();
 }
