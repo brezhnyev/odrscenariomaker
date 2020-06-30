@@ -80,6 +80,7 @@ void Viewer::postSelection(const QPoint &point)
         int id = selectedName();
         m_scenario.select(id); // In graphics we can only select waypoint
         emit signal_select(id);
+        // KB: no need to call update, since this function is a virtual and the update is called after it from OGLViewer
     }
 }
 

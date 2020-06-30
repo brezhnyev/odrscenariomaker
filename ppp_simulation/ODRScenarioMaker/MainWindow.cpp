@@ -24,9 +24,11 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_wpProps(nullpt
     QDockWidget * propsDock = new QDockWidget(tr("Waypoint props"), this);
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
     connect(m_viewer, &Viewer::signal_select, 
-    [&, this, propsDock](){
+    [&, this, propsDock](int id){
+        auto wp = m_scenario.getActiveWaypoint();
+        if (!wp) return;
         delete m_wpProps;
-        m_wpProps = new WaypointProps(*m_scenario.getActiveWaypoint());
+        m_wpProps = new WaypointProps(*wp);
         propsDock->setWidget(m_wpProps);
         connect(m_wpProps, &WaypointProps::update, [this](){m_viewer->update(); });
     }

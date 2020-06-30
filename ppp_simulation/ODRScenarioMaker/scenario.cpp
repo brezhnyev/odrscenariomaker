@@ -42,7 +42,7 @@ void Scenario::delWaypoint()
 
 void Scenario::select(int id)
 {
-    // first deselect
+    // first deselect all
     for (auto && wpath : m_waypaths) wpath.second.select(-1);
     // then select the id:
     for (auto && wpath : m_waypaths)
@@ -55,12 +55,13 @@ void Scenario::select(int id)
     }
 }
 
+Waypoint * Scenario::getActiveWaypoint()
+{
+    return m_waypaths[m_activeWaypath].getWaypoint(m_activeWaypoint);
+}
+
 Waypath * Scenario::getActiveWaypath()
 {
     return &m_waypaths[m_activeWaypath];
 }
 
-Waypoint * Scenario::getActiveWaypoint()
-{
-    return m_waypaths[m_activeWaypath].getWaypoint(m_activeWaypoint);
-}
