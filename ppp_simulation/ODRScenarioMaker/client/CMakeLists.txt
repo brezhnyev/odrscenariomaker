@@ -12,7 +12,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/boost)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/carla/)
 
-set (SOURCE play.cpp ../Waypath.cpp ../Waypoint.cpp)
+set (SOURCE play.cpp ../Selectable.cpp ../Waypath.cpp ../Waypoint.cpp)
 
 link_directories(/usr/local/lib/)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/carla_debug)

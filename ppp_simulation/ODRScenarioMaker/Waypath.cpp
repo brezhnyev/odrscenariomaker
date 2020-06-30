@@ -5,6 +5,8 @@
 using namespace Eigen;
 using namespace std;
 
+Waypath::Waypath() {}
+
 void Waypath::draw()
 {
     for (auto && wp : m_wpoints) wp.draw();
@@ -31,23 +33,26 @@ int Waypath::pushWaypoint(Vector3f p)
 
 bool Waypath::select(int id)
 {
-    // deselect all first:
-    for (auto && w : m_wpoints) w.select(false);
+    // otherwise selet the waypoint only:
+    m_activeWaypoint = 0;
+    m_selected = false;
 
+    for (auto && wp : m_wpoints)
+    {
+        if (wp.select(id))
+        {
+            m_activeWaypoint = wp.getID();
+        }
+    }
+
+    // if path is selected then select all points on the path:
     if (id == m_id)
     {
         for (auto && p : m_wpoints) p.select(true);
-        return true;
+        m_selected = true;
     }
 
-    auto it = find_if(m_wpoints.begin(), m_wpoints.end(), [&](Waypoint & wp){ return (wp.getID() == id); });
-    if (it != m_wpoints.end())
-    {
-        it->select(true);
-        return true;
-    }
-
-    return false;
+    return m_selected || m_activeWaypoint;
 }
 
 bool Waypath::getNext(Vector3f & pos)

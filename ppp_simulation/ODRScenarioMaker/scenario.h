@@ -2,6 +2,10 @@
 
 #include "Waypath.h"
 
+#pragma once
+
+#include "Actor.h"
+
 #include <eigen3/Eigen/Eigen>
 
 #include <vector>
@@ -9,7 +13,7 @@
 class Scenario
 {
 public:
-    Scenario() : m_activeWaypath(0), m_activeWaypoint(0) {}
+    Scenario();
     void draw();
     void drawWithNames();
 
@@ -18,12 +22,12 @@ public:
     void delWaypath(int id);
     void delWaypoint();
     void select(int id);
-    Waypoint * getActiveWaypoint();
-    Waypath  * getActiveWaypath();
+
+    Selectable * getSelectable(int id);
+    Waypath *    getActiveWaypath();
 
 public:
     int m_activeWaypath;
-    int m_activeWaypoint;
 
 private:
     std::map<int, Waypath>    m_waypaths;

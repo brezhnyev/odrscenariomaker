@@ -7,6 +7,8 @@
 
 #include <QGLViewer/qglviewer.h>
 
+#include <thread>
+
 class Viewer : public QGLViewer
 {
     Q_OBJECT
@@ -30,10 +32,13 @@ signals:
 public slots:
     void slot_select(int);
     void slot_play();
+    void slot_stop();
 
 private:
     Canvas m_canvas;
     Scenario & m_scenario;
     Vehicle m_vehicle;
     bool m_isconnected;
+    int m_sock;
+    std::thread * m_commThread;
 };

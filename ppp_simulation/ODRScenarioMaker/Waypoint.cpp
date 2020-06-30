@@ -4,7 +4,7 @@
 
 using namespace std;
 
-int BaseObject::s_ID = 0;
+Waypoint::Waypoint(Eigen::Vector3f pos, float speed) : Selectable(), m_pos(pos), m_speed(speed) {}
 
 void Waypoint::draw()
 {
@@ -38,4 +38,10 @@ void Waypoint::drawWithNames()
     glPushName(m_id);
     draw();
     glPopName();
+}
+
+bool Waypoint::select(int id)
+{ 
+    m_selected = id == m_id ? true : false; 
+    return m_selected;
 }

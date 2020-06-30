@@ -1,27 +1,22 @@
 #pragma once
 
+#include "Selectable.h"
+
 #include <atomic>
 
 #include <eigen3/Eigen/Eigen>
 
-class BaseObject
-{
-public:
-    BaseObject() : m_selected(false) { ++s_ID; m_id = s_ID; }
-    int getID() { return m_id; }
-protected:
-    static int          s_ID;
-    int                 m_id;
-    bool                m_selected;
-};
 
-class Waypoint : public BaseObject
+class Waypoint : public Selectable
 {
 public:
-    Waypoint(Eigen::Vector3f pos, float speed) : BaseObject(), m_pos(pos), m_speed(speed) {}
-    void draw();
-    void drawWithNames();
-    void select(bool flag) { m_selected = flag; }
+    Waypoint(Eigen::Vector3f pos, float speed);
+    void draw() override;
+    void drawWithNames() override;
+    Selectable * getChild(int id) override {}
+    Selectable * getActive() override {}
+    bool select(int id) override;
+
     Eigen::Vector3f getPosition() { return m_pos; }
     void  setPosition(Eigen::Vector3f val) { m_pos = val; }
     float getSpeed() { return m_speed; }

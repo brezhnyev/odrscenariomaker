@@ -6,7 +6,6 @@
 
 #include <iostream>
 #include <sstream>
-#include <thread>
 
 
 #include <stdio.h> 
@@ -25,7 +24,7 @@ using namespace qglviewer;
 using namespace Eigen;
 
 
-Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-27, 92, 239, 237)), m_scenario(scenario)
+Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-27, 92, 239, 237)), m_scenario(scenario), m_commThread(nullptr)
 {
     using namespace net;
 
@@ -99,61 +98,67 @@ void Viewer::slot_play()
 
     usleep(2e6);
 
-    std::thread * t = new std::thread(
+    if (m_commThread && !m_commThread->joinable()) delete m_commThread;
+
+    m_commThread = new std::thread(
         [&, this]()
         {
             listenForResponse();
-            delete t;
         }
     );
-
-    t->detach();
+    m_commThread->detach();
 }
 
 void Viewer::listenForResponse()
 {
     using namespace net;
 
-    int sock = 0;
+    m_sock = 0;
     static struct sockaddr_in serv_addr;
 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    if ((m_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     { 
-        printf("\n Socket creation error \n"); 
+        printf("\n Socket creation error \n");
         return; 
     } 
    
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(PORT); 
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
        
     // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)  
+    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)
     { 
-        printf("\nInvalid address/ Address not supported \n"); 
+        printf("\nInvalid address/ Address not supported \n");
         return; 
     }
 
-    if (net::connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+    if (net::connect(m_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     { 
-        printf("\nConnection Failed \n"); 
-        return; 
+        printf("\nConnection Failed \n");
+        return;
     }
 
     while (true)
     {
         using namespace net;
-        char buffer[1024] = {0}; 
+        char buffer[1024] = {0};
 
-        int valread = read( sock , buffer, 1024); 
+        int valread = read( m_sock , buffer, 1024);
         if (valread == 1 && buffer[0] == '*') break;
+        if (!valread) return;
         stringstream ss(buffer);
         float x; ss >> x;
         float y; ss >> y;
         float z; ss >> z;
         float yaw; ss >> yaw;
-        m_vehicle.setPosYaw(Vector3f(x,-y,z), -yaw);
+        m_vehicle.setTrf(Vector3f(x,-y,z), -yaw);
         update();
     }
 
-    shutdown(sock, net::SHUT_RDWR);
+    shutdown(m_sock, net::SHUT_RDWR);
+}
+
+void Viewer::slot_stop()
+{
+    shutdown(m_sock, net::SHUT_RDWR);
 }

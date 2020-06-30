@@ -3,6 +3,8 @@
 using namespace std;
 using namespace Eigen;
 
+Scenario::Scenario() : m_activeWaypath(0) {}
+
 void Scenario::draw()
 {
     for (auto && wp : m_waypaths) wp.second.draw();
@@ -15,9 +17,9 @@ void Scenario::drawWithNames()
 
 int Scenario::addWaypath()
 {
-    Waypath w;
-    m_waypaths[w.getID()] = w; // KB: disadvantage: copy assignment we skip one id
-    m_activeWaypath = w.getID();
+    Waypath wp;
+    m_waypaths[wp.getID()] = wp;
+    m_activeWaypath = wp.getID();
     return m_activeWaypath;
 }
 
@@ -42,26 +44,28 @@ void Scenario::delWaypoint()
 
 void Scenario::select(int id)
 {
-    // first deselect all
-    for (auto && wpath : m_waypaths) wpath.second.select(-1);
+    m_activeWaypath = 0;
     // then select the id:
     for (auto && wpath : m_waypaths)
     {
         if (wpath.second.select(id))
         {
             m_activeWaypath = wpath.second.getID();
-            if (id != m_activeWaypath) m_activeWaypoint = id;
         }
     }
 }
 
-Waypoint * Scenario::getActiveWaypoint()
+Selectable * Scenario::getSelectable(int id)
 {
-    return m_waypaths[m_activeWaypath].getWaypoint(m_activeWaypoint);
+    if (!m_activeWaypath) return nullptr;
+
+    auto point = m_waypaths[m_activeWaypath].getChild(id);
+    if (point) return point;
+
+    return &m_waypaths[m_activeWaypath];
 }
 
 Waypath * Scenario::getActiveWaypath()
 {
     return &m_waypaths[m_activeWaypath];
 }
-

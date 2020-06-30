@@ -4,6 +4,10 @@
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
 
+#include <iostream>
+
+using namespace std;
+
 MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_wpProps(nullptr)
 {
     m_viewer = new Viewer(m_scenario);
@@ -25,19 +29,40 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_wpProps(nullpt
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
     connect(m_viewer, &Viewer::signal_select, 
     [&, this, propsDock](int id){
-        auto wp = m_scenario.getActiveWaypoint();
-        if (!wp) return;
-        delete m_wpProps;
-        m_wpProps = new WaypointProps(*wp);
-        propsDock->setWidget(m_wpProps);
-        connect(m_wpProps, &WaypointProps::update, [this](){m_viewer->update(); });
+        auto item = m_scenario.getSelectable(id);
+
+        if (!item) return;
+
+        if (m_wpProps) m_wpProps->close();
+        if (dynamic_cast<Waypoint*>(item))
+        {
+            m_wpProps = new WaypointProps(*dynamic_cast<Waypoint*>(item));
+            propsDock->setWidget(m_wpProps);
+            connect(m_wpProps, &WaypointProps::update, [this](){m_viewer->update(); });
+        }
+        else if (dynamic_cast<Waypath*>(item))
+        {
+            cout << "Waypath dialog!" << endl;
+        }
     }
     );
 
     QDockWidget *playDock = new QDockWidget();
+    QHBoxLayout * playLayout = new QHBoxLayout();
+
     QPushButton *playButton = new QPushButton(playDock);
     playButton->setText("Play");
-    playDock->setWidget(playButton);
-    addDockWidget(Qt::BottomDockWidgetArea, playDock);
     connect(playButton, SIGNAL(pressed()), m_viewer, SLOT(slot_play()));
+
+    QPushButton *stopButton = new QPushButton(playDock);
+    stopButton->setText("Stop");
+    connect(stopButton, SIGNAL(pressed()), m_viewer, SLOT(slot_stop()));
+
+    playLayout->addWidget(playButton);
+    playLayout->addWidget(stopButton);
+
+    QWidget * playWidget = new QWidget();
+    playWidget->setLayout(playLayout);
+    playDock->setWidget(playWidget);
+    addDockWidget(Qt::BottomDockWidgetArea, playDock);
 }

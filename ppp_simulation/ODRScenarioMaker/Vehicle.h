@@ -1,18 +1,20 @@
 #pragma once
 
+#include "Actor.h"
+
 #include <eigen3/Eigen/Eigen>
 
-class Vehicle
+class Vehicle : public Actor
 {
 public:
-    void setPosYaw(Eigen::Vector3f pos, float yaw)
+    void setTrf(Eigen::Vector3f pos, float yaw) override
     {
         m_pos = pos;
         m_yaw = yaw;
     }
-    void draw();
-
-private:
-    Eigen::Vector3f m_pos;
-    float m_yaw;
+    void draw() override;
+    void drawWithNames() override {};
+    bool select(int id) override {};
+    Selectable * getChild(int id) override {} // TODO
+    Selectable * getActive() override {} // TODO
 };
