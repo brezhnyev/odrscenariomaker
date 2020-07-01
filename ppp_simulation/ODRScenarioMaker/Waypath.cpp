@@ -48,7 +48,7 @@ bool Waypath::select(int id)
     // if path is selected then select all points on the path:
     if (id == m_id)
     {
-        for (auto && p : m_wpoints) p.select(true);
+        for (auto && p : m_wpoints) p.select(p.getID());
         m_selected = true;
     }
 
