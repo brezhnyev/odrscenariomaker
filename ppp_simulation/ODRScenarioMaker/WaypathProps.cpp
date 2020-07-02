@@ -21,6 +21,6 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
     lh->addStretch(1);
 
     setLayout(lh);
-
-    connect(delLastPoint, &QPushButton::pressed, [this](){ int id = m_waypath.delWaypoint(); if (id != -1) emit signal_delWaypoint(id); });
+    // delChild(0) with dummy 0 parameter. The overriden delChild will pop the last waypoint from waypath
+    connect(delLastPoint, &QPushButton::pressed, [this](){ int id = m_waypath.delChild(0); if (id != -1) emit signal_delWaypoint(id); });
 }

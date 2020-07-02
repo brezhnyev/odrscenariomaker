@@ -5,70 +5,16 @@
 using namespace Eigen;
 using namespace std;
 
-Waypath::Waypath() {}
-
-void Waypath::draw()
+int Waypath::delChild(int id) // id is dummy parameter for Waypath
 {
-    for (auto && wp : m_wpoints) wp.draw();
-}
+    if (m_children.empty()) return -1;
 
-void Waypath::drawWithNames()
-{
-    for (auto && wp : m_wpoints) wp.drawWithNames();
-}
+    id = m_children.rbegin()->first;
+    m_children.erase(id);
+    if (m_children.empty()) m_activeChild = -1;
+    else m_activeChild = 0;
 
-int Waypath::delWaypoint()
-{
-    if (m_wpoints.empty()) return -1;
-    int id = m_wpoints.back().getID();
-    m_wpoints.pop_back();
     return id;
-}
-
-int Waypath::addWaypoint(Vector3f p)
-{
-    m_wpoints.emplace_back(p, 0);
-    return m_wpoints.back().getID();
-}
-
-bool Waypath::select(int id)
-{
-    // otherwise selet the waypoint only:
-    m_activeWaypoint = 0;
-    m_selected = false;
-
-    for (auto && wp : m_wpoints)
-    {
-        if (wp.select(id))
-        {
-            m_activeWaypoint = wp.getID();
-        }
-    }
-
-    // if path is selected then select all points on the path:
-    if (id == m_id)
-    {
-        for (auto && p : m_wpoints) p.select(p.getID());
-        m_selected = true;
-    }
-
-    return m_selected || m_activeWaypoint;
-}
-
-Selectable * Waypath::getChild(int id)
-{
-    Selectable * selection = nullptr;
-
-    for (auto && point : m_wpoints)
-    {
-        if (point.getID() == id)
-        {
-            return &point;
-        }
-        selection = point.getChild(id); // empty function for point
-        if (selection) return selection;
-    }
-    return selection;
 }
 
 bool Waypath::getNext(Vector3f & pos)
@@ -77,26 +23,29 @@ bool Waypath::getNext(Vector3f & pos)
     // find the nearest next point:
     float dist = 100000;
     int index = 0;
-    for (int i = 0; i < m_wpoints.size(); ++i)
+    vector<Waypoint*> wpoints;
+    for (auto && child : m_children) wpoints.push_back(dynamic_cast<Waypoint*>(child.second));
+
+    for (int i = 0; i < wpoints.size(); ++i)
     {
-        auto d = (pos - m_wpoints[i].getPosition()).norm();
+        auto d = (pos - wpoints[i]->getPosition()).norm();
         if (d < dist)
         {
             index = i;
             dist = d;
         }
     }
-    if (index != m_wpoints.size() - 1)
+    if (index != wpoints.size() - 1)
     {
-        auto v1 = (m_wpoints[index+1].getPosition() - m_wpoints[index].getPosition()).normalized();
-        auto v2 = (m_wpoints[index].getPosition() - pos).normalized();
+        auto v1 = (wpoints[index+1]->getPosition() - wpoints[index]->getPosition()).normalized();
+        auto v2 = (wpoints[index]->getPosition() - pos).normalized();
         if (v1.dot(v2) < 0) ++index;
     }
 
     dist = 0;
-    for (int i=index; i < m_wpoints.size(); ++i)
+    for (int i=index; i < wpoints.size(); ++i)
     {
-        Vector3f v = m_wpoints[i].getPosition() - pos;
+        Vector3f v = wpoints[i]->getPosition() - pos;
         float N = v.norm();
         if (dist + N > R)
         {
@@ -116,9 +65,9 @@ string Waypath::serialize()
 {
     Eigen::Vector3f v; float val; int counter = 0;
     stringstream ss;
-    for (auto && point : m_wpoints)
+    for (auto && child : m_children)
     {
-        auto p = point.getPosition();
+        auto p = dynamic_cast<Waypoint*>(child.second)->getPosition();
         ss << p.x() << " " << p.y() << " " << p.z() << " ";
     }
     return ss.str();

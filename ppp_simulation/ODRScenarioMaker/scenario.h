@@ -7,30 +7,22 @@
 
 #include <vector>
 
-class Scenario
+class Scenario : public Selectable
 {
 public:
-    Scenario();
-    void draw();
-    void drawWithNames();
-
     int addVehicle();
     int addWaypath();
     int addWaypoint(Eigen::Vector3f);
 
     void delActor(int id);
     void delWaypath(int id);
-    void delWaypoint();
-    void select(int id);
+    void delWaypoint(int id);
 
-    Selectable * getSelectable(int id);
+    Actor *      getActiveActor();
     Waypath *    getActiveWaypath();
-    int          getActiveWaypathID();
+    Waypoint *   getActiveWaypoint();
+
     int          getActiveActorID();
-
-public:
-
-private:
-    int m_activeActor;
-    std::map<int, Actor*>    m_actors;
+    int          getActiveWaypathID();
+    int          getActiveWaypointID();
 };  

@@ -39,9 +39,3 @@ void Waypoint::drawWithNames()
     draw();
     glPopName();
 }
-
-bool Waypoint::select(int id)
-{ 
-    m_selected = id == m_id ? true : false; 
-    return m_selected;
-}

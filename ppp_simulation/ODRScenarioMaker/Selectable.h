@@ -1,19 +1,28 @@
 #pragma once
 
+#include <map>
+
 class Selectable
 {
 public:
     Selectable();
     virtual ~Selectable() {}
-    virtual Selectable * getChild(int id) = 0;
-    virtual void draw() = 0;
-    virtual void drawWithNames() = 0;
-    virtual bool select(int) = 0;
+    virtual Selectable * getChild(int id);
+    virtual void draw();
+    virtual void drawWithNames();
+    virtual bool select(int);
+
+    virtual int addChild(Selectable * child);
+    virtual int delChild(int id);
 
     int getID() { return m_id; }
+    Selectable * getActiveChild() { return m_activeChild == -1 ? nullptr: m_children[m_activeChild]; }
     
 protected:
     static int          s_ID;
     int                 m_id;
     bool                m_selected;
+
+    int                         m_activeChild;
+    std::map<int, Selectable*>  m_children;
 };

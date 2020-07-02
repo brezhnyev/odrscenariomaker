@@ -11,11 +11,6 @@ class Actor : public Selectable
 public:
     virtual ~Actor() {}
     virtual void setTrf(Eigen::Vector3f pos, float yaw) = 0;
-    virtual int addWaypath() = 0;
-    virtual int addWaypoint(Eigen::Vector3f) = 0;
-    virtual void delWaypath(int) = 0;
-    virtual void delWaypoint() = 0;
-    virtual Waypath * getActiveWaypath() = 0;
 
 protected:
     Eigen::Vector3f m_pos;

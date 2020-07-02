@@ -31,7 +31,7 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nul
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
     connect(m_viewer, &Viewer::signal_select, 
     [&, this, propsDock](int id){
-        auto item = m_scenario.getSelectable(id);
+        auto item = m_scenario.getChild(id);
 
         if (!item) return;
 

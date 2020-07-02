@@ -1,4 +1,5 @@
 #include "ActorProps.h"
+#include "Waypath.h"
 
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QVBoxLayout>
@@ -23,5 +24,5 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 
     setLayout(lh);
 
-    connect(addWaypath, &QPushButton::pressed, [this](){ int id = m_actor.addWaypath(); emit signal_addWaypath(id); });
+    connect(addWaypath, &QPushButton::pressed, [this](){ int id = m_actor.addChild(new Waypath()); emit signal_addWaypath(id); });
 }
