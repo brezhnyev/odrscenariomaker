@@ -92,6 +92,11 @@ void Viewer::slot_select(int id)
 void Viewer::slot_play()
 {
     Waypath & wp = *m_scenario.getActiveWaypath();
+    if (wp.children().size() < 2)
+    {
+        cout << "At least two waypoints needed" << endl;
+        return;
+    }
     string command = "./client/client \"" + wp.serialize() + "\" &";
     system(command.c_str());
 
@@ -150,7 +155,9 @@ void Viewer::listenForResponse()
         float y; ss >> y;
         float z; ss >> z;
         float yaw; ss >> yaw;
-        //m_vehicle.setTrf(Vector3f(x,-y,z), -yaw);
+        Actor * actor = m_scenario.getActiveActor();
+        if (actor)
+            actor->setTrf(Vector3f(x,-y,z), -yaw);
         update();
     }
 

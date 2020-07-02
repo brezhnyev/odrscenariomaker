@@ -17,6 +17,7 @@ public:
 
     int getID() { return m_id; }
     Selectable * getActiveChild() { return m_activeChild == -1 ? nullptr: m_children[m_activeChild]; }
+    std::map<int, Selectable*> children() { return m_children; }
     
 protected:
     static int          s_ID;
