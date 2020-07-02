@@ -78,10 +78,8 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    void addWaypath(int);
-    void addWaypoint(int, int);
-    void delWaypath(int);
-    void delWaypoint(int);
+    void addItem(int, int, std::string type);
+    void delItem(int);
     QModelIndex getIndexById(int);
 
 private:

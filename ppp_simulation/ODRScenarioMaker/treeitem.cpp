@@ -83,6 +83,11 @@ TreeItem *TreeItem::child(int row)
         return nullptr;
     return m_childItems.at(row);
 }
+
+void TreeItem::removeChild(TreeItem *item)
+{
+    m_childItems.removeAt(item->row());
+}
 //! [3]
 
 //! [4]

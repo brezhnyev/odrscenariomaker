@@ -109,7 +109,7 @@ int main(int argc, char ** argv)
             if (counter%3 == 2) 
             {
                 v.z() = val;
-                waypath.pushWaypoint(v);
+                waypath.addWaypoint(v);
             }
             ++counter;
         }

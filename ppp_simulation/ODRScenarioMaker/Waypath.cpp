@@ -17,16 +17,16 @@ void Waypath::drawWithNames()
     for (auto && wp : m_wpoints) wp.drawWithNames();
 }
 
-void Waypath::popWaypoint()
+int Waypath::delWaypoint()
 {
-    if (m_wpoints.empty()) return;
-
+    if (m_wpoints.empty()) return -1;
+    int id = m_wpoints.back().getID();
     m_wpoints.pop_back();
+    return id;
 }
 
-int Waypath::pushWaypoint(Vector3f p)
+int Waypath::addWaypoint(Vector3f p)
 {
-    auto s = m_wpoints.size();
     m_wpoints.emplace_back(p, 0);
     return m_wpoints.back().getID();
 }
@@ -53,6 +53,22 @@ bool Waypath::select(int id)
     }
 
     return m_selected || m_activeWaypoint;
+}
+
+Selectable * Waypath::getChild(int id)
+{
+    Selectable * selection = nullptr;
+
+    for (auto && point : m_wpoints)
+    {
+        if (point.getID() == id)
+        {
+            return &point;
+        }
+        selection = point.getChild(id); // empty function for point
+        if (selection) return selection;
+    }
+    return selection;
 }
 
 bool Waypath::getNext(Vector3f & pos)

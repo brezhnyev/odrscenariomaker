@@ -3,6 +3,8 @@
 
 #include "Viewer.h"
 #include "WaypointProps.h"
+#include "WaypathProps.h"
+#include "ActorProps.h"
 
 #include <QtWidgets/QMainWindow>
 
@@ -13,8 +15,10 @@ public:
     MainWindow(QWidget * parent = nullptr);
 
 private:
-    Viewer      *m_viewer;
-    TreeView    *m_treeView;
-    Scenario     m_scenario;
-    WaypointProps *m_wpProps;
+    Viewer         *m_viewer;
+    TreeView       *m_treeView;
+    Scenario        m_scenario;
+    WaypointProps  *m_pointProps;
+    WaypathProps   *m_pathProps;
+    ActorProps     *m_actorProps;
 };

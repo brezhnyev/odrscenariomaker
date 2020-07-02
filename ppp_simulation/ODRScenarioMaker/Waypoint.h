@@ -13,8 +13,7 @@ public:
     Waypoint(Eigen::Vector3f pos, float speed);
     void draw() override;
     void drawWithNames() override;
-    Selectable * getChild(int id) override {}
-    Selectable * getActive() override {}
+    Selectable * getChild(int id) override { return nullptr; }
     bool select(int id) override;
 
     Eigen::Vector3f getPosition() { return m_pos; }

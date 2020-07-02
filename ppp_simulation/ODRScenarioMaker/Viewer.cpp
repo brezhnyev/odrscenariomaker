@@ -39,15 +39,14 @@ Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-27, 
 void Viewer::init()
 {
     m_canvas.init();
-    int id = m_scenario.addWaypath();
-    emit signal_addWaypath(id); // must be done over gui later
+    int id = m_scenario.addVehicle();
+    emit signal_addActor(id); // must be done over gui later
 }
 
 void Viewer::draw()
 {
     m_canvas.draw();
     m_scenario.draw();
-    m_vehicle.draw();
 }
 
 void Viewer::drawWithNames()
@@ -151,7 +150,7 @@ void Viewer::listenForResponse()
         float y; ss >> y;
         float z; ss >> z;
         float yaw; ss >> yaw;
-        m_vehicle.setTrf(Vector3f(x,-y,z), -yaw);
+        //m_vehicle.setTrf(Vector3f(x,-y,z), -yaw);
         update();
     }
 

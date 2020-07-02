@@ -10,7 +10,7 @@ include_directories(${Qt5OpenGL_INCLUDE_DIRS})
 
 add_executable(${PROJECT_NAME} main.cpp 
 MainWindow.cpp Viewer.cpp Canvas.cpp Waypath.cpp Waypoint.cpp treeitem.cpp treemodel.cpp treeview.cpp 
-scenario.cpp WaypointProps.cpp Vehicle.cpp Selectable.cpp)
+scenario.cpp WaypointProps.cpp Vehicle.cpp Selectable.cpp WaypathProps.cpp Actor.cpp ActorProps.cpp)
 target_link_libraries(${PROJECT_NAME} libQGLViewer-qt5.so Qt5::Core Qt5::Gui Qt5::Widgets libOpenGL.so Qt5::OpenGL libpthread.so)
 
 add_subdirectory(client)

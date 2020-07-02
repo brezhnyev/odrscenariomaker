@@ -6,7 +6,6 @@ public:
     Selectable();
     virtual ~Selectable() {}
     virtual Selectable * getChild(int id) = 0;
-    virtual Selectable * getActive() = 0;
     virtual void draw() = 0;
     virtual void drawWithNames() = 0;
     virtual bool select(int) = 0;

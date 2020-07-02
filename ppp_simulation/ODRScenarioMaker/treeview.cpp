@@ -19,18 +19,26 @@ TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
     });
 }
 
+void TreeView::slot_addActor(int id)
+{
+    m_treeModel->addItem(0, id, "Actor");
+}
+
 void TreeView::slot_addWaypath(int id)
 {
-    m_treeModel->addWaypath(id);
+    m_treeModel->addItem(m_scenario.getActiveActorID(), id, "Waypath");
 }
 
 void TreeView::slot_addWaypoint(int id)
 {
-    m_treeModel->addWaypoint(m_scenario.m_activeWaypath, id);
+    m_treeModel->addItem(m_scenario.getActiveWaypathID(), id, "Waypoint");
 }
 
-void TreeView::slot_delWaypath(int) {}
-void TreeView::slot_delWaypoint(int) {}
+void TreeView::slot_delItem(int id)
+{
+    m_treeModel->delItem(id);
+}
+
 void TreeView::slot_select(int id)
 {
     selectionModel()->clear();

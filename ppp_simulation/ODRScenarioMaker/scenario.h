@@ -1,10 +1,7 @@
 #pragma once
 
 #include "Waypath.h"
-
-#pragma once
-
-#include "Actor.h"
+#include "Vehicle.h"
 
 #include <eigen3/Eigen/Eigen>
 
@@ -17,18 +14,23 @@ public:
     void draw();
     void drawWithNames();
 
+    int addVehicle();
     int addWaypath();
     int addWaypoint(Eigen::Vector3f);
+
+    void delActor(int id);
     void delWaypath(int id);
     void delWaypoint();
     void select(int id);
 
     Selectable * getSelectable(int id);
     Waypath *    getActiveWaypath();
+    int          getActiveWaypathID();
+    int          getActiveActorID();
 
 public:
-    int m_activeWaypath;
 
 private:
-    std::map<int, Waypath>    m_waypaths;
+    int m_activeActor;
+    std::map<int, Actor*>    m_actors;
 };  

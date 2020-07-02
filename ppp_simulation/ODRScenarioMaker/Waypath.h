@@ -9,18 +9,12 @@ class Waypath : public Selectable
 {
 public:
     Waypath();
-    int pushWaypoint(Eigen::Vector3f p);
-    void popWaypoint();
+    int addWaypoint(Eigen::Vector3f p);
+    int delWaypoint();
     void draw() override;
     void drawWithNames() override;
     bool select(int id) override;
-    Waypoint * getChild(int id) override
-    { 
-        auto it = find_if(m_wpoints.begin(), m_wpoints.end(), [id](Waypoint & p){ return (id == p.getID()); });
-        if (it != m_wpoints.end()) return &(*it);
-        return nullptr;
-    }
-    Waypoint * getActive() override { return &m_wpoints[m_activeWaypoint]; }
+    Selectable * getChild(int id) override;
 
     size_t size() { return m_wpoints.size(); }
     bool getNext(Eigen::Vector3f & pos);

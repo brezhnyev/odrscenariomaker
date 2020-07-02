@@ -1,5 +1,6 @@
 #include "WaypointProps.h"
 
+#include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QGroupBox>
@@ -50,7 +51,7 @@ WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
     lh->addWidget(speedInfo);
     this->setLayout(lh);
 
-    connect(m_x, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [this](double val){ m_waypoint.setPosition(Eigen::Vector3f(val, m_y->value(), m_z->value())); emit update(); });
+    connect(m_x, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [&](double val){ m_waypoint.setPosition(Eigen::Vector3f(val, m_y->value(), m_z->value())); emit update(); });
     connect(m_y, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [this](double val){ m_waypoint.setPosition(Eigen::Vector3f(m_x->value(), val, m_z->value())); emit update(); });
     connect(m_z, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [this](double val){ m_waypoint.setPosition(Eigen::Vector3f(m_x->value(), m_y->value(), val)); emit update(); });
     connect(m_speed, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [this](double val){ m_waypoint.setSpeed(val); emit update(); });

@@ -22,6 +22,7 @@ public:
     void listenForResponse();
 
 signals:
+    void signal_addActor(int);
     void signal_addWaypath(int);
     void signal_addWaypoint(int);
     void signal_delWaypath(int);
@@ -37,7 +38,6 @@ public slots:
 private:
     Canvas m_canvas;
     Scenario & m_scenario;
-    Vehicle m_vehicle;
     bool m_isconnected;
     int m_sock;
     std::thread * m_commThread;
