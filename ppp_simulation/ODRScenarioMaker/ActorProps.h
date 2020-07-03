@@ -12,6 +12,7 @@ public:
 
 signals:
     void signal_addWaypath(int);
+    void signal_delWaypath(int);
 
 private:
     Actor & m_actor;

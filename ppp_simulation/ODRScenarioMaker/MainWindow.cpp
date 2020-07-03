@@ -18,14 +18,11 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nul
     addDockWidget(Qt::LeftDockWidgetArea, treeDock);
     treeDock->setWidget(m_treeView);
 
-    connect(m_viewer, SIGNAL(signal_addActor(int)), m_treeView, SLOT(slot_addActor(int)));
-    connect(m_viewer, SIGNAL(signal_addWaypath(int)), m_treeView, SLOT(slot_addWaypath(int)));
-    connect(m_viewer, SIGNAL(signal_addWaypoint(int)), m_treeView, SLOT(slot_addWaypoint(int)));
-    // connect(m_viewer, SIGNAL(signal_delActor(int)), m_treeView, SLOT(slot_delItem(int)));
-    // connect(m_viewer, SIGNAL(signal_delWaypath(int)), m_treeView, SLOT(slot_delItem(int)));
-    // connect(m_viewer, SIGNAL(signal_delWaypoint(int)), m_treeView, SLOT(slot_delItem(int)));
-    connect(m_viewer, SIGNAL(signal_select(int)), m_treeView, SLOT(slot_select(int)));
-    connect(m_treeView, SIGNAL(signal_select(int)), m_viewer, SLOT(slot_select(int)));
+    connect(m_viewer,   SIGNAL(signal_addActor(int)),       m_treeView,     SLOT(slot_addActor(int)));
+    connect(m_viewer,   SIGNAL(signal_addWaypath(int)),     m_treeView,     SLOT(slot_addWaypath(int)));
+    connect(m_viewer,   SIGNAL(signal_addWaypoint(int)),    m_treeView,     SLOT(slot_addWaypoint(int)));
+    connect(m_viewer,   SIGNAL(signal_select(int)),         m_treeView,     SLOT(slot_select(int)));
+    connect(m_treeView, SIGNAL(signal_select(int)),         m_viewer,       SLOT(slot_select(int)));
 
     QDockWidget * propsDock = new QDockWidget(tr("Properties"), this);
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
@@ -69,6 +66,8 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nul
             propsDock->setWidget(m_actorProps);
             connect(m_actorProps, &ActorProps::signal_addWaypath, [this](int id){m_viewer->update(); });
             connect(m_actorProps, &ActorProps::signal_addWaypath, [this](int id){m_treeView->slot_addWaypath(id); });
+            connect(m_actorProps, &ActorProps::signal_delWaypath, [this](int id){m_viewer->update(); });
+            connect(m_actorProps, &ActorProps::signal_delWaypath, [this](int id){m_treeView->slot_delItem(id); });
         }
     }
     );

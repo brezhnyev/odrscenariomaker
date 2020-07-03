@@ -24,13 +24,13 @@ using namespace qglviewer;
 using namespace Eigen;
 
 
-Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-27, 92, 239, 237)), m_scenario(scenario), m_commThread(nullptr)
+Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_commThread(nullptr)
 {
     using namespace net;
 
-    cout << "Version: " << glGetString(GL_VERSION) << endl;
-    cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
-    cout.flush();
+    // cout << "Version: " << glGetString(GL_VERSION) << endl; // KB: causes cout stop!
+    // cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
+    // cout.flush();
     camera()->setSceneRadius(200);
     camera()->fitSphere(Vec(0, 0, 0), 200);
     camera()->setZNearCoefficient(0.01);
@@ -38,20 +38,18 @@ Viewer::Viewer(Scenario & scenario) : m_canvas("../data/Town02.jpg", QRect(-27, 
 
 void Viewer::init()
 {
-    m_canvas.init();
+    m_scenario.init();
     int id = m_scenario.addVehicle();
     emit signal_addActor(id); // must be done over gui later
 }
 
 void Viewer::draw()
 {
-    m_canvas.draw();
     m_scenario.draw();
 }
 
 void Viewer::drawWithNames()
 {
-    m_canvas.drawWithNames();
     m_scenario.drawWithNames();
 }
 
@@ -68,9 +66,14 @@ void Viewer::postSelection(const QPoint &point)
 
     if (selectedName() == -1) return;
 
-    if (selectedName() == 0) // put a new waypoint
+    if (selectedName() == 1) // Canvas
     {
         int id = m_scenario.addWaypoint(Vector3f(sp.x, sp.y, sp.z));
+        if (id == -1)
+        {
+            QMessageBox::warning(this, "Error adding Element", "Add/activate waypath in Actor!");
+            return;
+        }
         emit signal_addWaypoint(id);
     }
     else

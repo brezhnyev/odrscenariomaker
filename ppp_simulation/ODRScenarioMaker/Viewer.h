@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Canvas.h"
 #include "Waypath.h"
 #include "scenario.h"
 #include "Vehicle.h"
@@ -36,9 +35,8 @@ public slots:
     void slot_stop();
 
 private:
-    Canvas m_canvas;
-    Scenario & m_scenario;
-    bool m_isconnected;
-    int m_sock;
-    std::thread * m_commThread;
+    Scenario &      m_scenario;
+    bool            m_isconnected;
+    int             m_sock;
+    std::thread *   m_commThread;
 };

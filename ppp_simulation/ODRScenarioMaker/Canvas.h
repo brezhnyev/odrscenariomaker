@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Selectable.h"
+
 #include <qrect.h>
 #include <qimage.h>
 
@@ -8,14 +10,14 @@
 #include <string>
 #include <vector>
 
-class Canvas
+class Canvas : public Selectable
 {
 public:
     Canvas();
     Canvas(std::string texname, QRect rect);
     void init();
-    void draw();
-    void drawWithNames();
+    void draw() override;
+    void drawWithNames() override;
 
 private:
     QRect m_rect;

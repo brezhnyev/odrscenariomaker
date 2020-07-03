@@ -3,70 +3,84 @@
 using namespace std;
 using namespace Eigen;
 
+Scenario::Scenario() : m_canvas("../data/Town02.jpg", QRect(-27, 92, 239, 237)) {}
+
+void Scenario::init()
+{
+    m_canvas.init();
+}
+
+void Scenario::draw()
+{
+    m_canvas.draw();
+    for (auto & child : m_children) child.second->draw();
+}
+
+void Scenario::drawWithNames()
+{
+    m_canvas.drawWithNames();
+    for (auto & child : m_children) child.second->drawWithNames();
+}
+
 // adding ---------------
 int Scenario::addVehicle()
 {
-    Vehicle * vehicle = new Vehicle();
-    return addChild(vehicle);
+    return addChild(new Vehicle);
 }
 
 int Scenario::addWaypath()
 {
-    Waypath * path = new Waypath();
-    return m_children[m_activeChild]->addChild(path);
+    return getActiveChild(0) ? getActiveChild(0)->addChild(new Waypath) : -1;
 }
 
 int Scenario::addWaypoint(Vector3f p)
 {
-    Waypoint * point = new Waypoint(p, 0);
-    return getActiveChild()->getActiveChild()->addChild(point);
+    return getActiveChild(1) ? getActiveChild(1)->addChild(new Waypoint(p, 0)) : -1;
 }
 
 // deleting -------------
-void Scenario::delActor(int id)
+int Scenario::delActor(int id)
 {
-    delChild(id);
+    return delChild(id);
 }
 
-void Scenario::delWaypath(int id)
+int Scenario::delWaypath(int id)
 {
-    getActiveChild()->delChild(id);
+    return getActiveChild(0) ? getActiveChild(0)->delChild(id) : -1;
 }
 
-void Scenario::delWaypoint(int id)
+int Scenario::delWaypoint(int id)
 {
-    getActiveChild()->getActiveChild()->delChild(id);
+    return getActiveChild(1) ? getActiveChild(1)->delChild(id) : -1;
 }
-
 
 // get active elements -------------
-
 Actor * Scenario::getActiveActor()
 {
-    return dynamic_cast<Actor*>(getActiveChild());
+    return getActiveChild(0) ? dynamic_cast<Actor*>(getActiveChild(0)) : nullptr;
 }
 
 Waypath * Scenario::getActiveWaypath()
 {
-    return dynamic_cast<Waypath*>(getActiveChild()->getActiveChild());
+    return getActiveChild(1) ? dynamic_cast<Waypath*>(getActiveChild(1)) : nullptr;
 }
 
 Waypoint * Scenario::getActiveWaypoint()
 {
-    return dynamic_cast<Waypoint*>(getActiveChild()->getActiveChild()->getActiveChild());
+    return getActiveChild(2) ? dynamic_cast<Waypoint*>(getActiveChild(2)) : nullptr;
 }
 
 int Scenario::getActiveActorID()
 {
-    return getActiveChild()->getID();
+    return getActiveChild(0) ? getActiveChild(0)->getID() : -1;
 }
 
 int Scenario::getActiveWaypathID()
 {
-    return getActiveChild()->getActiveChild()->getID();
+    return getActiveChild(1) ? getActiveChild(1)->getID() : -1;
 }
 
 int Scenario::getActiveWaypointID()
 {
-    return getActiveChild()->getActiveChild()->getActiveChild()->getID();
+    return getActiveChild(2) ? getActiveChild(2)->getID() : -1;
 }

@@ -2,9 +2,9 @@
 
 int Selectable::s_ID = 0;
 
-Selectable::Selectable() : m_selected(false), m_activeChild(0)
+Selectable::Selectable() : m_selected(false), m_activeChild(-1)
 { 
-    ++s_ID; m_id = s_ID;
+    m_id = s_ID; ++s_ID;
 }
 
 void Selectable::draw()

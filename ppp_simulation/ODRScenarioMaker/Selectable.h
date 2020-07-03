@@ -16,7 +16,10 @@ public:
     virtual int delChild(int id);
 
     int getID() { return m_id; }
-    Selectable * getActiveChild() { return m_activeChild == -1 ? nullptr: m_children[m_activeChild]; }
+    Selectable * getActiveChild(int depth)
+    { 
+        return (m_activeChild == -1 || m_children.empty()) ? nullptr: !depth ? m_children[m_activeChild] : m_children[m_activeChild]->getActiveChild(depth - 1);
+    }
     std::map<int, Selectable*> children() { return m_children; }
     
 protected:
