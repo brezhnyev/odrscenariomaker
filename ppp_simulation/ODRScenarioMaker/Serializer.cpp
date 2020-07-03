@@ -1,6 +1,8 @@
 #include "Serializer.h"
 #include "scenario.h"
 
+#include <eigen3/Eigen/Eigen>
+
 #include <sstream>
 #include <iostream>
 
@@ -50,14 +52,52 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
         YAML::Node node;
         node["type"] = "Waypoint";
         YAML::Node location;
-        YAML::Node x, y, z;
-        x["x"] = waypoint->getPosition().x();
-        y["y"] = waypoint->getPosition().y();
-        z["z"] = waypoint->getPosition().z();
-        location.push_back(x);
-        location.push_back(y);
-        location.push_back(z);
+        location["x"] = waypoint->getPosition().x();
+        location["y"] = waypoint->getPosition().y();
+        location["z"] = waypoint->getPosition().z();
         node["location"] = location;
         parent.push_back(node);
+    }
+}
+
+Scenario Serializer::deserialize_yaml(const std::string & data)
+{
+    YAML::Node root = YAML::Load(data);
+    Scenario object;
+
+    deserialize_yaml(root, object);
+
+    return object;
+}
+
+void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
+{
+    for (auto it = node.begin(); it != node.end(); ++it)
+    {
+        auto child = *it;
+        if (child["type"].as<string>() == "Vehicle")
+        {
+            Vehicle * vehicle = new Vehicle();
+            object.addChild(vehicle);
+            vehicle->m_name = child["name"].as<string>();
+            if (!child["waypaths"].IsNull())
+                deserialize_yaml(child["waypaths"], *vehicle);
+        }
+        if (child["type"].as<string>() == "Waypath")
+        {
+            Waypath * waypath = new Waypath();
+            object.addChild(waypath);
+            if (!child["waypoints"].IsNull())
+                deserialize_yaml(child["waypoints"], *waypath);
+        }
+        if (child["type"].as<string>() == "Waypoint")
+        {
+            auto location = child["location"];
+            float x = location["x"].as<float>();
+            float y = location["y"].as<float>();
+            float z = location["z"].as<float>();
+            Waypoint * waypoint = new Waypoint(Eigen::Vector3f(x,y,z), 0);
+            object.addChild(waypoint);
+        }
     }
 }

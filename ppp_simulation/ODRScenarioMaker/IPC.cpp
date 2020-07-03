@@ -24,16 +24,7 @@ IPC::IPC(Scenario & scenario) : m_scenario(scenario), m_isconnected(false), m_so
 void IPC::slot_play()
 {
     string data = m_serializer.serialize_yaml(&m_scenario);
-    cout << data << endl;
-    return;
-
-    Waypath & wp = *m_scenario.getActiveWaypath();
-    if (wp.children().size() < 2)
-    {
-        QMessageBox::warning(nullptr, "Missing data", "At least two waypoints needed");
-        return;
-    }
-    string command = "./client/client \"" + wp.serialize() + "\" &";
+    string command = "./client/client \"" + data + "\" &";
     system(command.c_str());
 
     usleep(1e6);
