@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Canvas.h"
 #include "Waypath.h"
 #include "Vehicle.h"
 
@@ -11,10 +10,6 @@
 class Scenario : public Selectable
 {
 public:
-    Scenario();
-    void init();
-    void draw() override;
-    void drawWithNames() override;
     std::string getType() const override { return "Scenario"; }
 
     int addVehicle();
@@ -32,7 +27,4 @@ public:
     int          getActiveActorID();
     int          getActiveWaypathID();
     int          getActiveWaypointID();
-
-private:
-    Canvas m_canvas;
 };  

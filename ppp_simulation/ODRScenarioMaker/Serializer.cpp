@@ -1,5 +1,4 @@
 #include "Serializer.h"
-#include "scenario.h"
 
 #include <eigen3/Eigen/Eigen>
 

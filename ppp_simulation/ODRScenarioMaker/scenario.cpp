@@ -1,26 +1,9 @@
 #include "scenario.h"
+#include <vector>
 
 using namespace std;
 using namespace Eigen;
 
-Scenario::Scenario() : m_canvas("../data/Town02.jpg", QRect(-27, 92, 239, 237)) {}
-
-void Scenario::init()
-{
-    m_canvas.init();
-}
-
-void Scenario::draw()
-{
-    m_canvas.draw();
-    for (auto & child : m_children) child.second->draw();
-}
-
-void Scenario::drawWithNames()
-{
-    m_canvas.drawWithNames();
-    for (auto & child : m_children) child.second->drawWithNames();
-}
 
 // adding ---------------
 int Scenario::addVehicle()

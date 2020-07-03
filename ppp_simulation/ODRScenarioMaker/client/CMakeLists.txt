@@ -4,7 +4,6 @@ project(client)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Wl,--warn-unresolved-symbols")
-set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-fsanitize=address")
 set(CMAKE_AUTOMOC ON)
 
 find_package(Qt5 COMPONENTS Core Gui Widgets Xml OpenGL REQUIRED)
@@ -31,4 +30,4 @@ endif()
 
 message("CARLA_LIB: ${CARLA_LIB}")
 target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} 
-    png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+    png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem ser yaml-cpp)

@@ -10,6 +10,9 @@
 #include <carla/rpc/WheelPhysicsControl.h>
 #include <carla/rpc/VehicleLightState.h>
 
+#include "../scenario.h"
+#include "../Serializer.h"
+
 #include <chrono>
 #include <iostream>
 #include <random>
@@ -31,7 +34,6 @@
 #include <iostream>
 #include <signal.h>
 
-#include "../Waypath.h"
 #include <eigen3/Eigen/Eigen>
 
 namespace cc = carla::client;
@@ -96,24 +98,32 @@ void prepareServer()
 
 int main(int argc, char ** argv)
 {
-    prepareServer();
+   // prepareServer();
 
-    Waypath waypath;
-    {
-        Eigen::Vector3f v; float val; int counter = 0;
-        stringstream ss(argv[1]);
-        while(ss >> val)
-        {
-            if (counter%3 == 0) v.x() = val;
-            if (counter%3 == 1) v.y() =-val;
-            if (counter%3 == 2) 
-            {
-                v.z() = val;
-                waypath.addChild(new Waypoint(v, 0));
-            }
-            ++counter;
-        }
-    }
+    Serializer ser;
+    string data = R"(- type: Vehicle
+  waypaths:
+    - type: Waypath
+      waypoints:
+        - type: Waypoint
+          location:
+            x: 122.1067
+            y: 187.7945
+            z: 0.0003890471
+        - type: Waypoint
+          location:
+            x: 97.04152
+            y: 187.7945
+            z: 0.0003890471
+        - type: Waypoint
+          location:
+            x: 77.80542
+            y: 187.2116
+            z: 0.0003890471
+  name: vehicle.volkswagen.t2)";
+    Scenario scenario = ser.deserialize_yaml(data);
+
+    Waypath waypath = *dynamic_cast<Waypath*>(scenario.children().begin()->second->children().begin()->second);
 
     isStopped = false;
 

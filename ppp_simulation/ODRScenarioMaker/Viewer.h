@@ -3,6 +3,7 @@
 #include "Waypath.h"
 #include "scenario.h"
 #include "Vehicle.h"
+#include "Canvas.h"
 
 #include <QGLViewer/qglviewer.h>
 
@@ -35,7 +36,5 @@ public slots:
 
 private:
     Scenario &      m_scenario;
-    bool            m_isconnected;
-    int             m_sock;
-    std::thread *   m_commThread;
+    Canvas          m_canvas;
 };

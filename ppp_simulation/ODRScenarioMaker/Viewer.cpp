@@ -24,7 +24,7 @@ using namespace qglviewer;
 using namespace Eigen;
 
 
-Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_commThread(nullptr)
+Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_canvas("../data/Town02.jpg", QRect{-27, 92, 239, 237})
 {
     using namespace net;
 
@@ -38,18 +38,20 @@ Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_commThread(nullptr
 
 void Viewer::init()
 {
-    m_scenario.init();
+    m_canvas.init();
     int id = m_scenario.addVehicle();
     emit signal_addVehicle(id); // must be done over gui later
 }
 
 void Viewer::draw()
 {
+    m_canvas.draw();
     m_scenario.draw();
 }
 
 void Viewer::drawWithNames()
 {
+    m_canvas.drawWithNames();
     m_scenario.drawWithNames();
 }
 

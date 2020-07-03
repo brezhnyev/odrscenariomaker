@@ -1,10 +1,8 @@
 #pragma once
 
 #include "scenario.h"
-
-#include <yaml-cpp/yaml.h>
-
 #include <string>
+#include <yaml-cpp/yaml.h>
 
 class Serializer
 {
