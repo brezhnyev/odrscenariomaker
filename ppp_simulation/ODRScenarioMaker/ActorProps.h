@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Actor.h"
+#include "Vehicle.h"
 
 #include <QtWidgets/QWidget>
+#include <QtWidgets/QLabel>
+
 
 class ActorProps : public QWidget
 {
@@ -14,6 +16,14 @@ signals:
     void signal_addWaypath(int);
     void signal_delWaypath(int);
 
-private:
+protected:
     Actor & m_actor;
+    QLabel * m_idInfo;
+};
+
+class VehicleProps : public ActorProps
+{
+    Q_OBJECT
+public:
+    VehicleProps(Vehicle & actor);
 };

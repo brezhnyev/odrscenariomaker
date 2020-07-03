@@ -19,9 +19,14 @@ TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
     });
 }
 
-void TreeView::slot_addActor(int id)
+void TreeView::slot_addVehicle(int id)
 {
-    m_treeModel->addItem(0, id, "Actor");
+    m_treeModel->addItem(0, id, "Vehicle");
+}
+
+void TreeView::slot_addWalker(int id)
+{
+    m_treeModel->addItem(0, id, "Walker");
 }
 
 void TreeView::slot_addWaypath(int id)

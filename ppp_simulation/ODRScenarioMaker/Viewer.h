@@ -21,7 +21,8 @@ public:
     void listenForResponse();
 
 signals:
-    void signal_addActor(int);
+    void signal_addVehicle(int);
+    void signal_addWalker(int);
     void signal_addWaypath(int);
     void signal_addWaypoint(int);
     void signal_delWaypath(int);

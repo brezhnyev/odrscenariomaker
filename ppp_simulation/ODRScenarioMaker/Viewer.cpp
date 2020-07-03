@@ -40,7 +40,7 @@ void Viewer::init()
 {
     m_scenario.init();
     int id = m_scenario.addVehicle();
-    emit signal_addActor(id); // must be done over gui later
+    emit signal_addVehicle(id); // must be done over gui later
 }
 
 void Viewer::draw()

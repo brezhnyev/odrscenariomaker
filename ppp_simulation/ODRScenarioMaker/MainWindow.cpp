@@ -18,7 +18,7 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nul
     addDockWidget(Qt::LeftDockWidgetArea, treeDock);
     treeDock->setWidget(m_treeView);
 
-    connect(m_viewer,   SIGNAL(signal_addActor(int)),       m_treeView,     SLOT(slot_addActor(int)));
+    connect(m_viewer,   SIGNAL(signal_addVehicle(int)),     m_treeView,     SLOT(slot_addVehicle(int)));
     connect(m_viewer,   SIGNAL(signal_addWaypath(int)),     m_treeView,     SLOT(slot_addWaypath(int)));
     connect(m_viewer,   SIGNAL(signal_addWaypoint(int)),    m_treeView,     SLOT(slot_addWaypoint(int)));
     connect(m_viewer,   SIGNAL(signal_select(int)),         m_treeView,     SLOT(slot_select(int)));
@@ -55,19 +55,19 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nul
             connect(m_pathProps, &WaypathProps::signal_delWaypoint, [this](int id){m_viewer->update(); });
             connect(m_pathProps, &WaypathProps::signal_delWaypoint, [this](int id){m_treeView->slot_delItem(id); });
         }
-        else if (dynamic_cast<Actor*>(item))
+        else if (dynamic_cast<Vehicle*>(item))
         {
             if (m_actorProps)
             {
                 m_actorProps->close();
                 delete m_actorProps;
             }
-            m_actorProps = new ActorProps(*dynamic_cast<Actor*>(item));
+            m_actorProps = new VehicleProps(*dynamic_cast<Vehicle*>(item));
             propsDock->setWidget(m_actorProps);
-            connect(m_actorProps, &ActorProps::signal_addWaypath, [this](int id){m_viewer->update(); });
-            connect(m_actorProps, &ActorProps::signal_addWaypath, [this](int id){m_treeView->slot_addWaypath(id); });
-            connect(m_actorProps, &ActorProps::signal_delWaypath, [this](int id){m_viewer->update(); });
-            connect(m_actorProps, &ActorProps::signal_delWaypath, [this](int id){m_treeView->slot_delItem(id); });
+            connect(m_actorProps, &VehicleProps::signal_addWaypath, [this](int id){m_viewer->update(); });
+            connect(m_actorProps, &VehicleProps::signal_addWaypath, [this](int id){m_treeView->slot_addWaypath(id); });
+            connect(m_actorProps, &VehicleProps::signal_delWaypath, [this](int id){m_viewer->update(); });
+            connect(m_actorProps, &VehicleProps::signal_delWaypath, [this](int id){m_treeView->slot_delItem(id); });
         }
     }
     );
