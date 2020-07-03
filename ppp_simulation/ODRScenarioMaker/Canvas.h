@@ -18,6 +18,7 @@ public:
     void init();
     void draw() override;
     void drawWithNames() override;
+    std::string getType() const override { return "Canvas"; }
 
 private:
     QRect m_rect;

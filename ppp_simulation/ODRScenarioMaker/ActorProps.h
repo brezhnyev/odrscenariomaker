@@ -10,6 +10,7 @@ class ActorProps : public QWidget
 {
     Q_OBJECT
 public:
+    virtual ~ActorProps() {}
     ActorProps(Actor & actor);
 
 signals:

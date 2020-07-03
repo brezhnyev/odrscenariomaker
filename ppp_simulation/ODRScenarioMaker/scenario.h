@@ -15,6 +15,7 @@ public:
     void init();
     void draw() override;
     void drawWithNames() override;
+    std::string getType() const override { return "Scenario"; }
 
     int addVehicle();
     int addWaypath();

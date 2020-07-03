@@ -5,6 +5,7 @@
 #include "WaypointProps.h"
 #include "WaypathProps.h"
 #include "ActorProps.h"
+#include "IPC.h"
 
 #include <QtWidgets/QMainWindow>
 
@@ -21,4 +22,5 @@ private:
     WaypointProps  *m_pointProps;
     WaypathProps   *m_pathProps;
     ActorProps     *m_actorProps;
+    IPC             m_IPC;
 };

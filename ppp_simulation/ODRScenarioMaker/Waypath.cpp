@@ -61,7 +61,7 @@ bool Waypath::getNext(Vector3f & pos)
     return false;
 }
 
-string Waypath::serialize()
+string Waypath::serialize() const
 {
     Eigen::Vector3f v; float val; int counter = 0;
     stringstream ss;

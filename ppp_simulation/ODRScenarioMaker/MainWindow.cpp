@@ -8,7 +8,11 @@
 
 using namespace std;
 
-MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nullptr), m_pathProps(nullptr), m_actorProps(nullptr)
+MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
+, m_pointProps(nullptr)
+, m_pathProps(nullptr)
+, m_actorProps(nullptr)
+, m_IPC(m_scenario)
 {
     m_viewer = new Viewer(m_scenario);
     setCentralWidget(m_viewer);
@@ -32,7 +36,7 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nul
 
         if (!item) return;
 
-        if (dynamic_cast<Waypoint*>(item))
+        if (item->getType() == "Waypoint")
         {
             if (m_pointProps)
             {
@@ -43,7 +47,7 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nul
             propsDock->setWidget(m_pointProps);
             connect(m_pointProps, &WaypointProps::update, [this](){m_viewer->update(); });
         }
-        else if (dynamic_cast<Waypath*>(item))
+        else if (item->getType() == "Waypath")
         {
             if (m_pathProps)
             {
@@ -55,7 +59,7 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nul
             connect(m_pathProps, &WaypathProps::signal_delWaypoint, [this](int id){m_viewer->update(); });
             connect(m_pathProps, &WaypathProps::signal_delWaypoint, [this](int id){m_treeView->slot_delItem(id); });
         }
-        else if (dynamic_cast<Vehicle*>(item))
+        else if (item->getType() == "Vehicle")
         {
             if (m_actorProps)
             {
@@ -77,11 +81,13 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent), m_pointProps(nul
 
     QPushButton *playButton = new QPushButton(playDock);
     playButton->setText("Play");
-    connect(playButton, SIGNAL(pressed()), m_viewer, SLOT(slot_play()));
+    connect(playButton, SIGNAL(pressed()), &m_IPC, SLOT(slot_play()));
 
     QPushButton *stopButton = new QPushButton(playDock);
     stopButton->setText("Stop");
-    connect(stopButton, SIGNAL(pressed()), m_viewer, SLOT(slot_stop()));
+    connect(stopButton, SIGNAL(pressed()), &m_IPC, SLOT(slot_stop()));
+
+    connect(&m_IPC, &IPC::signal_update, [this](){m_viewer->update();} );
 
     playLayout->addWidget(playButton);
     playLayout->addWidget(stopButton);

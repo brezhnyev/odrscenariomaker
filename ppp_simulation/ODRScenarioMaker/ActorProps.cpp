@@ -14,7 +14,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
     m_idInfo = new QLabel(this);
-    m_idInfo->setText("Actor ID: " + QString::number(actor.getID()));
+    m_idInfo->setText(QString(actor.getType().c_str()) + " ID: " + QString::number(actor.getID()));
 
     QPushButton * addWaypath = new QPushButton(this);
     addWaypath->setText("Add waypath");
@@ -64,7 +64,6 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 
 VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle)
 {
-    m_idInfo->setText("Vehicle ID: " + QString::number(vehicle.getID()));
     auto mainLayout = layout();
     QComboBox * typeCombo = new QComboBox(this);
     QStringList ls;
@@ -97,6 +96,8 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle)
     "vehicle.nissan.micra";
     typeCombo->addItems(ls);
     mainLayout->addWidget(typeCombo);
+    // KB: crashes if setName() function is used, should be checked later
+    connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.m_name = name.toStdString(); });
 
     //mainLayout->addStretch(1);
 }

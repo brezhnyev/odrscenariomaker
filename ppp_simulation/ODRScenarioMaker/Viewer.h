@@ -32,8 +32,6 @@ signals:
 
 public slots:
     void slot_select(int);
-    void slot_play();
-    void slot_stop();
 
 private:
     Scenario &      m_scenario;

@@ -1,5 +1,9 @@
 #include "Selectable.h"
 
+#include <string>
+
+using namespace std;
+
 int Selectable::s_ID = 0;
 
 Selectable::Selectable() : m_selected(false), m_activeChild(-1)
