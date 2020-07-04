@@ -98,33 +98,10 @@ void prepareServer()
 
 int main(int argc, char ** argv)
 {
-   // prepareServer();
+    prepareServer();
 
     Serializer ser;
-    string data = R"(- type: Vehicle
-  waypaths:
-    - type: Waypath
-      waypoints:
-        - type: Waypoint
-          location:
-            x: 122.1067
-            y: 187.7945
-            z: 0.0003890471
-        - type: Waypoint
-          location:
-            x: 97.04152
-            y: 187.7945
-            z: 0.0003890471
-        - type: Waypoint
-          location:
-            x: 77.80542
-            y: 187.2116
-            z: 0.0003890471
-  name: vehicle.volkswagen.t2)";
-    Scenario scenario = ser.deserialize_yaml(data);
-
-    Waypath waypath = *dynamic_cast<Waypath*>(scenario.children().begin()->second->children().begin()->second);
-
+    Scenario scenario = ser.deserialize_yaml(argv[1]);
     isStopped = false;
 
     auto client = cc::Client("127.0.0.1", 2000);
@@ -142,62 +119,55 @@ int main(int argc, char ** argv)
     world.SetWeather(crpc::WeatherParameters::ClearNoon);
 
     // Spawn Vehicles:
-    auto blueprints = world.GetBlueprintLibrary()->Filter("vehicle.volkswagen.t2");
+    auto scenario_vehicles = scenario.children();
+    const int number_of_vehicles = scenario_vehicles.size();
     auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
-    auto blueprint = (*blueprints)[0];
-    // Spawn the vehicle.
-    auto it = waypath.children().begin();
-    auto wp1 = dynamic_cast<Waypoint*>(it->second);
-    ++it;
-    auto wp2 = dynamic_cast<Waypoint*>(it->second);
-    auto dir = wp2->getPosition() - wp1->getPosition();
-    auto yaw = (atan2(dir.y(), dir.x()))*90/M_PI_2;
-    cg::Transform transform(cg::Location(wp1->getPosition().x(), wp1->getPosition().y(), wp1->getPosition().z()), cg::Rotation(0,yaw,0));
-    ShrdPtrActor actor = world.TrySpawnActor(blueprint, spawn_points[0]);
-    if (!actor)
-    {
-        shutdown(new_socket, SHUT_RDWR);
-        cout << "Failed to spawn actor ------" << endl;
-        return 1;
-    }
-    // Finish and store the vehicle
-    cout << "Spawned " << actor->GetDisplayId() << '\n';
+    vector<ShrdPtrActor> vehicles; vehicles.reserve(number_of_vehicles);
 
-    //cg::Transform transform(cg::Location(173.699, 237, 0), cg::Rotation(0,-180,0));
-    actor->SetTransform(transform);
+    cc::Vehicle::Control control;
+
+    int i = 0;
+    for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++i)
+    {
+        Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(it->second);
+        auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_vehicle.getName()))[0];
+        // Spawn the vehicle.
+        auto actor = world.TrySpawnActor(blueprint, spawn_points[i%number_of_vehicles]);
+        if (!actor)
+        {
+            cout << "Failed to spawn actor ------" << endl;
+            continue;
+        }
+        cout << "Spawned " << actor->GetDisplayId() << '\n';
+        // Set the scenario start position:
+        Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
+        auto wit = waypath.children().begin();
+        auto wp1 = dynamic_cast<Waypoint*>(wit->second); ++wit;
+        auto wp2 = dynamic_cast<Waypoint*>(wit->second);
+        auto dir = wp2->getPosition() - wp1->getPosition();
+        auto yaw = (atan2(dir.y(), dir.x()))*90/M_PI_2;
+        cg::Transform transform(cg::Location(wp1->getPosition().x(), wp1->getPosition().y(), wp1->getPosition().z()), cg::Rotation(0,yaw,0));
+        actor->SetTransform(transform);
+        auto vehicle = static_cast<cc::Vehicle*>(actor.get());
+        control.throttle = 1.0f;
+        vehicle->ApplyControl(control);
+        vehicle->SetSimulatePhysics();
+        vehicles.push_back(actor);
+    }
+    world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
+
+    // Set spectator trf by the first waypoint of the first vehicle:
+    Vehicle & first_vehicle = *dynamic_cast<Vehicle*>(scenario_vehicles.begin()->second);
     auto spectator = world.GetSpectator();
     //transform.location -= 10.0f * transform.GetForwardVector();
+    cg::Transform transform = vehicles[0]->GetTransform();
     transform.location.z += 30.0f;
     //transform.rotation.yaw += 180.0f;
     transform.rotation.pitch = -80.0f;
     spectator->SetTransform(transform);
 
-    auto vehicle = static_cast<cc::Vehicle*>(actor.get());
-    cc::Vehicle::Control control;
-    control.throttle = 1.0f;
-    vehicle->ApplyControl(control);
-
-    world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
 
     float SPEED = 10.0f;
-    map<int, std::vector<carla::SharedPtr<cc::Waypoint>>> paths;
-    int pathID = -1;
-    float DIST = 5.0f; // how far away we scan the waypoints ahead of the vehicle
-    bool turnLeft = true;
-
-    vehicle->SetSimulatePhysics();
-
-    // Comments to the below block:
-    // The GetWaypoint(position) returns the closest waypoint to the requested position
-    // This function returns 1 waypoint of the SAME road IF the vehicle is NOT in junction
-    // HOWEVER IF the vehicle IS in the junction the above function can return a waypoint of ANY crossing road:
-    // auto waypoint = world.GetMap()->GetWaypoint(vehicle->GetLocation());
-
-    // So there are several major values here:
-    // 1. vehicle->GetTransform() - the current position of the vehicle
-    // 2. waypoint (see above) - the closest waypoint to the vehicle
-    // 3. waypoints are the next waypoints from the waypoint DIST away ahead from it. Should be array of size 1 if the scan is NOT in junction.
-    // 4. paths is a container of possible paths (i.e. waypoints) in the junction
 
     auto brake = [&](float strength, cc::Vehicle* vehicle)
     {
@@ -223,47 +193,54 @@ int main(int argc, char ** argv)
         vehicle->ApplyControl(control);
     };
 
-
     while (!isStopped)
     {
         try
         {
-            auto trf = vehicle->GetTransform();
-            auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
-            auto speed =  vehicle->GetVelocity().Length();
+            auto * actor = &vehicles[0];
+            for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++actor)
+            {
+                auto vehicle = static_cast<cc::Vehicle*>((*actor).get());
 
-            // Get the next waypoints in some distance away:
-            Eigen::Vector3f peigen(trf.location.x, trf.location.y, trf.location.z);
-            if (!waypath.getNext(peigen)) break;
-            cg::Transform p(cg::Location(peigen.x(), peigen.y(), peigen.z()));
-            auto dir = (p.location - trf.location).MakeUnitVector();
-            auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
-            auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
+                auto trf = vehicle->GetTransform();
+                auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
+                auto speed =  vehicle->GetVelocity().Length();
 
-            // COMMENT:
-            // here the p MAY happen to be a waypoint from a IMPROPER track!!!
-            // This is especially possible when the waypoints are very close to the beginning of the junction
-            // where the tracks are almost overlapping
-            // This is NOT critical for heading the vehicle at this moment since the vehicle is now ~DIST meters away from the junction
+                Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(it->second);
+                Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
 
-            control.steer = sign * arc.Length();
-            vehicle->ApplyControl(control);
-            // The stronger is the curvature the lower speed:
-            float R = abs(3 * tan(M_PI_2 - control.steer)); // 3 is the ~length between axes
-            float acc = speed*speed/R; // get centrifusual acceleration
-            brake(0.01f*acc, vehicle);
+                // Get the next waypoints in some distance away:
+                Eigen::Vector3f peigen(trf.location.x, trf.location.y, trf.location.z);
+                if (!waypath.getNext(peigen))
+                {
+                    isStopped = true;
+                    break;
+                }
+                cg::Transform p(cg::Location(peigen.x(), peigen.y(), peigen.z()));
+                auto dir = (p.location - trf.location).MakeUnitVector();
+                auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
+                auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
+
+                control.steer = sign * arc.Length();
+                vehicle->ApplyControl(control);
+                // The stronger is the curvature the lower speed:
+                float R = abs(3 * tan(M_PI_2 - control.steer)); // 3 is the ~length between axes
+                float acc = speed*speed/R; // get centrifusual acceleration
+                brake(0.01f*acc, vehicle);
+
+                stringstream ss;
+                ss << scenario_vehicle.getID() << " " << trf.location.x << " " << trf.location.y << " " << trf.location.z << " " << trf.rotation.yaw;
+                send(new_socket, ss.str().c_str(), ss.str().size(), 0 ); 
+            }
             
             world.Tick(carla::time_duration(1s));
 
-            stringstream ss;
-            ss << trf.location.x << " " << trf.location.y << " " << trf.location.z << " " << trf.rotation.yaw;
-            send(new_socket, ss.str().c_str(), ss.str().size(), 0 ); 
         }
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
 
     world.ApplySettings(defaultSettings);
-    actor->Destroy();
+    for (auto v : vehicles) v->Destroy();
     send(new_socket, "*", 1, 0 );
     usleep(1e6);
     shutdown(new_socket, SHUT_RDWR);

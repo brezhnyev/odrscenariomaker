@@ -77,13 +77,13 @@ void IPC::listenForResponse()
         if (valread == 1 && buffer[0] == '*') break;
         if (!valread) return;
         stringstream ss(buffer);
+        int id; ss >> id;
         float x; ss >> x;
         float y; ss >> y;
         float z; ss >> z;
         float yaw; ss >> yaw;
-        Actor * actor = m_scenario.getActiveActor();
-        if (actor)
-            actor->setTrf(x,-y,z, -yaw);
+        Actor * actor = dynamic_cast<Actor*>(m_scenario.children()[id]);
+        if (actor) actor->setTrf(x,-y,z, -yaw);
         emit signal_update();
     }
 

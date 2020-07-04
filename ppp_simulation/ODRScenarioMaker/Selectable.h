@@ -12,11 +12,13 @@ public:
     virtual void drawWithNames();
     virtual bool select(int);
     virtual std::string getType() const = 0;
+    virtual std::string getName() const { return "unnamed"; }
 
     virtual int addChild(Selectable * child);
     virtual int delChild(int id);
 
     int getID() const { return m_id; }
+    int setID(int id) { m_id = id; s_ID = std::max(s_ID, m_id); } // relevant when reading from file / deserializing
     Selectable * getActiveChild(int depth)
     { 
         return (m_activeChild == -1 || m_children.empty()) ? nullptr: !depth ? m_children[m_activeChild] : m_children[m_activeChild]->getActiveChild(depth - 1);

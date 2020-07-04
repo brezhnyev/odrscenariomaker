@@ -29,6 +29,7 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
         Vehicle * vehicle = dynamic_cast<Vehicle*>(object);
         YAML::Node node;
         node["type"] = "Vehicle";
+        node["id"] = vehicle->getID();
         node["name"] = vehicle->getName();
         YAML::Node waypaths;
         node["waypaths"] = waypaths;
@@ -52,7 +53,7 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
         node["type"] = "Waypoint";
         YAML::Node location;
         location["x"] = waypoint->getPosition().x();
-        location["y"] = waypoint->getPosition().y();
+        location["y"] =-waypoint->getPosition().y();
         location["z"] = waypoint->getPosition().z();
         node["location"] = location;
         parent.push_back(node);
@@ -79,6 +80,7 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             Vehicle * vehicle = new Vehicle();
             object.addChild(vehicle);
             vehicle->m_name = child["name"].as<string>();
+            vehicle->setID(child["id"].as<int>());
             if (!child["waypaths"].IsNull())
                 deserialize_yaml(child["waypaths"], *vehicle);
         }

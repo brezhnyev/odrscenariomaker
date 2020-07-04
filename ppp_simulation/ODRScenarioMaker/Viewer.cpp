@@ -41,6 +41,8 @@ void Viewer::init()
     m_canvas.init();
     int id = m_scenario.addVehicle();
     emit signal_addVehicle(id); // must be done over gui later
+    id = m_scenario.addVehicle();
+    emit signal_addVehicle(id);
 }
 
 void Viewer::draw()
