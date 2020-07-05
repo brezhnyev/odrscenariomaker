@@ -23,13 +23,13 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     mainLayout->addWidget(m_idInfo);
     mainLayout->addWidget(addVehicle);
 
-    QHBoxLayout * bl1 = new QHBoxLayout();
+    QVBoxLayout * bl1 = new QVBoxLayout();
     QComboBox * delCombo = new QComboBox(this);
     for (auto && child : m_scenario.children()) delCombo->addItem(QString::number(child.second->getID()));
     QPushButton * delButton = new QPushButton(this);
     delButton->setText("Delete");
-    bl1->addWidget(delCombo);
     bl1->addWidget(delButton);
+    bl1->addWidget(delCombo);
     QGroupBox * delGroup = new QGroupBox(this);
     delGroup->setTitle("Delete vehicle");
     delGroup->setLayout(bl1);

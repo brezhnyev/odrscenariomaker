@@ -89,6 +89,8 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
             connect(m_scenarioProps, &ScenarioProps::signal_delVehicle, [this](int id){m_viewer->update(); });
             connect(m_scenarioProps, &ScenarioProps::signal_delVehicle, [this](int id){m_treeView->slot_delItem(id); });
         }
+        propsDock->setMaximumWidth(200);
+        propsDock->setMinimumWidth(200);
     }
     );
 

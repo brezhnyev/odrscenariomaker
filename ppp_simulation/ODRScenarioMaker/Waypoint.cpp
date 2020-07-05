@@ -10,9 +10,13 @@ void Waypoint::draw()
 {
     glDisable(GL_TEXTURE_2D);
 
-    float w = 0.4f;
-    glColor3f(1.0f, 0.0f, 0.0f);
+    // get current color (is set when the vehicle is drawn)
+    float cc[4];
+    glGetFloatv(GL_CURRENT_COLOR, cc);
 
+    glColor3f(1.0f-cc[0], 1.0f-cc[1], 1.0f-cc[2]);
+
+    float w = 0.4f;
     if (m_selected)
     {
         glBegin(GL_QUADS);
@@ -24,7 +28,7 @@ void Waypoint::draw()
     }
 
     w = 0.20f;
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f(cc[0], cc[1], cc[2]);
     glBegin(GL_QUADS);
     glVertex3f(m_pos.x() - w, m_pos.y() - w, m_pos.z()+0.1);
     glVertex3f(m_pos.x() + w, m_pos.y() - w, m_pos.z()+0.1);
