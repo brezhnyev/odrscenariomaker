@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include <GL/gl.h>
 
@@ -18,7 +19,7 @@ void Vehicle::draw()
     glPushMatrix();
     glRotatef(m_yaw,0,0,1);
 
-    glColor3f(1.0f, 1.0f, 0.0f);
+    glColor3f(float(m_color[0])/255, float(m_color[1])/255, float(m_color[2])/255);
     glBegin(GL_QUADS);
     glVertex3f(-2, -1, 0);
     glVertex3f( 2, -1, 0);
@@ -30,4 +31,14 @@ void Vehicle::draw()
     glPopMatrix();
 
     for (auto && child : m_children) child.second->draw();
+}
+
+std::string Vehicle::colorToString()
+{
+    return to_string(m_color[0]) + ", " + to_string(m_color[1]) + ", " + to_string(m_color[2]);
+}
+
+Eigen::Vector3i Vehicle::stringToColor()
+{
+
 }

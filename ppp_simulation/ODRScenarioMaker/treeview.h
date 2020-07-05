@@ -10,6 +10,7 @@ class TreeView : public QTreeView
     Q_OBJECT
 public:
     TreeView(Scenario & scenario);
+
 public slots:
     void slot_addVehicle(int);
     void slot_addWalker(int);

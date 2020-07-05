@@ -7,13 +7,20 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QColorDialog>
+
+#include <eigen3/Eigen/Eigen>
+
+#include <sstream>
+#include <iostream>
 
 #define MINMAXPOS 1000000
 
 ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
-    m_idInfo = new QLabel(this);
+    QLabel * m_idInfo = new QLabel(this);
     m_idInfo->setText(QString(actor.getType().c_str()) + " ID: " + QString::number(actor.getID()));
 
     QPushButton * addWaypath = new QPushButton(this);
@@ -62,7 +69,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
     });
 }
 
-VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle)
+VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(vehicle)
 {
     auto mainLayout = layout();
     QComboBox * typeCombo = new QComboBox(this);
@@ -95,6 +102,22 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle)
     "vehicle.nissan.patrol" <<
     "vehicle.nissan.micra";
     typeCombo->addItems(ls);
+
+    // vehicle color:
+    m_colorPicker = new QPushButton(this);
+    std::string scolor = m_vehicle.colorToString();
+    m_colorPicker->setStyleSheet("background-color: rgb("+QString(m_vehicle.colorToString().c_str()) + ")");
+    m_colorPicker->setText("Color");
+    connect(m_colorPicker, &QPushButton::pressed, [this]()
+    {
+        QColor color = QColorDialog::getColor();
+        QString scolor(QString::number(color.red()) + "," + QString::number(color.green()) + "," + QString::number(color.blue()));
+        m_colorPicker->setStyleSheet("background-color: rgb("+scolor+")");
+        m_vehicle.m_color = Eigen::Vector3i(color.red(), color.green(), color.blue());
+        emit signal_update();
+    });
+    mainLayout->addWidget(m_colorPicker);
+
     mainLayout->addWidget(typeCombo);
     // KB: crashes if setName() function is used, should be checked later
     connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.m_name = name.toStdString(); });

@@ -31,6 +31,11 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
         node["type"] = "Vehicle";
         node["id"] = vehicle->getID();
         node["name"] = vehicle->getName();
+        YAML::Node color;
+        color["r"] = vehicle->m_color[0];
+        color["g"] = vehicle->m_color[1];
+        color["b"] = vehicle->m_color[2];
+        node["color"] = color;
         YAML::Node waypaths;
         node["waypaths"] = waypaths;
         for (auto && child : object->children()) serialize_yaml(waypaths, child.second);
@@ -81,6 +86,11 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             object.addChild(vehicle);
             vehicle->m_name = child["name"].as<string>();
             vehicle->setID(child["id"].as<int>());
+            auto color = child["color"];
+            int r = color["r"].as<int>();
+            int g = color["g"].as<int>();
+            int b = color["b"].as<int>();
+            vehicle->m_color = Eigen::Vector3i(r,g,b);
             if (!child["waypaths"].IsNull())
                 deserialize_yaml(child["waypaths"], *vehicle);
         }

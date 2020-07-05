@@ -10,7 +10,7 @@ void Waypoint::draw()
 {
     glDisable(GL_TEXTURE_2D);
 
-    float w = 0.25f;
+    float w = 0.4f;
     glColor3f(1.0f, 0.0f, 0.0f);
 
     if (m_selected)

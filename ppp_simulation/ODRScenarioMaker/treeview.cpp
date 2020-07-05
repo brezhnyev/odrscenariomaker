@@ -13,20 +13,20 @@ TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
         if (sellist.empty()) return; // KB: IMHO should not happen. However happens due to slot_select (blockSignals do not help)
         int s = sellist.size();
         auto treeItem = static_cast<TreeItem*>(sellist[0].internalPointer());
-        auto ti2 = static_cast<TreeItem*>(sellist[1].internalPointer());
-        selectionModel()->selection();
+        //auto ti2 = static_cast<TreeItem*>(sellist[1].internalPointer()); // not used
         emit signal_select(treeItem->getID());
     });
+    m_treeModel->addItem(-1, m_scenario.getID(), "Scenario");
 }
 
 void TreeView::slot_addVehicle(int id)
 {
-    m_treeModel->addItem(0, id, "Vehicle");
+    m_treeModel->addItem(m_scenario.getID(), id, "Vehicle");
 }
 
 void TreeView::slot_addWalker(int id)
 {
-    m_treeModel->addItem(0, id, "Walker");
+    m_treeModel->addItem(m_scenario.getID(), id, "Walker");
 }
 
 void TreeView::slot_addWaypath(int id)

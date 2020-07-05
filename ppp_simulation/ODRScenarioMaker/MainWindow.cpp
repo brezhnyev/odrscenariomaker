@@ -11,7 +11,8 @@ using namespace std;
 MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
 , m_pointProps(nullptr)
 , m_pathProps(nullptr)
-, m_actorProps(nullptr)
+, m_vehicleProps(nullptr)
+, m_scenarioProps(nullptr)
 , m_IPC(m_scenario)
 {
     m_viewer = new Viewer(m_scenario);
@@ -32,7 +33,7 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
     connect(m_viewer, &Viewer::signal_select, 
     [&, this, propsDock](int id){
-        auto item = m_scenario.getChild(id);
+        auto item = m_scenario.findSelectable(id);
 
         if (!item) return;
 
@@ -61,17 +62,32 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
         }
         else if (item->getType() == "Vehicle")
         {
-            if (m_actorProps)
+            if (m_vehicleProps)
             {
-                m_actorProps->close();
-                delete m_actorProps;
+                m_vehicleProps->close();
+                delete m_vehicleProps;
             }
-            m_actorProps = new VehicleProps(*dynamic_cast<Vehicle*>(item));
-            propsDock->setWidget(m_actorProps);
-            connect(m_actorProps, &VehicleProps::signal_addWaypath, [this](int id){m_viewer->update(); });
-            connect(m_actorProps, &VehicleProps::signal_addWaypath, [this](int id){m_treeView->slot_addWaypath(id); });
-            connect(m_actorProps, &VehicleProps::signal_delWaypath, [this](int id){m_viewer->update(); });
-            connect(m_actorProps, &VehicleProps::signal_delWaypath, [this](int id){m_treeView->slot_delItem(id); });
+            m_vehicleProps = new VehicleProps(*dynamic_cast<Vehicle*>(item));
+            propsDock->setWidget(m_vehicleProps);
+            connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){m_viewer->update(); });
+            connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){m_treeView->slot_addWaypath(id); });
+            connect(m_vehicleProps, &VehicleProps::signal_delWaypath, [this](int id){m_viewer->update(); });
+            connect(m_vehicleProps, &VehicleProps::signal_delWaypath, [this](int id){m_treeView->slot_delItem(id); });
+            connect(m_vehicleProps, &VehicleProps::signal_update, [this](){m_viewer->update(); }); // color update
+        }
+        else if (item->getType() == "Scenario")
+        {
+            if (m_scenarioProps)
+            {
+                m_scenarioProps->close();
+                delete m_scenarioProps;
+            }
+            m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
+            propsDock->setWidget(m_scenarioProps);
+            connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){m_viewer->update(); });
+            connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){m_treeView->slot_addVehicle(id); });
+            connect(m_scenarioProps, &ScenarioProps::signal_delVehicle, [this](int id){m_viewer->update(); });
+            connect(m_scenarioProps, &ScenarioProps::signal_delVehicle, [this](int id){m_treeView->slot_delItem(id); });
         }
     }
     );

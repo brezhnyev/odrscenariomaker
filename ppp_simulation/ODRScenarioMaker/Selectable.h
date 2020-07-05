@@ -7,7 +7,7 @@ class Selectable
 public:
     Selectable();
     virtual ~Selectable() {}
-    virtual Selectable * getChild(int id);
+    virtual Selectable * findSelectable(int id);
     virtual void draw();
     virtual void drawWithNames();
     virtual bool select(int);

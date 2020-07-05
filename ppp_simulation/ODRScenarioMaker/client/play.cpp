@@ -131,6 +131,11 @@ int main(int argc, char ** argv)
     {
         Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(it->second);
         auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_vehicle.getName()))[0];
+        if (blueprint.ContainsAttribute("color"))
+        {
+            auto &attribute = blueprint.GetAttribute("color");
+            blueprint.SetAttribute("color", scenario_vehicle.colorToString());
+        }
         // Spawn the vehicle.
         auto actor = world.TrySpawnActor(blueprint, spawn_points[i%number_of_vehicles]);
         if (!actor)
@@ -229,7 +234,12 @@ int main(int argc, char ** argv)
                 brake(0.01f*acc, vehicle);
 
                 stringstream ss;
-                ss << scenario_vehicle.getID() << " " << trf.location.x << " " << trf.location.y << " " << trf.location.z << " " << trf.rotation.yaw;
+                ss 
+                    << scenario_vehicle.getID()
+                    << " " << trf.location.x 
+                    << " " << trf.location.y 
+                    << " " << trf.location.z 
+                    << " " << trf.rotation.yaw;
                 send(new_socket, ss.str().c_str(), ss.str().size(), 0 ); 
             }
             

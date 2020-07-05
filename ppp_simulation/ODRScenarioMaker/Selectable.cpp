@@ -33,49 +33,41 @@ int Selectable::delChild(int id)
     if (m_children.empty()) return -1;
 
     m_children.erase(id);
-
-    if (m_children.empty()) m_activeChild = -1;
-    else m_activeChild = 0;
+    m_activeChild = -1;
 
     return id;
 }
 
 bool Selectable::select(int id)
 {
-    // otherwise selet the waypoint only:
-    m_activeChild = 0;
+    m_activeChild = -1;
     m_selected = false;
 
-    for (auto && child : m_children)
-    {
-        if (child.second->select(id))
-        {
-            m_activeChild = child.second->getID();
-        }
-    }
-
-    // if path is selected then select all points on the path:
+    // if parent is selected select all children:
     if (id == m_id)
     {
         for (auto && child : m_children) child.second->select(child.second->getID());
         m_selected = true;
     }
-
-    return m_selected || m_activeChild;
+    else for (auto && child : m_children)
+    {
+        if (child.second->select(id)) // effects in either select or deselect the children
+        {
+            m_activeChild = child.second->getID();
+        }
+    }
+    return m_selected || m_activeChild != -1;
 }
 
-Selectable * Selectable::getChild(int id)
+Selectable * Selectable::findSelectable(int id)
 {
+    if (id == m_id) return this;
+
     Selectable * selection = nullptr;
 
     for (auto && child : m_children)
     {
-        if (child.second->getID() == id)
-        {
-            return child.second;
-        }
-        selection = child.second->getChild(id); // empty function for point
-        if (selection) return selection;
+        if (selection = child.second->findSelectable(id)) break;
     }
     return selection;
 }

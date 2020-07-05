@@ -5,6 +5,7 @@
 #include "WaypointProps.h"
 #include "WaypathProps.h"
 #include "ActorProps.h"
+#include "ScenarioProps.h"
 #include "IPC.h"
 
 #include <QtWidgets/QMainWindow>
@@ -21,6 +22,7 @@ private:
     Scenario        m_scenario;
     WaypointProps  *m_pointProps;
     WaypathProps   *m_pathProps;
-    ActorProps     *m_actorProps;
+    VehicleProps   *m_vehicleProps;
+    ScenarioProps  *m_scenarioProps;
     IPC             m_IPC;
 };
