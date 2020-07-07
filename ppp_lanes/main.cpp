@@ -37,7 +37,7 @@ int main()
         {"cont", "/LanePoints/cont_lane"},
         {"dash", "/LanePoints/dash_lane"},
         {"curb", "/LanePoints/curbstone"},
-        {"notl", "/LanePoints/curbstone"}};
+        {"stop", "/LanePoints/stop_lane"}};
 
     while (true)
     {
@@ -51,20 +51,9 @@ int main()
             bag.open(fileName);
             auto &&messages = rosbag::View(bag);
             deque<Point> lanes;
-            
+
             for (rosbag::MessageInstance const &msg : messages)
             {
-                // Vector4f v;
-                // v[3] = 1.0;
-                // if (msg.getTopic() == "/localization/local")
-                // {
-                //     auto trf = msg.instantiate<TransformStamped>();
-                //     auto trl = trf->transform.translation;
-                //     auto qtn = trf->transform.rotation;
-                //     M.block(0,3,3,1)= Vector3f(trl.x, trl.y, trl.z);
-                //     Quaternionf qtnd(qtn.w, qtn.x, qtn.y, qtn.z);
-                //     M.block(0,0,3,3) = qtnd.matrix();
-                // }
                 if (msg.getTopic() == t.second)
                 {
                     auto pc = msg.instantiate<PointCloud2>();
