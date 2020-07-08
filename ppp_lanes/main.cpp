@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "FolderReader.h"
+#include "kdTree.h"
 
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -19,12 +20,6 @@ using namespace sensor_msgs;
 using namespace geometry_msgs;
 using namespace Eigen;
 
-struct __attribute__((packed)) Point
-{
-    float x, y, z;
-    int32_t intensity;
-    int32_t t_lo, t_hi;
-};
 
 int main()
 {
@@ -35,23 +30,26 @@ int main()
 
     map<string, string> topics = {
         {"cont", "/LanePoints/cont_lane"},
-        {"dash", "/LanePoints/dash_lane"},
         {"curb", "/LanePoints/curbstone"},
+        {"dash", "/LanePoints/dash_lane"},
         {"stop", "/LanePoints/stop_lane"}};
 
     while (true)
     {
         string fileName = fr.getNext("bag");
+        string baseName = fileName.substr(0, fileName.size() - 4);
+        baseName = basename(&baseName[0]);
+
         if (fileName.empty())
             break;
 
-        for (auto &&t : topics)
+        for (auto && t : topics)
         {
             rosbag::Bag bag;
             bag.open(fileName);
-            auto &&messages = rosbag::View(bag);
+            int count = 0;
+            auto && messages = rosbag::View(bag);
             deque<Point> lanes;
-
             for (rosbag::MessageInstance const &msg : messages)
             {
                 if (msg.getTopic() == t.second)
@@ -64,31 +62,41 @@ int main()
                         memcpy(&point, &data[i], pc->point_step);
                         lanes.emplace_back(point);
                     }
-                }
-            }
-            bag.close();
 
-            ofstream ofs("./out/" + fileName + "." + t.first + ".ply");
-            ofs << R"(ply
+                    if (lanes.size() > 10000)
+                    {
+                        ofstream ofs("./out/" + baseName + "/" + t.first + "/" + to_string(count++) + ".ply");
+                        ofs << R"(ply
 format ascii 1.0
 comment VCGLIB generated
 element vertex )";
-            ofs << lanes.size() / 3 << endl;
-            ofs << R"(property float x
+                        ofs << lanes.size() / 3 << endl;
+                        ofs << R"(property float x
 property float y
 property float z
 element face 0
 property list uchar int vertex_indices
 end_header
 )";
-            for (int i = 0; i < lanes.size(); i += 3)
-            {
-                ofs << lanes[i].x << " " << lanes[i].y << " " << lanes[i].z << endl;
+                        auto mid = lanes.begin(); advance(mid, lanes.size()*0.5);
+
+                        // for (int i = 0; i < lanes.size(); ++i)
+                        // {
+                        //     ofs << lanes[i][0] << " " << lanes[i][1] << " " << lanes[i][2] << endl;
+                        // }
+
+                        KdTree tree;
+                        for (auto && l : lanes) tree.addNode(new KdNode(l));
+                        ofs << tree;
+
+                        lanes.erase(lanes.begin(), mid);
+
+                        ofs.close();
+                    }
+                }
             }
-
-            ofs.close();
+            bag.close();
         }
-
     }
 
     return 0;
