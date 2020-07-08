@@ -1,23 +1,12 @@
+#pragma once
+
+#include "point.h"
+
 #include <vector>
 
 #include <eigen3/Eigen/Eigen>
 
 enum Level {X,Y,Z};
-
-struct __attribute__((packed)) Point
-{
-    Point() {}
-    Point(float x, float y, float z)
-    {
-        v[0] = x;
-        v[1] = y;
-        v[2] = z;
-    }
-    float v [3];
-    int32_t intensity;
-    int32_t t_lo, t_hi;
-    float operator[](int i)  { return v[i]; }
-};
 
 struct KdNode
 {

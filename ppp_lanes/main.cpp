@@ -2,6 +2,7 @@
 
 #include "FolderReader.h"
 #include "kdTree.h"
+#include "quantizer.h"
 
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -63,14 +64,18 @@ int main()
                         lanes.emplace_back(point);
                     }
 
-                    if (lanes.size() > 10000)
+                    //if (lanes.size() > 1000)
                     {
+                        Quantizer<decltype(lanes)> q(lanes, 0.5f);
+                        auto qc = q.getQuantized();
+
                         ofstream ofs("./out/" + baseName + "/" + t.first + "/" + to_string(count++) + ".ply");
                         ofs << R"(ply
 format ascii 1.0
 comment VCGLIB generated
 element vertex )";
-                        ofs << lanes.size() / 3 << endl;
+                        //ofs << lanes.size() << endl;
+                        ofs << qc.size() << endl;
                         ofs << R"(property float x
 property float y
 property float z
@@ -78,18 +83,26 @@ element face 0
 property list uchar int vertex_indices
 end_header
 )";
-                        auto mid = lanes.begin(); advance(mid, lanes.size()*0.5);
 
+                        // 1) printing as is
                         // for (int i = 0; i < lanes.size(); ++i)
                         // {
                         //     ofs << lanes[i][0] << " " << lanes[i][1] << " " << lanes[i][2] << endl;
                         // }
 
-                        KdTree tree;
-                        for (auto && l : lanes) tree.addNode(new KdNode(l));
-                        ofs << tree;
+                        // 2) printing kdTree
+                        // KdTree tree;
+                        // for (auto && l : lanes) tree.addNode(new KdNode(l));
+                        // ofs << tree;
 
-                        lanes.erase(lanes.begin(), mid);
+                        // 3) printing quantized
+                        for (int i = 0; i < qc.size(); ++i)
+                        {
+                            ofs << qc[i][0] << " " << qc[i][1] << " " << qc[i][2] << endl;
+                        }
+
+                        auto mid = lanes.begin(); advance(mid, lanes.size()*0.5);
+                        lanes.clear();
 
                         ofs.close();
                     }
