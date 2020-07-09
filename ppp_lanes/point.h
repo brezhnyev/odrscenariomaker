@@ -12,9 +12,9 @@ struct __attribute__((packed)) Point
         v[1] = y;
         v[2] = z;
     }
+    float & operator [](int i)  { return v[i]; }
     float v [3];
     int32_t intensity;
     int32_t t_lo, t_hi;
-    float & operator[](int i)  { return v[i]; }
-    int id; // lane id
+    int id;
 };

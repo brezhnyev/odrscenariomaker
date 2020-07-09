@@ -1,9 +1,9 @@
 #include <iostream>
 
 #include "FolderReader.h"
-#include "kdTree.h"
+//#include "kdTree.h"
 #include "quantizer.h"
-#include "bbox.h"
+#include "pathfinder.h"
 
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -22,6 +22,7 @@ using namespace sensor_msgs;
 using namespace geometry_msgs;
 using namespace Eigen;
 
+#define LANEW 0.4
 
 void storePly(string folderName, string laneType, string fileName, BBoxPC &lane)
 {
@@ -80,7 +81,8 @@ int main()
             {
                 BBoxPC flatLane;
                 for (auto && l : lanes) copy(l.begin(), l.end(), back_inserter(flatLane));
-                Quantizer<decltype(flatLane)> q(flatLane, 0.5f);
+                Quantizer q(flatLane, LANEW);
+                //PathFinder(flatLane, LANEW);
                 storePly(baseName, t.first, to_string(count++), flatLane);
                 lanes.clear();
             };
@@ -101,7 +103,7 @@ int main()
                     lane.push_back(point);
                 }
 
-                removeOutliers(lane);
+                BBoxPC::removeOutliers(lane);
 
                 //storePly(baseName, t.first, to_string(count++), lane);
 

@@ -8,25 +8,24 @@
 
 #include <eigen3/Eigen/Eigen>
 
-template<typename C>
 class Quantizer
 {
 public:
-    typedef typename C::value_type T;
-    Quantizer(C & container, float _cS) 
-        : W(0), H(0), cS(_cS)
+    
+    Quantizer(BBoxPC & container, float _cS, int _shakes = 64) 
+        : W(0), H(0), cS(_cS), shakes(_shakes)
     {
         using namespace Eigen;
         assert(cS);
 
         quantized = container;
-        for (int i = 0; i < 10; ++i)
+        for (int i = 0; i < shakes; ++i)
         {
             buckets.clear();
             quantized.clear();
 
-            auto minp = container.bbox.minp - Eigen::Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX);
-            auto maxp = container.bbox.maxp + Eigen::Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX);
+            auto minp = container.bbox.minp - (!!i)*Eigen::Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX);
+            auto maxp = container.bbox.maxp + (!!i)*Eigen::Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX);
 
             W = ceil((maxp[0] - minp[0])/cS);
             H = ceil((maxp[1] - minp[1])/cS);
@@ -37,6 +36,7 @@ public:
                 int row = (p[1] - minp[1])/cS;
 
                 int index = row*W + col;
+                p.id = index;
                 buckets[index].push_back(p);
             }
 
@@ -59,11 +59,10 @@ public:
         }
     }
 
-private:
+protected:
     std::map<int, std::list<Point>> buckets;
-
-private:
     int W, H;
-    C quantized;
+    BBoxPC quantized;
     float cS; // cell size
+    int shakes;
 };
