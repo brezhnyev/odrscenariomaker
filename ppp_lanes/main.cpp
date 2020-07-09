@@ -23,6 +23,29 @@ using namespace geometry_msgs;
 using namespace Eigen;
 
 
+void storePly(string folderName, string laneType, string fileName, BBoxPC &lane)
+{
+    ofstream ofs("./out/" + folderName + "/" + laneType + "/" + fileName + ".ply");
+    ofs << R"(ply
+format ascii 1.0
+comment VCGLIB generated
+element vertex )";
+    ofs << lane.size() << endl;
+    ofs << R"(property float x
+property float y
+property float z
+element face 0
+property list uchar int vertex_indices
+end_header
+)";
+    for (int i = 0; i < lane.size(); ++i)
+    {
+        ofs << lane[i][0] << " " << lane[i][1] << " " << lane[i][2] << endl;
+    }
+    ofs.close();
+}
+
+
 int main()
 {
     FolderReader<> fr("./data");
@@ -53,6 +76,15 @@ int main()
             auto && messages = rosbag::View(bag);
             deque<BBoxPC> lanes;
 
+            auto storePC = [&]()
+            {
+                BBoxPC flatLane;
+                for (auto && l : lanes) copy(l.begin(), l.end(), back_inserter(flatLane));
+                Quantizer<decltype(flatLane)> q(flatLane, 0.5f);
+                storePly(baseName, t.first, to_string(count++), flatLane);
+                lanes.clear();
+            };
+
             for (rosbag::MessageInstance const &msg : messages)
             {
                 if (msg.getTopic() != t.second)
@@ -66,56 +98,18 @@ int main()
                 {
                     Point point(count);
                     memcpy(&point, &data[i], pc->point_step); // the id will not be overriten
-                    lane.addPoint(point);
+                    lane.push_back(point);
                 }
 
                 removeOutliers(lane);
-                Quantizer<decltype(lane)> q(lane, 0.5f);
 
-                ofstream ofs("./out/" + baseName + "/" + t.first + "/" + to_string(count++) + ".ply");
-                ofs << R"(ply
-format ascii 1.0
-comment VCGLIB generated
-element vertex )";
-                ofs << lane.size() << endl;
-                ofs << R"(property float x
-property float y
-property float z
-element face 0
-property list uchar int vertex_indices
-end_header
-)";
+                //storePly(baseName, t.first, to_string(count++), lane);
 
-                // 1) printing as is
-                // for (int i = 0; i < lane.size(); ++i)
-                // {
-                //     ofs << lane[i][0] << " " << lane[i][1] << " " << lane[i][2] << endl;
-                // }
-
-                // 2) printing kdTree
-                // KdTree tree;
-                // for (auto && l : lane) tree.addNode(new KdNode(l));
-                // ofs << tree;
-
-                // 3) printing quantized
-                for (int i = 0; i < lane.size(); ++i)
-                {
-                    ofs << lane[i][0] << " " << lane[i][1] << " " << lane[i][2] << endl;
-                }
-
-                lanes.push_back(lane);
-                while (lanes.size() > 1)
-                {
-                    if (!lanes.front().bbox.crossing(lanes.back().bbox))
-                        lanes.pop_front();
-                    else break;
-                }
-                
-
-                lane.clear();
-
-                ofs.close();
+                if (!lanes.empty() && !lanes.front().bbox.crossing(lane.bbox)) storePC();
+                else lanes.push_back(lane);
             }
+            // store the rest of the PC:
+            storePC();
             bag.close();
         }
     }

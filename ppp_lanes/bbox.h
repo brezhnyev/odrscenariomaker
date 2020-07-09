@@ -38,7 +38,7 @@ struct BBox
 
 struct BBoxPC : public std::deque<Point>
 {
-    void addPoint(Point p)
+    void push_back(Point p)
     {
         emplace_back(p);
         bbox.addPoint(p.v);
@@ -60,7 +60,7 @@ static void removeOutliers(BBoxPC & pc)
     auto newpc = pc; newpc.clear(); newpc.bbox.clear();
     for (auto p : pc)
         if ((Vector3f(p.v[0], p.v[1], p.v[2]) - center).norm() < 5*R)
-            newpc.addPoint(p);
+            newpc.push_back(p);
 
     pc = newpc;
 }
