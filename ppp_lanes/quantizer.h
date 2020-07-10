@@ -35,9 +35,8 @@ public:
                 int col = (p[0] - minp[0])/cS;
                 int row = (p[1] - minp[1])/cS;
 
-                int index = row*W + col;
-                p.id = index;
-                buckets[index].push_back(p);
+                p.index = row*W + col;
+                buckets[p.index].push_back(p);
             }
 
             for (auto && bucket : buckets)

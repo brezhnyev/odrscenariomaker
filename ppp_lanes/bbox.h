@@ -107,13 +107,13 @@ std::pair<VectorT, MatrixT> getPCEigenvalues(const ContainerT & values, bool doS
             components[cc].emplace_back(values[vc][cc] - center[cc]);
 
     // fill out co-variance matrix:
-    Eigen::Matrix<double, DIM, DIM> m;
+    Eigen::Matrix<T, DIM, DIM> m;
     for (int cc1 = 0; cc1 < DIM; ++cc1)
         for (int cc2 = 0; cc2 < DIM; ++cc2)
-            m(cc1, cc2) = inner_product(components[cc1].begin(), components[cc1].end(), components[cc2].begin(), T())/components[cc1].size();
+            m(cc1, cc2) = (T)inner_product(components[cc1].begin(), components[cc1].end(), components[cc2].begin(), T())/components[cc1].size();
 
     // use the Eigen solver to find out the eigen-values and eigen-vectors:
-    Eigen::EigenSolver<Eigen::Matrix3d> es(m);
+    Eigen::EigenSolver<decltype(m)> es(m);
     auto evec = es.eigenvectors();
     auto eval = es.eigenvalues();
 
@@ -129,16 +129,16 @@ std::pair<VectorT, MatrixT> getPCEigenvalues(const ContainerT & values, bool doS
         }
         // then fill out the output:
         int vc = 0; // eigen vectors/values counter
-        for (auto it = val2vec.begin(); it != val2vec.end(); ++it)
+        for (auto it = val2vec.begin(); it != val2vec.end(); ++it, ++vc)
         {
             retV[vc] = it->first;
-            for (int cc = 0; cc < DIM; ++cc) retM(cc, vc) = it->second[cc];
+            retM.block(0,vc,3,1) = it->second;
         }
     }
     else
     {
-        retV = eval.real().cast<T>();
-        retM = evec.real().cast<T>();
+        retV = eval.real();
+        retM = evec.real();
     }
 
     return std::pair<VectorT, MatrixT>(retV, retM);

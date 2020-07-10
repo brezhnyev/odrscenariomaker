@@ -5,7 +5,7 @@
 struct __attribute__((packed)) Point
 {
     Point() {}
-    Point(int _id) : id(_id) {}
+    Point(int _id) : index(_id) {}
     Point(float x, float y, float z)
     {
         v[0] = x;
@@ -16,5 +16,7 @@ struct __attribute__((packed)) Point
     float v [3];
     int32_t intensity;
     int32_t t_lo, t_hi;
-    int id;
+    unsigned char color [3] = {255,0,0};
+    int index;
+    bool isVisited {false}; // implicitely used for ANY c-tor, so fits for us.
 };

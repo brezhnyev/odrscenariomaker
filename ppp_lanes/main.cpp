@@ -35,13 +35,16 @@ element vertex )";
     ofs << R"(property float x
 property float y
 property float z
+property uchar red
+property uchar green
+property uchar blue
 element face 0
 property list uchar int vertex_indices
 end_header
 )";
-    for (int i = 0; i < lane.size(); ++i)
+    for (auto && p : lane)
     {
-        ofs << lane[i][0] << " " << lane[i][1] << " " << lane[i][2] << endl;
+        ofs << p[0] << " " << p[1] << " " << p[2] << " " << (int)p.color[0] << " " << (int)p.color[1] << " " << (int)p.color[2] << endl;
     }
     ofs.close();
 }
@@ -82,7 +85,7 @@ int main()
                 BBoxPC flatLane;
                 for (auto && l : lanes) copy(l.begin(), l.end(), back_inserter(flatLane));
                 Quantizer q(flatLane, LANEW);
-                //PathFinder(flatLane, LANEW);
+                PathFinder(flatLane, LANEW);
                 storePly(baseName, t.first, to_string(count++), flatLane);
                 lanes.clear();
             };
