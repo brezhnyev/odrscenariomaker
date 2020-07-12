@@ -13,11 +13,12 @@
 class PathFinder : public Quantizer
 {
 public:
-    PathFinder(BBoxPC & container, float _cS) : Quantizer(container, _cS, 1)
+    PathFinder(BBoxPC & container, float _cS) : Quantizer(container, _cS)
     {
         using namespace Eigen;
         using namespace std;
 
+        // figure out the longest paths from the unvisited point:
         for (auto && bucket : buckets)
         {
             Point & bP = bucket.second.front(); // we do not check if the front exists, cause it should, since the bucket is here.
@@ -31,7 +32,35 @@ public:
             if (!lane.empty()) lanes.push_back(lane);
         }
 
-        container.clear();
+        // set all the points in the buckets again as isVisited = false
+        for (auto && bucket : buckets) bucket.second.front().isVisited = false;
+
+        // do another iteration to make sure the lanes are spanning really the extreme start-end points:
+        auto lanescp = move(lanes);
+        for (auto && l : lanescp)
+        {
+            Point & bP = l.back();
+
+            BBoxPC lane;
+            searchPath(bP, lane);
+
+            if (!lane.empty()) lanes.push_back(lane);
+        }
+
+        // the removeRedundantPaths function will remove the commong points, ex.:
+
+        // the two paths having the commong points:
+        // ........................    path 1
+        // ..............
+        //                .
+        //                  . path 2
+
+        // will be reduced to:
+
+        // ........................    path 1
+        //                .
+        //                  . path 2 (only two points left)
+
         multimap<size_t, BBoxPC*> lanesM; // lanes by size
         for (auto && l : lanes) lanesM.insert(make_pair<size_t, BBoxPC*>(l.size(), &l));
 
@@ -53,23 +82,34 @@ public:
             for (int i = 0; i < lMax2Pop; i++) lane.pop_front();
         }
 
-        for (auto it = lanesM.rbegin(); it != lanesM.rend(); ++it)
-        {
-            auto l = *(*it).second;
-            if (l.size() < SCANC) continue;
-            unsigned char rgb [] = { (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255)};
-            if (rgb[0] < 50 && rgb[1] < 50 && rgb[2] < 50)
-            {
-                int index = rand()%3;
-                rgb[index] = 255 - rgb[index];
-            }
+        container.clear();
 
-            for (auto & p : l)
+        auto store = [&]()
+        {
+            int i = 0;
+            for (auto && l : lanes)
             {
-                memcpy(p.color, rgb, 3*sizeof(unsigned char));
-                container.push_back(p);
+                if (l.size() < SCANC) continue;
+                unsigned char rgb [] = { (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255)};
+                rgb[0] = i*50;
+
+                int j = 0;
+                for (auto & p : l)
+                {
+                    if (j != 0)
+                        memcpy(p.color, rgb, 3*sizeof(unsigned char));
+                    else {
+                        unsigned char RGB[3] = {255,255,255};
+                        memcpy(p.color, RGB, 3*sizeof(unsigned char));
+                    }
+                    container.push_back(p);
+                    ++j;
+                }
+                ++i;
             }
-        }
+        };
+
+        store();
     }
 
 

@@ -58,10 +58,10 @@ int main()
     //static_assert(sizeof(Point) == 24);
 
     map<string, string> topics = {
-        {"cont", "/LanePoints/cont_lane"},
-        {"curb", "/LanePoints/curbstone"},
-        {"dash", "/LanePoints/dash_lane"},
-        {"stop", "/LanePoints/stop_lane"}};
+        {"cont", "/LanePoints/cont_lane"}};
+        // {"curb", "/LanePoints/curbstone"},
+        // {"dash", "/LanePoints/dash_lane"},
+        // {"stop", "/LanePoints/stop_lane"}};
 
     while (true)
     {
@@ -84,7 +84,7 @@ int main()
             {
                 BBoxPC flatLane;
                 for (auto && l : lanes) copy(l.begin(), l.end(), back_inserter(flatLane));
-                Quantizer q(flatLane, LANEW);
+                //Quantizer q(flatLane, LANEW);
                 PathFinder(flatLane, LANEW);
                 storePly(baseName, t.first, to_string(count++), flatLane);
                 lanes.clear();
