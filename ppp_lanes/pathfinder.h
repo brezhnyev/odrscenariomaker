@@ -86,9 +86,9 @@ private:
         int index = bP.index;
         int r = index / W;
         int c = index - r * W;
-        for (int nc = -1; nc >= -SCANC; nc = nc < 0 ? -nc : -(nc + 1) ) // neighbour col
+        for (int nc = 0; nc >= -SCANC; nc = nc < 0 ? -nc : -(nc + 1) ) // neighbour col
         {
-            for (int nr = -1; nr >= -SCANC; nr = nr < 0 ? -nr : -(nr + 1) ) // neighbour row
+            for (int nr = 0; nr >= -SCANC; nr = nr < 0 ? -nr : -(nr + 1) ) // neighbour row
             {
                 int i = (r + nr) * W + (c + nc);
                 auto it = buckets.find(i);
