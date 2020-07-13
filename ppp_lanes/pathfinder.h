@@ -8,7 +8,7 @@
 
 #include <eigen3/Eigen/Eigen>
 
-#define SCANC 4
+#define NSCAN 4 // distance (in cells) for neighbours scan for longest path detection
 
 class PathFinder : public Quantizer
 {
@@ -48,33 +48,8 @@ public:
         }
 
         removeRedundansies();
-        //closeHoles();
 
-        container.clear();
-
-        // Fillout the container
-        // the labda is used due to some unclear gdb behaviour in case the block is just inlined as usual code
-        auto store = [&]()
-        {
-            for (auto && l : lanes)
-            {
-                if (l.size() < SCANC) continue;
-                unsigned char rgb [3] = { (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255)};
-
-                for (int i = 0; i < l.size(); ++i)
-                {
-                    if (i != 0)
-                        memcpy(l[i].color, rgb, 3*sizeof(unsigned char)); 
-                    else {
-                        unsigned char RGB[3] = {255,255,255}; // This will visually mark the start of the path
-                        memcpy(l[i].color, RGB, 3*sizeof(unsigned char));
-                    }
-                    container.push_back(l[i]);
-                }
-            }
-        };
-
-        store();
+        store(container);
     }
 
 
@@ -92,9 +67,9 @@ private:
         int index = bP.index;
         int r = index / W;
         int c = index - r * W;
-        for (int nc = 0; nc >= -SCANC; nc = nc < 0 ? -nc : -(nc + 1) ) // neighbour col
+        for (int nc = 0; nc >= -NSCAN; nc = nc < 0 ? -nc : -(nc + 1) ) // neighbour col
         {
-            for (int nr = 0; nr >= -SCANC; nr = nr < 0 ? -nr : -(nr + 1) ) // neighbour row
+            for (int nr = 0; nr >= -NSCAN; nr = nr < 0 ? -nr : -(nr + 1) ) // neighbour row
             {
                 int i = (r + nr) * W + (c + nc);
                 auto it = buckets.find(i);
@@ -167,22 +142,35 @@ private:
         }
     }
 
-    void closeHoles()
+
+protected:
+
+    void store(BBoxPC & container)
     {
-        using namespace std;
-
+        container.clear();
         auto lanescp = move(lanes);
-
-        // iterate the lanes and figure out which pieces may be welded
-        for (auto it = lanescp.begin(); it != lanescp.end(); ++it)
+        // Fillout the container
+        for (auto && l : lanescp)
         {
-            for (auto nit = it+1; nit != lanescp.end(); ++nit)
+            if (l.size() < NSCAN) continue;
+
+            unsigned char rgb [3] = { (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255)};
+            if ((rgb[0] < 50) && (rgb[1] < 50) && (rgb[2] < 50)) rgb[rand()%3] *= -1;
+            for (int i = 0; i < l.size(); ++i)
             {
-
+                if (i != 0)
+                    memcpy(l[i].color, rgb, 3*sizeof(unsigned char)); 
+                else 
+                {
+                    unsigned char RGB[3] = {255,255,255}; // This will visually mark the start of the path
+                    memcpy(l[i].color, RGB, 3*sizeof(unsigned char));
+                }
+                container.push_back(l[i]);
             }
+            lanes.push_back(l);
         }
-
     }
+
 
 protected:
     std::deque<BBoxPC> lanes;

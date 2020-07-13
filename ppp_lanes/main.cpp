@@ -4,6 +4,7 @@
 //#include "kdTree.h"
 #include "quantizer.h"
 #include "pathfinder.h"
+#include "pathmerger.h"
 
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -85,7 +86,9 @@ int main()
                 BBoxPC flatLane;
                 for (auto && l : lanes) copy(l.begin(), l.end(), back_inserter(flatLane));
                 //Quantizer q(flatLane, LANEW);
-                PathFinder(flatLane, LANEW);
+                //PathFinder(flatLane, LANEW);
+                PathMerger(flatLane, LANEW);
+                cout << flatLane.size() << endl;
                 storePly(baseName, t.first, to_string(count++), flatLane);
                 lanes.clear();
             };
