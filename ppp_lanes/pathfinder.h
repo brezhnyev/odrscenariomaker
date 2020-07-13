@@ -47,65 +47,30 @@ public:
             if (!lane.empty()) lanes.push_back(lane);
         }
 
-        // the removeRedundantPaths function will remove the commong points, ex.:
-
-        // the two paths having the commong points:
-        // ........................    path 1
-        // ..............
-        //                .
-        //                  . path 2
-
-        // will be reduced to:
-
-        // ........................    path 1
-        //                .
-        //                  . path 2 (only two points left)
-
-        multimap<size_t, BBoxPC*> lanesM; // lanes by size
-        for (auto && l : lanes) lanesM.insert(make_pair<size_t, BBoxPC*>(l.size(), &l));
-
-        for (auto it = lanesM.begin(); it != lanesM.end(); ++it)
-        {
-            auto && lane = *(*it).second;
-            int lMax2Pop = 0;
-            auto nit = it; nit++;
-            for (; nit != lanesM.end(); ++nit) // next iterator
-            {
-                auto && nlane = *(*nit).second;
-                int nMax2Pop = 0;
-                for (int i = 0; i < lane.size(); ++i)
-                {
-                    if (lane[i].index == nlane[i].index) ++nMax2Pop;
-                }
-                if (lMax2Pop < nMax2Pop) lMax2Pop = nMax2Pop;
-            }
-            for (int i = 0; i < lMax2Pop; i++) lane.pop_front();
-        }
+        removeRedundansies();
+        //closeHoles();
 
         container.clear();
 
+        // Fillout the container
+        // the labda is used due to some unclear gdb behaviour in case the block is just inlined as usual code
         auto store = [&]()
         {
-            int i = 0;
             for (auto && l : lanes)
             {
                 if (l.size() < SCANC) continue;
-                unsigned char rgb [] = { (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255)};
-                rgb[0] = i*50;
+                unsigned char rgb [3] = { (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255)};
 
-                int j = 0;
-                for (auto & p : l)
+                for (int i = 0; i < l.size(); ++i)
                 {
-                    if (j != 0)
-                        memcpy(p.color, rgb, 3*sizeof(unsigned char));
+                    if (i != 0)
+                        memcpy(l[i].color, rgb, 3*sizeof(unsigned char)); 
                     else {
-                        unsigned char RGB[3] = {255,255,255};
-                        memcpy(p.color, RGB, 3*sizeof(unsigned char));
+                        unsigned char RGB[3] = {255,255,255}; // This will visually mark the start of the path
+                        memcpy(l[i].color, RGB, 3*sizeof(unsigned char));
                     }
-                    container.push_back(p);
-                    ++j;
+                    container.push_back(l[i]);
                 }
-                ++i;
             }
         };
 
@@ -114,6 +79,7 @@ public:
 
 
 private:
+
     void searchPath(Point & bP, BBoxPC & lane)
     {
         using namespace Eigen;
@@ -162,5 +128,62 @@ private:
         }
     }
 
+    // remove the commong points, ex.:
+
+    // the two paths having the commong points:
+    // ........................    path 1
+    // ..............
+    //                .
+    //                  . path 2
+
+    // will be reduced to:
+
+    // ........................    path 1
+    //                .
+    //                  . path 2 (only two points left)
+    void removeRedundansies()
+    {
+        using namespace std;
+
+        multimap<size_t, BBoxPC*> lanesM; // lanes by size
+        for (auto && l : lanes) lanesM.insert(make_pair<size_t, BBoxPC*>(l.size(), &l));
+
+        for (auto it = lanesM.begin(); it != lanesM.end(); ++it)
+        {
+            auto && lane = *(*it).second;
+            int lMax2Pop = 0;
+            auto nit = it; nit++;
+            for (; nit != lanesM.end(); ++nit) // next iterator after it
+            {
+                auto && nlane = *(*nit).second;
+                int nMax2Pop = 0;
+                for (int i = 0; i < lane.size(); ++i)
+                {
+                    if (lane[i].index == nlane[i].index) ++nMax2Pop;
+                }
+                if (lMax2Pop < nMax2Pop) lMax2Pop = nMax2Pop;
+            }
+            for (int i = 0; i < lMax2Pop; i++) lane.pop_front();
+        }
+    }
+
+    void closeHoles()
+    {
+        using namespace std;
+
+        auto lanescp = move(lanes);
+
+        // iterate the lanes and figure out which pieces may be welded
+        for (auto it = lanescp.begin(); it != lanescp.end(); ++it)
+        {
+            for (auto nit = it+1; nit != lanescp.end(); ++nit)
+            {
+
+            }
+        }
+
+    }
+
+protected:
     std::deque<BBoxPC> lanes;
 };
