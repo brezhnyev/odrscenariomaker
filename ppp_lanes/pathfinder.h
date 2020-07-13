@@ -150,16 +150,15 @@ protected:
         container.clear();
         auto lanescp = move(lanes);
         // Fillout the container
+        int li = 0;
         for (auto && l : lanescp)
         {
             if (l.size() < NSCAN) continue;
 
-            unsigned char rgb [3] = { (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255), (unsigned char)((float)rand()/RAND_MAX*255)};
-            if ((rgb[0] < 50) && (rgb[1] < 50) && (rgb[2] < 50)) rgb[rand()%3] *= -1;
             for (int i = 0; i < l.size(); ++i)
             {
                 if (i != 0)
-                    memcpy(l[i].color, rgb, 3*sizeof(unsigned char)); 
+                    memcpy(l[i].color, &colors[li][0], 3*sizeof(unsigned char)); 
                 else 
                 {
                     unsigned char RGB[3] = {255,255,255}; // This will visually mark the start of the path
@@ -167,6 +166,7 @@ protected:
                 }
                 container.push_back(l[i]);
             }
+            ++li;
             lanes.push_back(l);
         }
     }

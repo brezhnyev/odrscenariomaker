@@ -88,7 +88,6 @@ int main()
                 //Quantizer q(flatLane, LANEW);
                 //PathFinder(flatLane, LANEW);
                 PathMerger(flatLane, LANEW);
-                cout << flatLane.size() << endl;
                 storePly(baseName, t.first, to_string(count++), flatLane);
                 lanes.clear();
             };
