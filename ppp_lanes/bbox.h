@@ -33,6 +33,10 @@ struct BBox
         minp = Eigen::Vector3f( MAXVAL, MAXVAL, MAXVAL);
         maxp = Eigen::Vector3f(-MAXVAL,-MAXVAL,-MAXVAL);
     }
+    Eigen::Vector3f center()
+    {
+        return 0.5f*(minp + maxp);
+    }
     Eigen::Vector3f minp = Eigen::Vector3f{ MAXVAL,  MAXVAL,  MAXVAL};
     Eigen::Vector3f maxp = Eigen::Vector3f{-MAXVAL, -MAXVAL, -MAXVAL};
 };

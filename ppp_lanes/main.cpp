@@ -5,6 +5,7 @@
 #include "quantizer.h"
 #include "pathfinder.h"
 #include "pathmerger.h"
+#include "laneaggregator.h"
 
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -22,6 +23,11 @@ using namespace geometry_msgs;
 using namespace Eigen;
 
 #define LANEW 0.4
+
+BBox LaneAggregator::bbox;
+Eigen::Vector3f LaneAggregator::direction = Vector3f(0,0,0);
+std::deque<BBoxPC> LaneAggregator::lanes;
+int LaneAggregator::laneID = 0;
 
 void storePly(string folderName, string laneType, string fileName, BBoxPC &lane)
 {
@@ -85,8 +91,13 @@ int main()
                 for (auto && l : lanes) copy(l.begin(), l.end(), back_inserter(flatLane));
                 //Quantizer q(flatLane, LANEW);
                 //PathFinder(flatLane, LANEW);
-                PathMerger(flatLane, LANEW);
-                storePly(baseName, t.first, to_string(count++), flatLane);
+                //PathMerger(flatLane, LANEW);
+
+                map<int, BBoxPC> lanesmap;
+                LaneAggregator(flatLane, LANEW, lanesmap);
+
+                if (!flatLane.empty())
+                    storePly(baseName, t.first, to_string(count++), flatLane);
                 lanes.clear();
             };
 
