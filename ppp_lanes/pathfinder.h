@@ -29,22 +29,22 @@ public:
             BBoxPC lane;
             searchPath(bP, lane);
 
-            if (!lane.empty()) lanes.push_back(lane);
+            if (!lane.empty()) paths.push_back(lane);
         }
 
         // set all the points in the buckets again as isVisited = false
         for (auto && bucket : buckets) bucket.second.front().isVisited = false;
 
-        // do another iteration to make sure the lanes are spanning really the extreme start-end points:
-        auto lanescp = move(lanes);
-        for (auto && l : lanescp)
+        // do another iteration to make sure the paths are spanning really the extreme start-end points:
+        auto pathscp = move(paths);
+        for (auto && l : pathscp)
         {
             Point & bP = l.back();
 
             BBoxPC lane;
             searchPath(bP, lane);
 
-            if (!lane.empty()) lanes.push_back(lane);
+            if (!lane.empty()) paths.push_back(lane);
         }
 
         removeRedundansies();
@@ -98,7 +98,7 @@ private:
             {
                 BBoxPC cpl = snapshot;
                 searchPath(p, cpl);
-                lanes.push_back(cpl);
+                paths.push_back(cpl);
             }
         }
     }
@@ -120,15 +120,15 @@ private:
     {
         using namespace std;
 
-        multimap<size_t, BBoxPC*> lanesM; // lanes by size
-        for (auto && l : lanes) lanesM.insert(make_pair<size_t, BBoxPC*>(l.size(), &l));
+        multimap<size_t, BBoxPC*> pathsM; // paths by size
+        for (auto && l : paths) pathsM.insert(make_pair<size_t, BBoxPC*>(l.size(), &l));
 
-        for (auto it = lanesM.begin(); it != lanesM.end(); ++it)
+        for (auto it = pathsM.begin(); it != pathsM.end(); ++it)
         {
             auto && lane = *(*it).second;
             int lMax2Pop = 0;
             auto nit = it; nit++;
-            for (; nit != lanesM.end(); ++nit) // next iterator after it
+            for (; nit != pathsM.end(); ++nit) // next iterator after it
             {
                 auto && nlane = *(*nit).second;
                 int nMax2Pop = 0;
@@ -148,10 +148,10 @@ protected:
     void store(BBoxPC & container)
     {
         container.clear();
-        auto lanescp = move(lanes);
+        auto pathscp = move(paths);
         // Fillout the container
         int li = 0;
-        for (auto && l : lanescp)
+        for (auto && l : pathscp)
         {
             if (l.size() < NSCAN) continue;
 
@@ -167,11 +167,11 @@ protected:
                 container.push_back(l[i]);
             }
             ++li;
-            lanes.push_back(l);
+            paths.push_back(l);
         }
     }
 
 
 protected:
-    std::deque<BBoxPC> lanes;
+    std::deque<BBoxPC> paths;
 };

@@ -13,9 +13,9 @@ public:
         using namespace std;
         using namespace Eigen;
 
-        auto lanescp = move(lanes);
+        auto pathscp = move(paths);
         deque<Vector3f> pcl1, pcl2;
-        int index1, index2; // the indices of the "bridge" points of two lanes
+        int index1, index2; // the indices of the "bridge" points of two paths
         float D = MAXVAL;
         Vector3f bridge(0,0,0);
 
@@ -36,12 +36,12 @@ public:
             }
         };
 
-        // iterate the lanes and figure out which pieces may be welded
-        for (auto it = lanescp.begin(); it != lanescp.end(); ++it)
+        // iterate the paths and figure out which pieces may be welded
+        for (auto it = pathscp.begin(); it != pathscp.end(); ++it)
         {
             auto && l1 = *it;
             if (l1.empty()) continue; // this can happen due to processing on previous steps
-            for (auto nit = it+1; nit != lanescp.end(); ++nit)
+            for (auto nit = it+1; nit != pathscp.end(); ++nit)
             {
                 // first condition: the distance between the end-end points not larger than some constant
                 auto && l2 = *nit;
@@ -75,7 +75,7 @@ public:
                 l2.clear();
             }
         }
-        lanes = move(lanescp);
+        paths = move(pathscp);
         store(container);
     }
 
