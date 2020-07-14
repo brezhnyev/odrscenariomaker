@@ -40,10 +40,31 @@ struct BBox
 
 struct BBoxPC : public std::deque<Point>
 {
+    BBoxPC() = default;
+    BBoxPC(const BBoxPC & b) = default;
+    BBoxPC & operator = (const BBoxPC & b) = default;
+    ~BBoxPC() = default;
+
+    BBoxPC(BBoxPC && b)
+    {
+        *this = move(b);
+    }
+    BBoxPC & operator = (BBoxPC && b)
+    {
+        this->std::deque<Point>::operator=(move(b));
+        b.clear();
+        return *this;
+    }
+
     void push_back(Point p)
     {
-        emplace_back(p);
+        std::deque<Point>::push_back(p);
         bbox.addPoint(p.v);
+    }
+    void clear()
+    {
+        std::deque<Point>::clear();
+        bbox.clear();
     }
     BBox bbox;
 

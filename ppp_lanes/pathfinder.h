@@ -4,7 +4,6 @@
 
 #include <map>
 #include <list>
-#include <map>
 
 #include <eigen3/Eigen/Eigen>
 
@@ -34,6 +33,8 @@ public:
 
         // set all the points in the buckets again as isVisited = false
         for (auto && bucket : buckets) bucket.second.front().isVisited = false;
+
+        removeRedundansies();
 
         // do another iteration to make sure the paths are spanning really the extreme start-end points:
         auto pathscp = move(paths);
@@ -138,8 +139,11 @@ private:
                 }
                 if (lMax2Pop < nMax2Pop) lMax2Pop = nMax2Pop;
             }
-            for (int i = 0; i < lMax2Pop; i++) lane.pop_front();
+            for (int i = 0; i < lMax2Pop; i++) lane.pop_front(); // KB: the BBox is not updated!!
         }
+
+        auto cpaths = move(paths);
+        for (auto && l : cpaths) if (l.size() >= NSCAN) paths.push_back(l);
     }
 
 

@@ -18,7 +18,6 @@ public:
         using namespace Eigen;
         assert(cS);
 
-        quantized = container;
         for (int i = 0; i < shakes; ++i)
         {
             buckets.clear();
@@ -54,7 +53,7 @@ public:
                 
                 quantized.push_back(sP);
             }
-            container = quantized;
+            container = move(quantized);
         }
     }
 

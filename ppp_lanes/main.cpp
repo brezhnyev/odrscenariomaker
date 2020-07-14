@@ -14,8 +14,6 @@
 
 #include <eigen3/Eigen/Eigen>
 
-#include <deque>
-#include <vector>
 #include <fstream>
 
 using namespace std;
