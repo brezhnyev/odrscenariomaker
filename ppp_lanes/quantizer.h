@@ -46,6 +46,7 @@ public:
                     sP[0] += p[0];
                     sP[1] += p[1];
                     sP[2] += p[2];
+                    sP.weight += p.weight;
                 }
                 sP[0] /= bucket.second.size();
                 sP[1] /= bucket.second.size();

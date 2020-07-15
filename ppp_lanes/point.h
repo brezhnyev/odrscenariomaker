@@ -8,12 +8,12 @@ static std::map<int, std::array<unsigned char,3>> colors =
     {0, {100, 0, 0}},
     {1, {0, 100, 0}},
     {2, {0, 0, 100}},
-    {3, {200, 0, 0}},
-    {4, {0, 200, 0}},
-    {5, {0, 0, 200}},
-    {6, {100, 100, 0}},
-    {7, {100, 0, 100}},
-    {8, {0, 100, 100}},
+    {3, {100, 100, 0}},
+    {4, {100, 0, 100}},
+    {5, {0, 100, 100}},
+    {6, {200, 0, 0}},
+    {7, {0, 200, 0}},
+    {8, {0, 0, 200}},
     {9, {200, 200, 0}},
     {10,{200, 0, 200}},
     {11,{0, 200, 200}},
@@ -42,4 +42,5 @@ struct __attribute__((packed)) Point
     unsigned char color [3] = {255,0,0};
     int index;
     bool isVisited {false}; // implicitely used for ANY c-tor, so fits for us.
+    int weight {1}; // the number of aggregated points
 };

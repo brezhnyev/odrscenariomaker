@@ -98,8 +98,6 @@ int main()
 
                 if (!flatLane.empty())
                     storePly(baseName, t.first, to_string(count++), flatLane);
-                    
-                lanes.clear();
             };
 
             for (rosbag::MessageInstance const &msg : messages)
@@ -122,8 +120,13 @@ int main()
 
                 //storePly(baseName, t.first, to_string(count++), lane);
 
-                if (!lanes.empty() && !lanes.front().bbox.crossing(lane.bbox)) storePC();
-                else lanes.push_back(lane);
+                lanes.push_back(lane);
+                if (!lanes.empty() && !lanes.front().bbox.crossing(lane.bbox))
+                {
+                    storePC();
+                    size_t s = lanes.size();
+                    while (!lanes.empty() && lanes.size() > 0.5*s) lanes.pop_front();
+                }
             }
             // store the rest of the PC:
             storePC();

@@ -91,6 +91,35 @@ struct BBoxPC : public std::deque<Point>
 
         pc = newpc;
     }
+
+    // static void removeOutliers(BBoxPC & pc)
+    // {
+    //     using namespace Eigen;
+
+    //     if (pc.size() < 3) return;
+
+    //     deque<Vector3f> vv;
+    //     for (auto && p : pc) vv.push_back(Vector3f(p.v));
+    //     Vector3f center(0,0,0);
+    //     for (auto && v : vv) center += v; center /= vv.size();
+
+    //     auto res = getPCEigenvalues<decltype(vv), Vector3f, Matrix3f>(vv);
+    //     // eigenvalues are variances! Get standard deviation:
+    //     float devX = sqrt(res.first[0]);
+    //     float devY = sqrt(res.first[1]);
+
+    //     BBoxPC newpc;
+
+    //     for (int i = 0; i < vv.size(); ++i)
+    //     {
+    //         Vector3f v = res.second*(vv[i] - center);
+    //         // check only x and y:
+    //         if ( (abs(v[0]) < 3*devX) && (abs(v[1]) < 3*devY) )
+    //             newpc.push_back(pc[i]);
+    //     }
+
+    //     pc = move(newpc);
+    // }
 };
 
 template <typename ContainerT, typename VectorT, typename MatrixT>

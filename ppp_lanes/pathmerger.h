@@ -3,6 +3,7 @@
 #include "pathfinder.h"
 
 #define HSCAN 8 // distance (in meters) for closing holes
+#define HNSCAN 8 // number of neighbours to scan for closing holes
 
 class PathMerger : public PathFinder
 {
@@ -19,19 +20,31 @@ public:
         float D = MAXVAL;
         Vector3f bridge(0,0,0);
 
-        auto fillForPCA = [&](auto it1, auto it2) 
+        auto fillForPCA = [&](auto it1, auto it1end, auto it2, auto it2end) 
         {
             auto d = (Vector3f((*it1).v) - Vector3f((*it2).v)).norm();
             if (d < HSCAN && d < D)
             {
                 D = d;
                 pcl1.clear(); pcl2.clear();
-                bridge = Vector3f((*it1).v) - Vector3f((*it2).v);
-                index1 = (*it1).index; index2 = (*it2).index;
+                // get the bridge first;
+                auto it1cp = it1; auto it2cp = it2;
+                Vector3f bp1(0,0,0);
+                Vector3f bp2(0,0,0);
                 for (int i = 0; i < NSCAN; ++i)
                 {
-                    pcl1.push_back(Vector3f((*it1).v)); ++it1;
-                    pcl2.push_back(Vector3f((*it2).v)); ++it2;
+                    bp1 += Vector3f((*it1cp).v); ++it1cp;
+                    bp2 += Vector3f((*it2cp).v); ++it2cp;
+                }
+                bp1 /= NSCAN; bp2 /= NSCAN;
+                bridge = bp1 - bp2;
+                // Fillout pcl1 and pcl2:
+                for (int i = 0; i < HNSCAN; ++i)
+                {
+                    const Point & p1 = (*it1);
+                    for (int wc = 0; wc < p1.weight; ++wc) pcl1.push_back(Vector3f(p1.v)); ++it1; if (it1 == it1end) break;
+                    const Point & p2 = (*it2);
+                    for (int wc = 0; wc < p2.weight; ++wc) pcl2.push_back(Vector3f(p2.v)); ++it2; if (it2 == it2end) break;
                 }
             }
         };
@@ -50,10 +63,10 @@ public:
                 D = MAXVAL;
                 bridge = Vector3f(0,0,0);
 
-                fillForPCA(l1.rbegin(), l2.begin());
-                fillForPCA(l1.begin(),  l2.rbegin());
-                fillForPCA(l1.begin(),  l2.begin());
-                fillForPCA(l1.rbegin(), l2.rbegin());
+                fillForPCA(l1.rbegin(), l1.rend(), l2.begin(), l2.end());
+                fillForPCA(l1.begin(),  l1.end(),  l2.rbegin(),l2.rend());
+                fillForPCA(l1.begin(),  l1.end(),  l2.begin(), l2.end());
+                fillForPCA(l1.rbegin(), l1.rend(), l2.rbegin(),l2.rend());
 
                 if (bridge.isZero()) continue;
 
@@ -64,9 +77,9 @@ public:
                 // now check if the pca1 and pca2 main components and the bridge between pclounds are aligned
                 Vector3f v1 = pca1.second.block(0,2,3,1);
                 Vector3f v2 = pca2.second.block(0,2,3,1);
-                if (abs(v1.dot(v2)) < 0.9f)     continue;
-                if (abs(bridge.dot(v1)) < 0.9f) continue;
-                if (abs(bridge.dot(v2)) < 0.9f) continue;
+                if (abs(v1.dot(v2))     < 0.98f) continue;
+                if (abs(bridge.dot(v1)) < 0.98f) continue;
+                if (abs(bridge.dot(v2)) < 0.98f) continue;
 
                 // the actual merging:
                 if (l1.back() .index != index1) reverse(l1.begin(), l1.end());
