@@ -7,12 +7,14 @@ public:
     {
         using namespace std;
         using namespace Eigen;
+
         
         if (lanes.empty())
         {
             lanes = paths;
             direction.setZero();
             bbox = container.bbox;
+            container.clear();
         }
         else if (direction.isZero())
         {
@@ -68,13 +70,15 @@ private:
                         lanes.push_back(move(lane));
                         path.clear();
                         isExtending = true;
-                        break;
+                        goto nextlane;
                     }
                 }
             }
+nextlane:;
             if (!isExtending)
                 lanesmap[laneID++] = move(lane);
         }
+        for (auto && path : pathscp) if (!path.empty()) lanes.push_back(move(path)); // the rest of new paths not extending the existing lanes
 
         // store:
         container.clear();
