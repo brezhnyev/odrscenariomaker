@@ -48,40 +48,80 @@ private:
                 reverse(path.begin(), path.end());
         }
 
-        auto lanescp = move(lanes);
-        auto pathscp = paths;
-
-        for (auto &&lane : lanescp)
+        auto isOverlapping = [&](auto P, auto && it, auto itend) -> bool
         {
-            bool isExtending = false;
-            for (auto &&path : pathscp)
+            int col = (P[0] - container.bbox.minp[0]) / cS;
+            int row = (P[1] - container.bbox.minp[1]) / cS;
+            for (; it != itend; ++it)
             {
-                if (path.empty()) continue;
-                int col = (lane.back()[0] - container.bbox.minp[0]) / cS;
-                int row = (lane.back()[1] - container.bbox.minp[1]) / cS;
-                for (auto it = path.begin(); it != path.end(); ++it)
+                Point p = (*it);
+                int pcol = (p[0] - container.bbox.minp[0]) / cS;
+                int prow = (p[1] - container.bbox.minp[1]) / cS;
+                if (abs(pcol - col) < 2 && abs(prow - row) < 2)
                 {
-                    Point p = (*it);
-                    int pcol = (p[0] - container.bbox.minp[0]) / cS;
-                    int prow = (p[1] - container.bbox.minp[1]) / cS;
-                    if (abs(pcol - col) < 2 && abs(prow - row) < 2)
-                    {
-                        for (; it != path.end(); ++it) lane.push_back(*it);
-                        lanes.push_back(move(lane));
-                        path.clear();
-                        isExtending = true;
-                        goto nextlane;
-                    }
+                    return true;
                 }
             }
-nextlane:;
-            if (!isExtending)
+            return false;
+        };
+
+        auto extendPath = [&](auto P, auto it, auto itend, auto & path, bool pushfront) -> bool
+        {
+            if (isOverlapping(P, it, itend))
+            {
+                if (pushfront)
+                    for (; it != itend; ++it) path.push_front(*it);
+                else
+                    for (; it != itend; ++it) path.push_back(*it);
+
+                return true;
+            }
+            return false;
+        };
+
+        for (auto &&lane : lanes)
+        {
+            bool isOverlap = false;
+
+            for (auto &&path : paths)
+            {
+                // front extension of path:
+                isOverlap = extendPath(path.front(), lane.rbegin(), lane.rend(), path, true);
+                // back extension of path:
+                isOverlap = extendPath(path.back(), lane.begin(), lane.end(), path, false) || isOverlap;
+
+                // if lane is part of path then the lane will be removed
+                if (!isOverlap)
+                    isOverlap = isOverlapping(lane.front(), path.rbegin(), path.rend());
+                if (!isOverlap)
+                    isOverlap = isOverlapping(lane.back(), path.begin(), path.end()) || isOverlap;
+
+                if (isOverlap)
+                {
+                    lane.clear();
+                    break;
+                }
+            }
+            if (!isOverlap)
                 lanesmap[laneID++] = move(lane);
         }
-        for (auto && path : pathscp) if (!path.empty()) lanes.push_back(move(path)); // the rest of new paths not extending the existing lanes
 
-        // store:
+        // get rid of all empty lanes:
+        auto lanescp = move(lanes);
+        for (auto && lane : lanescp) if (!lane.empty()) lanes.push_back(lane);
+        // rest of the non-overlapping paths:
+        for (auto && path : paths) lanes.push_front(path);
+
+        getLanes(container, lanesmap);
+    }
+
+public:
+
+    static void getLanes(BBoxPC & container, std::map<int, BBoxPC> & lanesmap, bool isFinal = false)
+    {
         container.clear();
+        if (isFinal)
+            for (auto && lane : lanes) lanesmap[laneID++] = move(lane);
         // Fillout the container
         int li = 0;
         for (auto && it : lanesmap)

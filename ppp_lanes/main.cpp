@@ -98,6 +98,7 @@ int main()
 
                 if (!flatLane.empty())
                     storePly(baseName, t.first, to_string(count++), flatLane);
+                    
                 lanes.clear();
             };
 
@@ -126,6 +127,15 @@ int main()
             }
             // store the rest of the PC:
             storePC();
+
+            // for Lanes aggregator - there still not aggregated lanes sitting there, get them:
+            BBoxPC flatLane;
+            map<int, BBoxPC> lanesmap;
+            LaneAggregator::getLanes(flatLane, lanesmap, true);
+
+            if (!flatLane.empty())
+                storePly(baseName, t.first, to_string(count++), flatLane);
+
             bag.close();
         }
     }
