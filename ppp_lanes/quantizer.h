@@ -12,8 +12,10 @@ class Quantizer
 {
 public:
     
-    Quantizer(BBoxPC & container, float _cS, int _shakes = 64) 
-        : W(0), H(0), cS(_cS), shakes(_shakes)
+    Quantizer(float _cS, int _shakes = 64)
+        : W(0), H(0), cS(_cS), shakes(_shakes) {}
+
+    void process(BBoxPC & container)
     {
         using namespace Eigen;
         assert(cS);
@@ -23,8 +25,8 @@ public:
             buckets.clear();
             quantized.clear();
 
-            auto minp = container.bbox.minp - (!!i)*Eigen::Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX);
-            auto maxp = container.bbox.maxp + (!!i)*Eigen::Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX);
+            auto minp = container.bbox.minp - Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX)*(!!i);
+            auto maxp = container.bbox.maxp + Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX)*(!!i);
 
             W = ceil((maxp[0] - minp[0])/cS);
             H = ceil((maxp[1] - minp[1])/cS);

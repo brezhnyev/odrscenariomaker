@@ -12,8 +12,13 @@
 class PathFinder : public Quantizer
 {
 public:
-    PathFinder(BBoxPC & container, float _cS) : Quantizer(container, _cS)
+    PathFinder(float _cS) : Quantizer(_cS) {}
+
+    void process(BBoxPC & container)
     {
+        Quantizer::process(container);
+        paths.clear();
+
         using namespace Eigen;
         using namespace std;
 

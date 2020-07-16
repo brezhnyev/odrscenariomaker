@@ -2,21 +2,30 @@
 
 #define MINLANESZ 16 // minimum 15 points making lane
 
+
 class LaneAggregator : public PathMerger
 {
 public:
-    LaneAggregator(BBoxPC & container, float _cS, std::map<int, BBoxPC> & lanesmap) : PathMerger(container, _cS)
+    LaneAggregator(float _cS) : PathMerger(_cS) {}
+
+public:
+
+    void process(BBoxPC & container, std::map<int, BBoxPC> & lanesmap)
     {
+        PathMerger::process(container);
+
         using namespace std;
         using namespace Eigen;
 
-        
+        lanesmap.clear();
+
         if (lanes.empty())
         {
             lanes = paths;
             direction.setZero();
             bbox = container.bbox;
             container.clear();
+            return;
         }
         else if (direction.isZero())
         {
@@ -27,22 +36,12 @@ public:
                 if ((Vector3f(lane.back().v) - Vector3f(lane.front().v)).dot(direction) < 0)
                     reverse(lane.begin(), lane.end());
             }
-            process(lanesmap, container);
         }
         else
         {
             direction = container.bbox.center() - bbox.center();
             bbox = container.bbox;
-            process(lanesmap, container);
         }
-    }
-
-private:
-
-    bool process(std::map<int, BBoxPC> & lanesmap, BBoxPC & container)
-    {
-        using namespace std;
-        using namespace Eigen;
 
         for (auto &&path : paths)
         {
@@ -84,7 +83,7 @@ private:
         for (auto &&lane : lanes)
         {
             bool isOverlap = false;
-
+            // WE ARE CHANGING THE PATHS!!!
             for (auto &&path : paths)
             {
                 // front extension of path:
@@ -117,14 +116,16 @@ private:
         auto lanescp = move(lanes);
         for (auto && lane : lanescp) if (!lane.empty()) lanes.push_back(lane);
         // rest of the non-overlapping paths:
-        for (auto && path : paths) lanes.push_front(path);
+        for (auto && path : paths) lanes.push_front(move(path));
+
+        // PATHS ARE EMPTY at this point !!!!!!!!!
 
         getLanes(container, lanesmap);
     }
 
 public:
 
-    static void getLanes(BBoxPC & container, std::map<int, BBoxPC> & lanesmap, bool isFinal = false)
+    void getLanes(BBoxPC & container, std::map<int, BBoxPC> & lanesmap, bool isFinal = false)
     {
         using namespace Eigen;
 
@@ -139,15 +140,8 @@ public:
         for (auto && it : lanesmap)
         {
             auto && lane = it.second;
-            // RESAMPLE the lane:
-            // Remember the start point of lane:
-            auto st = lane.front();
-            // resample with a new step size (ex. 1 meter), we set the closing holes a bit larger than before due to new (larger) quantizing
-            PathMerger pf(lane, 1.0f, 10.0f);
-            // The lane may be now reversed, check this:
-            if ((Vector3f(lane.front().v) - Vector3f(st.v)).norm() > (Vector3f(lane.back().v) - Vector3f(st.v)).norm())
-                reverse(lane.begin(), lane.end());
-            // FINISHED resampling lane
+
+            resample(lane);
 
             for (int i = 0; i < lane.size(); ++i)
             {
@@ -164,9 +158,56 @@ public:
         }
     }
 
+protected:
+
+    virtual void resample(BBoxPC & lane)
+    {
+        using namespace Eigen;
+
+        // Remember the start point of lane:
+        auto st = lane.front();
+        // resample with a new step size (ex. 1 meter), we set the closing holes a bit larger than before due to new (larger) quantizing
+        PathMerger pf(1.0f, 10.0f); pf.process(lane);
+        // The lane may be now reversed, check this:
+        if ((Vector3f(lane.front().v) - Vector3f(st.v)).norm() > (Vector3f(lane.back().v) - Vector3f(st.v)).norm())
+            reverse(lane.begin(), lane.end());
+    }
+
 private:
-    static BBox bbox;
-    static Eigen::Vector3f direction;
-    static std::deque<BBoxPC> lanes;
+    BBox bbox;
+    Eigen::Vector3f direction;
+    std::deque<BBoxPC> lanes;
     static int laneID;
+};
+
+
+
+class LaneAggregatorCont : public LaneAggregator
+{
+public:
+    LaneAggregatorCont(float _cS) : LaneAggregator(_cS) {}
+};
+
+class LaneAggregatorCurb : public LaneAggregator
+{
+public:
+    LaneAggregatorCurb(float _cS) : LaneAggregator(_cS) {}
+};
+
+class LaneAggregatorDash : public LaneAggregator
+{
+public:
+    LaneAggregatorDash(float _cS) : LaneAggregator(_cS) {}
+};
+
+
+class LaneAggregatorStop : public LaneAggregator
+{
+public:
+    LaneAggregatorStop(float _cS) : LaneAggregator(_cS) {}
+
+    void resample(BBoxPC & lane) override
+    {
+
+    }
 };

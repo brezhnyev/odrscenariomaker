@@ -7,6 +7,8 @@
 #include "pathmerger.h"
 #include "laneaggregator.h"
 
+#include <omp.h>
+
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 
@@ -24,9 +26,6 @@ using namespace Eigen;
 
 #define LANEW 0.4
 
-BBox LaneAggregator::bbox;
-Eigen::Vector3f LaneAggregator::direction = Vector3f(0,0,0);
-std::deque<BBoxPC> LaneAggregator::lanes;
 int LaneAggregator::laneID = 0;
 
 void storePly(string folderName, string laneType, string fileName, BBoxPC &lane)
@@ -63,10 +62,18 @@ int main()
     //static_assert(sizeof(Point) == 24);
 
     map<string, string> topics = {
-        {"cont", "/LanePoints/cont_lane"}};
-        // {"curb", "/LanePoints/curbstone"},
-        // {"dash", "/LanePoints/dash_lane"},
-        // {"stop", "/LanePoints/stop_lane"}};
+        {"cont", "/LanePoints/cont_lane"},
+        {"curb", "/LanePoints/curbstone"},
+        {"dash", "/LanePoints/dash_lane"},
+        {"stop", "/LanePoints/stop_lane"}};
+
+        map<string, LaneAggregator*> processors;
+        processors["cont"] = new LaneAggregatorCont(LANEW);
+        processors["curb"] = new LaneAggregatorCurb(LANEW);
+        processors["dash"] = new LaneAggregatorDash(LANEW);
+        processors["stop"] = new LaneAggregatorStop(LANEW);
+
+        assert(topics.size() == processors.size());
 
     while (true)
     {
@@ -77,24 +84,30 @@ int main()
         if (fileName.empty())
             break;
 
-        for (auto && t : topics)
+//#pragma omp parallel
+        for (int i = 0; i < topics.size(); ++i)
+        //for (auto && t : topics)
         {
+            auto it = topics.begin();
+            advance(it, i);
+            auto t = *it;
+
             rosbag::Bag bag;
             bag.open(fileName);
             int count = 0;
             auto && messages = rosbag::View(bag);
             deque<BBoxPC> lanes;
 
-            auto storePC = [&]()
+            auto processPC = [&]()
             {
-                BBoxPC flatLane;
+                BBoxPC flatLane; map<int, BBoxPC> lanesmap;
+                // flatten the lanes into one array:
                 for (auto && l : lanes) copy(l.begin(), l.end(), back_inserter(flatLane));
-                //Quantizer q(flatLane, LANEW);
-                //PathFinder(flatLane, LANEW);
-                //PathMerger(flatLane, LANEW);
+                //Quantizer q(flatLane, LANEW); // could be used for debugging
+                //PathFinder(flatLane, LANEW); // could be used for debugging
+                //PathMerger(flatLane, LANEW); // could be used for debugging
 
-                map<int, BBoxPC> lanesmap;
-                LaneAggregator(flatLane, LANEW, lanesmap);
+                processors[t.first]->process(flatLane, lanesmap); // if this is commented the raw data will be stored (bunch of PCs from multiple messages)
 
                 if (!flatLane.empty())
                     storePly(baseName, t.first, to_string(count++), flatLane);
@@ -118,23 +131,24 @@ int main()
 
                 BBoxPC::removeOutliers(lane);
 
-                //storePly(baseName, t.first, to_string(count++), lane);
+                //storePly(baseName, t.first, to_string(count++), lane); // could be used for debugging
 
+                // sliding window principle. Add into lanes until the bboxes of front and end do not cross:
                 lanes.push_back(lane);
                 if (!lanes.empty() && !lanes.front().bbox.crossing(lane.bbox))
                 {
-                    storePC();
+                    processPC();
                     size_t s = lanes.size();
+                    // Remove half of the elements from the from of queue:
                     while (!lanes.empty() && lanes.size() > 0.5*s) lanes.pop_front();
                 }
             }
-            // store the rest of the PC:
-            storePC();
+            // Process the remaining pc (still in lanes):
+            processPC();
 
             // for Lanes aggregator - there still not aggregated lanes sitting there, get them:
-            BBoxPC flatLane;
-            map<int, BBoxPC> lanesmap;
-            LaneAggregator::getLanes(flatLane, lanesmap, true);
+            BBoxPC flatLane; map<int, BBoxPC> lanesmap;
+            processors[t.first]->getLanes(flatLane, lanesmap, true);
 
             if (!flatLane.empty())
                 storePly(baseName, t.first, to_string(count++), flatLane);

@@ -9,8 +9,12 @@ class PathMerger : public PathFinder
 {
 public:
 
-    PathMerger(BBoxPC & container, float _cS, float _holesSZ = HSCAN) : PathFinder(container, _cS), holesSZ(_holesSZ)
+    PathMerger(float _cS, float _holesSZ = HSCAN) : PathFinder(_cS), holesSZ(_holesSZ) {}
+
+    void process(BBoxPC & container)
     {
+        PathFinder::process(container);
+
         using namespace std;
         using namespace Eigen;
 
