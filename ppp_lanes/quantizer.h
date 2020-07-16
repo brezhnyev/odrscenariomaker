@@ -20,13 +20,15 @@ public:
         using namespace Eigen;
         assert(cS);
 
+        auto rnd = []() -> float { return float(rand())/RAND_MAX; };
+
         for (int i = 0; i < shakes; ++i)
         {
             buckets.clear();
             quantized.clear();
 
-            auto minp = container.bbox.minp - Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX)*(!!i);
-            auto maxp = container.bbox.maxp + Vector3f(float(rand())/RAND_MAX, float(rand())/RAND_MAX, float(rand())/RAND_MAX)*(!!i);
+            Vector3f minp = container.bbox.minp - Vector3f(rnd(), rnd(), rnd())*(!!i);
+            Vector3f maxp = container.bbox.maxp + Vector3f(rnd(), rnd(), rnd())*(!!i);
 
             W = ceil((maxp[0] - minp[0])/cS);
             H = ceil((maxp[1] - minp[1])/cS);
