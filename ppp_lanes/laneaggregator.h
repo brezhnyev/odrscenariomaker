@@ -1,5 +1,7 @@
 #include "pathmerger.h"
 
+#define MINLANESZ 16 // minimum 15 points making lane
+
 class LaneAggregator : public PathMerger
 {
 public:
@@ -103,7 +105,12 @@ private:
                 }
             }
             if (!isOverlap)
-                lanesmap[laneID++] = move(lane);
+            {
+                if (lane.size() > MINLANESZ) // filter out too short lanes
+                    lanesmap[laneID++] = move(lane);
+                else
+                    lane.clear();
+            }
         }
 
         // get rid of all empty lanes:
@@ -122,6 +129,7 @@ public:
         container.clear();
         if (isFinal)
             for (auto && lane : lanes) lanesmap[laneID++] = move(lane);
+
         // Fillout the container
         int li = 0;
         for (auto && it : lanesmap)
