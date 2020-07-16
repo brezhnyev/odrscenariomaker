@@ -56,7 +56,8 @@ struct BBoxPC : public std::deque<Point>
     BBoxPC & operator = (BBoxPC && b)
     {
         this->std::deque<Point>::operator=(move(b));
-        b.clear();
+        bbox = b.bbox;
+        b.bbox.clear();
         return *this;
     }
 

@@ -126,26 +126,39 @@ public:
 
     static void getLanes(BBoxPC & container, std::map<int, BBoxPC> & lanesmap, bool isFinal = false)
     {
+        using namespace Eigen;
+
         container.clear();
         if (isFinal)
             for (auto && lane : lanes) if (lane.size() > MINLANESZ) lanesmap[laneID++] = move(lane);
+
+        if (lanesmap.empty()) return;
 
         // Fillout the container
         int li = 0;
         for (auto && it : lanesmap)
         {
-            auto && l = it.second;
+            auto && lane = it.second;
+            // RESAMPLE the lane:
+            // Remember the start point of lane:
+            auto st = lane.front();
+            // resample with a new step size (ex. 1 meter), we set the closing holes a bit larger than before due to new (larger) quantizing
+            PathMerger pf(lane, 1.0f, 10.0f);
+            // The lane may be now reversed, check this:
+            if ((Vector3f(lane.front().v) - Vector3f(st.v)).norm() > (Vector3f(lane.back().v) - Vector3f(st.v)).norm())
+                reverse(lane.begin(), lane.end());
+            // FINISHED resampling lane
 
-            for (int i = 0; i < l.size(); ++i)
+            for (int i = 0; i < lane.size(); ++i)
             {
                 if (i != 0)
-                    memcpy(l[i].color, &colors[li][0], 3*sizeof(unsigned char)); 
+                    memcpy(lane[i].color, &colors[li][0], 3*sizeof(unsigned char)); 
                 else 
                 {
                     unsigned char RGB[3] = {255,255,255}; // This will visually mark the start of the path
-                    memcpy(l[i].color, RGB, 3*sizeof(unsigned char));
+                    memcpy(lane[i].color, RGB, 3*sizeof(unsigned char));
                 }
-                container.push_back(l[i]);
+                container.push_back(lane[i]);
             }
             ++li;
         }

@@ -9,7 +9,7 @@ class PathMerger : public PathFinder
 {
 public:
 
-    PathMerger(BBoxPC & container, float _cS) : PathFinder(container, _cS)
+    PathMerger(BBoxPC & container, float _cS, float _holesSZ = HSCAN) : PathFinder(container, _cS), holesSZ(_holesSZ)
     {
         using namespace std;
         using namespace Eigen;
@@ -23,7 +23,7 @@ public:
         auto fillForPCA = [&](auto it1, auto it1end, auto it2, auto it2end) 
         {
             auto d = (Vector3f((*it1).v) - Vector3f((*it2).v)).norm();
-            if (d < HSCAN && d < D)
+            if (d < holesSZ && d < D)
             {
                 D = d;
                 pcl1.clear(); pcl2.clear();
@@ -92,5 +92,7 @@ public:
         paths = move(pathscp);
         store(container);
     }
+
+    const int holesSZ;
 
 };

@@ -72,6 +72,7 @@ private:
         {
             for (int nr = 0; nr >= -NSCAN; nr = nr < 0 ? -nr : -(nr + 1) ) // neighbour row
             {
+                if ((r + nr) >= H || (r + nr) < 0 || (c + nc) >= W || (c + nc) < 0 ) continue;
                 int i = (r + nr) * W + (c + nc);
                 auto it = buckets.find(i);
                 if (it == buckets.end())
