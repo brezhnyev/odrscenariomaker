@@ -128,7 +128,7 @@ public:
     {
         container.clear();
         if (isFinal)
-            for (auto && lane : lanes) lanesmap[laneID++] = move(lane);
+            for (auto && lane : lanes) if (lane.size() > MINLANESZ) lanesmap[laneID++] = move(lane);
 
         // Fillout the container
         int li = 0;

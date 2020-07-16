@@ -27,6 +27,7 @@ public:
             {
                 D = d;
                 pcl1.clear(); pcl2.clear();
+                index1 = (*it1).index; index2 = (*it2).index;
                 // get the bridge first;
                 auto it1cp = it1; auto it2cp = it2;
                 Vector3f bp1(0,0,0);
