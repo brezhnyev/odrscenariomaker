@@ -129,9 +129,12 @@ int main()
                     lane.push_back(point);
                 }
 
-                BBoxPC::removeOutliers(lane);
+                // storePly(baseName, t.first, to_string(count++), lane); // could be used for debugging
+                // continue;
 
-                //storePly(baseName, t.first, to_string(count++), lane); // could be used for debugging
+                BBoxPC::removeOutliers(lane);
+                if (lane.size() < 2) continue;
+
 
                 // sliding window principle. Add into lanes until the bboxes of front and end do not cross:
                 lanes.push_back(lane);

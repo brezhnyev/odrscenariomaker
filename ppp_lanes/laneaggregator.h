@@ -142,6 +142,8 @@ public:
             auto && lane = it.second;
 
             resample(lane);
+            // After resampling the lane may lose all points, i.e. become empty, discard it
+            if (lane.empty()) continue;
 
             for (int i = 0; i < lane.size(); ++i)
             {
@@ -168,6 +170,7 @@ protected:
         auto st = lane.front();
         // resample with a new step size (ex. 1 meter), we set the closing holes a bit larger than before due to new (larger) quantizing
         PathMerger pf(1.0f, 10.0f); pf.process(lane);
+        if (lane.empty()) return;
         // The lane may be now reversed, check this:
         if ((Vector3f(lane.front().v) - Vector3f(st.v)).norm() > (Vector3f(lane.back().v) - Vector3f(st.v)).norm())
             reverse(lane.begin(), lane.end());
@@ -208,6 +211,28 @@ public:
 
     void resample(BBoxPC & lane) override
     {
+        // The stop line is short and usually dense PC. Get the PCA thereof to get its main axis and resample along it.
+        using namespace Eigen;
+        using namespace std;
 
+        deque<Vector3f> vv;
+        for (auto && p : lane) vv.push_back(Vector3f(p.v));
+        auto eig = getPCEigenvalues<decltype(vv), Vector3f, Matrix3f>(vv);
+
+        Vector3f center(0,0,0);
+        for (auto && v : vv) center += v; center /= vv.size();
+        map<float, int, greater<float>> maxEig; // the first element (i.e. begin) will be the largest eig value
+        maxEig[eig.first[0]] = 0;
+        maxEig[eig.first[1]] = 1;
+        maxEig[eig.first[2]] = 2;
+        BBoxPC newlane;
+        // with step 0.5 meters:
+        for (float f = -sqrt(maxEig.begin()->first); f < sqrt(maxEig.begin()->first); f += 0.5f)
+        {
+            Vector3f v(0.0f, 0.0f, 0.0f); v[maxEig.begin()->second] = f;
+            v = eig.second * v + center; // transform to World
+            newlane.push_back(Point(v[0], v[1], v[2]));
+        }
+        lane = move(newlane);
     }
 };

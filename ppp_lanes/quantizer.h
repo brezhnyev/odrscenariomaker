@@ -18,6 +18,8 @@ public:
     void process(BBoxPC & container)
     {
         using namespace Eigen;
+        using namespace std;
+
         assert(cS);
 
         auto rnd = []() -> float { return float(rand())/RAND_MAX; };

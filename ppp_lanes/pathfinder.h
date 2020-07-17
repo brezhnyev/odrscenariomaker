@@ -105,7 +105,7 @@ private:
             {
                 BBoxPC cpl = snapshot;
                 searchPath(p, cpl);
-                paths.push_back(cpl);
+                paths.push_back(move(cpl));
             }
         }
     }

@@ -75,6 +75,8 @@ struct BBoxPC : public std::deque<Point>
 
     static void removeOutliers(BBoxPC & pc)
     {
+        if (pc.size() < 3) return;
+
         using namespace Eigen;
 
         Vector3f center(0,0,0);
