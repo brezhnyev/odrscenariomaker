@@ -22,31 +22,8 @@ public:
         if (lanes.empty())
         {
             lanes = paths;
-            direction.setZero();
-            bbox = container.bbox;
             container.clear();
             return;
-        }
-        else if (direction.isZero())
-        {
-            direction = container.bbox.center() - bbox.center();
-            bbox = container.bbox;
-            for (auto && lane : lanes)
-            {
-                if ((Vector3f(lane.back().v) - Vector3f(lane.front().v)).dot(direction) < 0)
-                    reverse(lane.begin(), lane.end());
-            }
-        }
-        else
-        {
-            direction = container.bbox.center() - bbox.center();
-            bbox = container.bbox;
-        }
-
-        for (auto &&path : paths)
-        {
-            if ((Vector3f(path.back().v) - Vector3f(path.front().v)).dot(direction) < 0)
-                reverse(path.begin(), path.end());
         }
 
         for (auto &&lane : lanes)
@@ -76,7 +53,6 @@ public:
             }
             else lane.clear();
         }
-
 
         // All lanes MUST be empty now, so clear lanes container:
         lanes.clear();
@@ -143,8 +119,6 @@ protected:
     }
 
 private:
-    BBox bbox;
-    Eigen::Vector3f direction;
     std::deque<BBoxPC> lanes;
     static int laneID;
 };

@@ -30,10 +30,10 @@ public:
             if (bP.isVisited)
                 continue;
 
-            BBoxPC lane;
-            searchPath(bP, lane);
+            BBoxPC path;
+            searchPath(bP, path);
 
-            if (!lane.empty()) paths.push_back(lane);
+            if (!path.empty()) paths.push_back(path);
         }
 
         // set all the points in the buckets again as isVisited = false
@@ -47,27 +47,27 @@ public:
         {
             Point & bP = l.back();
 
-            BBoxPC lane;
-            searchPath(bP, lane);
+            BBoxPC path;
+            searchPath(bP, path);
 
-            if (!lane.empty()) paths.push_back(lane);
+            if (!path.empty()) paths.push_back(path);
         }
 
         removeRedundansies();
 
-        store(container);
+        getLanes(container);
     }
 
 
 private:
 
-    void searchPath(Point & bP, BBoxPC & lane)
+    void searchPath(Point & bP, BBoxPC & path)
     {
         using namespace Eigen;
         using namespace std;
 
         buckets[bP.index].front().isVisited = true;
-        lane.push_back(bP);
+        path.push_back(bP);
 
         BBoxPC local;
         int index = bP.index;
@@ -95,13 +95,13 @@ private:
 
         bool firstChild = true;
         BBoxPC snapshot;
-        if (local.size() > 1) snapshot = lane; // do copy only if needed (optimization)
+        if (local.size() > 1) snapshot = path; // do copy only if needed (optimization)
 
         for (auto && p : local)
         {
             if (firstChild)
             {
-                searchPath(p, lane);
+                searchPath(p, path);
                 firstChild = false;
             }
             else
@@ -135,30 +135,30 @@ private:
 
         for (auto it = pathsM.begin(); it != pathsM.end(); ++it)
         {
-            auto && lane = *(*it).second;
+            auto && path = *(*it).second;
             int lMax2Pop = 0;
             auto nit = it; nit++;
             for (; nit != pathsM.end(); ++nit) // next iterator after it
             {
-                auto && nlane = *(*nit).second;
+                auto && npath = *(*nit).second;
                 int nMax2Pop = 0;
-                for (int i = 0; i < lane.size(); ++i)
+                for (int i = 0; i < path.size(); ++i)
                 {
-                    if (lane[i].index == nlane[i].index) ++nMax2Pop;
+                    if (path[i].index == npath[i].index) ++nMax2Pop;
                 }
                 if (lMax2Pop < nMax2Pop) lMax2Pop = nMax2Pop;
             }
-            for (int i = 0; i < lMax2Pop; i++) lane.pop_front(); // KB: the BBox is not updated!!
+            for (int i = 0; i < lMax2Pop; i++) path.pop_front(); // KB: the BBox is not updated!!
         }
 
-        auto cpaths = move(paths);
-        for (auto && l : cpaths) if (l.size() >= NSCAN) paths.push_back(l);
+        auto pathscp = move(paths);
+        for (auto && l : pathscp) if (l.size() >= NSCAN) paths.push_back(l);
     }
 
 
 protected:
 
-    void store(BBoxPC & container)
+    void getLanes(BBoxPC & container)
     {
         container.clear();
         auto pathscp = move(paths);

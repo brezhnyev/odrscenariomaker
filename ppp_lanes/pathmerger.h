@@ -97,7 +97,7 @@ public:
         paths = move(pathscp);
         // sort with greater predicate
         sort(paths.begin(), paths.end(), [](const BBoxPC & pc1, const BBoxPC & pc2){ return pc1.size() > pc2.size(); });
-        store(container);
+        getLanes(container);
     }
 
     const int holesSZ;
