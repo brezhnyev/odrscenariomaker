@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pathfinder.h"
+#include <algorithm>
 
 #define HSCAN 8 // distance (in meters) for closing holes
 #define HNSCAN 8 // number of neighbours to scan for closing holes
@@ -94,6 +95,8 @@ public:
             }
         }
         paths = move(pathscp);
+        // sort with greater predicate
+        sort(paths.begin(), paths.end(), [](const BBoxPC & pc1, const BBoxPC & pc2){ return pc1.size() > pc2.size(); });
         store(container);
     }
 

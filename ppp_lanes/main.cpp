@@ -24,13 +24,11 @@ using namespace sensor_msgs;
 using namespace geometry_msgs;
 using namespace Eigen;
 
-#define LANEW 0.4
-
 int LaneAggregator::laneID = 0;
 
-void storePly(string folderName, string laneType, string fileName, BBoxPC &lane)
+void storePly(string folderName, string fileName, BBoxPC &lane)
 {
-    ofstream ofs("./out/" + folderName + "/" + laneType + "/" + fileName + ".ply");
+    ofstream ofs(folderName + "/" + fileName + ".ply");
     ofs << R"(ply
 format ascii 1.0
 comment VCGLIB generated
@@ -54,49 +52,59 @@ end_header
 }
 
 
-int main()
+int main(int argc, char ** argv)
 {
-    FolderReader<> fr("./data");
-    Matrix4f M;
-    M.setIdentity();
+    if (argc < 2)
+    {
+        cout << "Please provide folder to the bagfiles: ./lanes_detection ./path/to/folder" << endl;
+        return 0;
+    }
+    FolderReader<> fr(argv[1]);
     //static_assert(sizeof(Point) == 24);
+
+    system("mkdir output");
 
     map<string, string> topics = {
         {"cont", "/LanePoints/cont_lane"},
         {"curb", "/LanePoints/curbstone"},
         {"dash", "/LanePoints/dash_lane"},
-        {"stop", "/LanePoints/stop_lane"}};
+        {"stop", "/LanePoints/stop_lane"}
+        };
 
         map<string, LaneAggregator*> processors;
         processors["cont"] = new LaneAggregatorCont(LANEW);
         processors["curb"] = new LaneAggregatorCurb(LANEW);
         processors["dash"] = new LaneAggregatorDash(LANEW);
-        processors["stop"] = new LaneAggregatorStop(LANEW);
+        processors["stop"] = new LaneAggregatorStop(0.5f*LANEW);
 
         assert(topics.size() == processors.size());
 
     while (true)
     {
         string fileName = fr.getNext("bag");
-        string baseName = fileName.substr(0, fileName.size() - 4);
-        baseName = basename(&baseName[0]);
+        string baseName = basename(&fileName.c_str()[0]);
 
         if (fileName.empty())
             break;
 
+
 //#pragma omp parallel
-        for (int i = 0; i < topics.size(); ++i)
-        //for (auto && t : topics)
+        //for (int i = 0; i < topics.size(); ++i)
+        for (auto && t : topics)
         {
-            auto it = topics.begin();
-            advance(it, i);
-            auto t = *it;
+            // auto it = topics.begin();
+            // advance(it, i);
+            // auto t = *it;
 
             rosbag::Bag bag;
             bag.open(fileName);
             int count = 0;
             auto && messages = rosbag::View(bag);
             deque<BBoxPC> lanes;
+
+            string outfolder = "./output/" + baseName  + "/" + t.first;
+
+            system(string("mkdir -p " + outfolder).c_str());
 
             auto processPC = [&]()
             {
@@ -110,7 +118,7 @@ int main()
                 processors[t.first]->process(flatLane, lanesmap); // if this is commented the raw data will be stored (bunch of PCs from multiple messages)
 
                 if (!flatLane.empty())
-                    storePly(baseName, t.first, to_string(count++), flatLane);
+                    storePly(outfolder, to_string(count++), flatLane);
             };
 
             for (rosbag::MessageInstance const &msg : messages)
@@ -137,7 +145,6 @@ int main()
 
 
                 // sliding window principle. Add into lanes until the bboxes of front and end do not cross:
-                lanes.push_back(lane);
                 if (!lanes.empty() && !lanes.front().bbox.crossing(lane.bbox))
                 {
                     processPC();
@@ -145,6 +152,7 @@ int main()
                     // Remove half of the elements from the from of queue:
                     while (!lanes.empty() && lanes.size() > 0.5*s) lanes.pop_front();
                 }
+                else lanes.push_back(lane);
             }
             // Process the remaining pc (still in lanes):
             processPC();
@@ -154,7 +162,7 @@ int main()
             processors[t.first]->getLanes(flatLane, lanesmap, true);
 
             if (!flatLane.empty())
-                storePly(baseName, t.first, to_string(count++), flatLane);
+                storePly(outfolder, to_string(count++), flatLane);
 
             bag.close();
         }

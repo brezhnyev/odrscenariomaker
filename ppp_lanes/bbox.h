@@ -33,6 +33,14 @@ struct BBox
         minp = Eigen::Vector3f( MAXVAL, MAXVAL, MAXVAL);
         maxp = Eigen::Vector3f(-MAXVAL,-MAXVAL,-MAXVAL);
     }
+    bool hasPoint(Point p)
+    {
+        if (p.v[0] < minp[0] || p.v[0] > maxp[0]) return false;
+        if (p.v[1] < minp[1] || p.v[1] > maxp[1]) return false;
+        if (p.v[2] < minp[2] || p.v[2] > maxp[2]) return false;
+
+        return true;
+    }
     Eigen::Vector3f center()
     {
         return 0.5f*(minp + maxp);

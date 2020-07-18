@@ -22,6 +22,8 @@ public:
 
         assert(cS);
 
+        srand(0);
+
         auto rnd = []() -> float { return float(rand())/RAND_MAX; };
 
         for (int i = 0; i < shakes; ++i)

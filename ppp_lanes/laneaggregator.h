@@ -1,7 +1,7 @@
 #include "pathmerger.h"
 
-#define MINLANESZ 16 // minimum 15 points making lane
-
+#define MINLANESZ 8 // minimum 15 points making lane
+#define LANEW 0.4
 
 class LaneAggregator : public PathMerger
 {
@@ -49,59 +49,23 @@ public:
                 reverse(path.begin(), path.end());
         }
 
-        auto isOverlapping = [&](auto P, auto && it, auto itend) -> bool
-        {
-            int col = (P[0] - container.bbox.minp[0]) / cS;
-            int row = (P[1] - container.bbox.minp[1]) / cS;
-            for (; it != itend; ++it)
-            {
-                Point p = (*it);
-                int pcol = (p[0] - container.bbox.minp[0]) / cS;
-                int prow = (p[1] - container.bbox.minp[1]) / cS;
-                if (abs(pcol - col) < 2 && abs(prow - row) < 2)
-                {
-                    return true;
-                }
-            }
-            return false;
-        };
-
-        auto extendPath = [&](auto P, auto it, auto itend, auto & path, bool pushfront) -> bool
-        {
-            if (isOverlapping(P, it, itend))
-            {
-                if (pushfront)
-                    for (; it != itend; ++it) path.push_front(*it);
-                else
-                    for (; it != itend; ++it) path.push_back(*it);
-
-                return true;
-            }
-            return false;
-        };
-
         for (auto &&lane : lanes)
         {
             bool isOverlap = false;
             // WE ARE CHANGING THE PATHS!!!
             for (auto &&path : paths)
             {
-                // front extension of path:
-                isOverlap = extendPath(path.front(), lane.rbegin(), lane.rend(), path, true);
-                // back extension of path:
-                isOverlap = extendPath(path.back(), lane.begin(), lane.end(), path, false) || isOverlap;
+                if (!lane.bbox.crossing(path.bbox)) continue;
+                BBoxPC flatLane = lane;
+                for (auto && p : path) flatLane.push_back(p);
+                auto s = flatLane.size();
+                PathMerger pm(cS, holesSZ + 1.0f); // holes closing should be a bit larger than default
+                pm.process(flatLane);
+                // If more than one path is generated, it means that path and lane are NOT overlapping:
+                if (pm.paths.size() > 1) continue;
 
-                // if lane is part of path then the lane will be removed
-                if (!isOverlap)
-                    isOverlap = isOverlapping(lane.front(), path.rbegin(), path.rend());
-                if (!isOverlap)
-                    isOverlap = isOverlapping(lane.back(), path.begin(), path.end()) || isOverlap;
-
-                if (isOverlap)
-                {
-                    lane.clear();
-                    break;
-                }
+                path = pm.paths[0];
+                isOverlap = true;
             }
             if (!isOverlap)
             {
@@ -110,11 +74,12 @@ public:
                 else
                     lane.clear();
             }
+            else lane.clear();
         }
 
-        // get rid of all empty lanes:
-        auto lanescp = move(lanes);
-        for (auto && lane : lanescp) if (!lane.empty()) lanes.push_back(lane);
+
+        // All lanes MUST be empty now, so clear lanes container:
+        lanes.clear();
         // rest of the non-overlapping paths:
         for (auto && path : paths) lanes.push_front(move(path));
 
@@ -170,6 +135,7 @@ protected:
         auto st = lane.front();
         // resample with a new step size (ex. 1 meter), we set the closing holes a bit larger than before due to new (larger) quantizing
         PathMerger pf(1.0f, 10.0f); pf.process(lane);
+        // After resampling the lane may lose all points, i.e. become empty, discard it
         if (lane.empty()) return;
         // The lane may be now reversed, check this:
         if ((Vector3f(lane.front().v) - Vector3f(st.v)).norm() > (Vector3f(lane.back().v) - Vector3f(st.v)).norm())

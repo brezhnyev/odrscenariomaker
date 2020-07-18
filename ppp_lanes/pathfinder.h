@@ -77,13 +77,16 @@ private:
         {
             for (int nr = 0; nr >= -NSCAN; nr = nr < 0 ? -nr : -(nr + 1) ) // neighbour row
             {
-                if ((r + nr) >= H || (r + nr) < 0 || (c + nc) >= W || (c + nc) < 0 ) continue;
                 int i = (r + nr) * W + (c + nc);
+                if (i >= W*H) continue;
                 auto it = buckets.find(i);
                 if (it == buckets.end())
                     continue;
                 if (it->second.front().isVisited)
                     continue;
+                // the row and column are NOT enough, since the radius must be checked:
+                Point nP = it->second.front();
+                if ((Vector3f(bP.v) - Vector3f(nP.v)).squaredNorm() > (NSCAN*cS)*(NSCAN*cS)) continue;
                 local.push_back(it->second.front());
             }
         }
@@ -182,6 +185,6 @@ protected:
     }
 
 
-protected:
+public:
     std::deque<BBoxPC> paths;
 };
