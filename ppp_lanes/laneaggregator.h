@@ -1,5 +1,7 @@
 #include "pathmerger.h"
 
+#include <iostream>
+
 #define MINLANESZ 8 // minimum 15 points making lane
 #define LANEW 0.4
 
@@ -17,31 +19,33 @@ public:
         using namespace std;
         using namespace Eigen;
 
-        lanesmap.clear();
+        bbox = container.bbox; // remember for figuring out the direction of motion (nice to have feature)
 
-        if (lanes.empty())
+        lanesmap.clear();
+        container.clear();
+
+        if (paths.empty()) return;
+
+        auto aggregate = [](BBoxPC & path1, BBoxPC & path2, float cS, float hS) -> bool
         {
-            lanes = paths;
-            container.clear();
-            return;
-        }
+            if (!path1.bbox.crossing(path2.bbox)) return false;
+            BBoxPC flatContainer = path1;
+            for (auto && p : path2) flatContainer.push_back(p);
+            PathMerger pm(cS, hS); // holes closing should be a bit larger than default
+            pm.process(flatContainer);
+            // If more than one path is generated, it means that (most probably) the paths are NOT overlapping:
+            if (pm.paths.size() > 1) return false;
+            // Nice to have: figure out the  begin and end:
+            path1 = pm.paths[0]; // move operator causes crash, hmmmm
+            return true;
+        };
 
         for (auto &&lane : lanes)
         {
             bool isOverlap = false;
-            // WE ARE CHANGING THE PATHS!!!
             for (auto &&path : paths)
             {
-                if (!lane.bbox.crossing(path.bbox)) continue;
-                BBoxPC flatLane = lane;
-                for (auto && p : path) flatLane.push_back(p);
-                auto s = flatLane.size();
-                PathMerger pm(cS, holesSZ + 1.0f); // holes closing should be a bit larger than default
-                pm.process(flatLane);
-                // If more than one path is generated, it means that path and lane are NOT overlapping:
-                if (pm.paths.size() > 1) continue;
-
-                path = pm.paths[0];
+                if (!aggregate(path, lane, cS, holesSZ + 1.0f)) continue;
                 isOverlap = true;
             }
             if (!isOverlap)
@@ -54,13 +58,27 @@ public:
             else lane.clear();
         }
 
+        // This check can significantly reduce the performance but produces cleaner output
+        // since ex. two paths may be spanned by one lane -> redundancy
+        for (auto it1 = paths.begin(); it1 != paths.end(); ++it1)
+        {
+            auto && path1 = *it1;
+            for (auto it2 = it1 + 1; it2 != paths.end(); ++it2)
+            {
+                auto && path2 = *it2;
+                if (path2.empty()) continue;
+
+                if (!aggregate(path1, path2, cS, holesSZ + 1.0f)) continue;
+                path2.clear();
+            }
+        }
+
         // All lanes MUST be empty now, so clear lanes container:
         lanes.clear();
         // rest of the non-overlapping paths:
-        for (auto && path : paths) lanes.push_front(move(path));
+        for (auto && path : paths) if (!path.empty()) lanes.push_front(move(path));
 
         // PATHS ARE EMPTY at this point !!!!!!!!!
-
         getLanes(container, lanesmap);
     }
 
@@ -85,6 +103,11 @@ public:
             resample(lane);
             // After resampling the lane may lose all points, i.e. become empty, discard it
             if (lane.empty()) continue;
+
+            // set proper begin - end for the lane, depending on the motion
+            Vector3f direction = bbox.center() - lane.bbox.center();
+            if ((Vector3f(lane.back().v) - Vector3f(lane.front().v)).dot(direction) < 0)
+                reverse(lane.begin(), lane.end());
 
             for (int i = 0; i < lane.size(); ++i)
             {
@@ -120,6 +143,7 @@ protected:
 
 private:
     std::deque<BBoxPC> lanes;
+    BBox bbox; // to figure out the direction of motion
     static int laneID;
 };
 
