@@ -85,8 +85,24 @@ private:
                 if (it->second.front().isVisited)
                     continue;
                 // the row and column are NOT enough, since the radius must be checked:
+
+//   | 4*NSCAN |
+//   |      .  |B
+//   |         *------------
+//   |         |  .      | 4*NSCAN however the distance between two points A and B is diagonal, i.e. a larger distance
+//   |         |     .   |
+//   *         |        -----
+//  A  .       |
+//       .
+//         .
                 Point nP = it->second.front();
                 if ((Vector3f(bP.v) - Vector3f(nP.v)).squaredNorm() > (NSCAN*cS)*(NSCAN*cS)) continue;
+
+                // still another test could be very helpfull:
+                // try to figure out if the neighbour will make a rapid turn (diverge from a straight line)
+                // In this case we will avoid jumping from A to B even if the distance is small between them
+                // TODO:
+
                 local.push_back(it->second.front());
             }
         }
@@ -115,7 +131,7 @@ private:
 
     // remove the commong points, ex.:
 
-    // the two paths having the commong points:
+    // the two paths having common points:
     // ........................    path 1
     // ..............
     //                .
@@ -125,7 +141,7 @@ private:
 
     // ........................    path 1
     //                .
-    //                  . path 2 (only two points left)
+    //                  . path 2 (only two points left in path2)
     void removeRedundansies()
     {
         using namespace std;

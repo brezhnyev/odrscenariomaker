@@ -29,7 +29,6 @@ public:
         for (int i = 0; i < shakes; ++i)
         {
             buckets.clear();
-            quantized.clear();
 
             Vector3f minp = container.bbox.minp - Vector3f(rnd(), rnd(), rnd())*(!!i);
             Vector3f maxp = container.bbox.maxp + Vector3f(rnd(), rnd(), rnd())*(!!i);
@@ -46,6 +45,8 @@ public:
                 buckets[p.index].push_back(p);
             }
 
+            container.clear();
+
             for (auto && bucket : buckets)
             {
                 Point sP(0,0,0);
@@ -60,16 +61,14 @@ public:
                 sP[1] /= bucket.second.size();
                 sP[2] /= bucket.second.size();
                 
-                quantized.push_back(sP);
+                container.push_back(sP);
             }
-            container = move(quantized);
         }
     }
 
 protected:
     std::map<int, std::list<Point>> buckets;
     int W, H;
-    BBoxPC quantized;
     float cS; // cell size
     int shakes;
 };
