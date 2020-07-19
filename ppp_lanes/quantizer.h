@@ -49,7 +49,7 @@ public:
 
             for (auto && bucket : buckets)
             {
-                Point sP(0,0,0);
+                Point sP(0,0,0); sP.weight = 0;
                 for (auto && p : bucket.second)
                 {
                     sP[0] += p[0];
@@ -64,6 +64,9 @@ public:
                 container.push_back(sP);
             }
         }
+        // remove points with weight == 1 (assume this is noise):
+        auto containercp = move(container);
+        for (auto && p : containercp) if (p.weight > 1) container.push_back(p);
     }
 
 protected:

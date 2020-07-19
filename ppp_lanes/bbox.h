@@ -9,6 +9,83 @@
 #include <numeric>
 
 #define MAXVAL 1000000000
+
+template <typename ContainerT, typename VectorT, typename MatrixT>
+std::pair<VectorT, MatrixT> getPCEigenvalues(const ContainerT & values, bool doSort = false)
+{
+    using namespace std;
+    using namespace Eigen;
+
+    typedef typename VectorT::value_type T; // standard type (float, double ...)
+
+    const int DIM = VectorT::RowsAtCompileTime; // must be implemented in the customer's class!
+
+    VectorT retV; // eigenvalues
+    MatrixT retM; // eigenvectors
+
+    if (values.empty()) return pair<VectorT, MatrixT>(retV, retM); // zero values
+
+    // make structure of arrays out of array of structures
+    // this will make more efficient multiplication row x col to find covariance matrix
+
+    // values (size n+1 x 3):       components (size 3 x n+1):
+
+    //  v0 v1 v2     vn             x| x0 x1 x2 ... xn
+    // |x0|x1|x2|...|xn|              ---------------
+    // |y0|y1|y2|...|yn|     ->     y| y0 y1 y2 ... yn
+    // |z0|z1|z2|...|zn|              ---------------
+    //                              z| z0 z1 z2 ... zn
+
+    vector<vector<T>> components; components.resize(DIM);
+    for (int cc = 0; cc < DIM; ++cc) components[cc].reserve(values.size());
+
+    // find the center of the neighbours PC:
+    VectorT center; // unfortunately Eigen does not initialize with zeros, we must fill out to be sure:
+    for (int cc = 0; cc < DIM; ++cc) center[cc] = 0;
+    for (const VectorT & v : values) center += v; center /= (double)values.size();
+    // fill out the X,Y and Z:
+    for (size_t vc = 0; vc < values.size(); ++vc) // vc == vector or value counter
+        for (int cc = 0; cc < DIM; ++cc)
+            components[cc].emplace_back(values[vc][cc] - center[cc]);
+
+    // fill out co-variance matrix:
+    Eigen::Matrix<T, DIM, DIM> m;
+    for (int cc1 = 0; cc1 < DIM; ++cc1)
+        for (int cc2 = 0; cc2 < DIM; ++cc2)
+            m(cc1, cc2) = (T)inner_product(components[cc1].begin(), components[cc1].end(), components[cc2].begin(), T())/components[cc1].size();
+
+    // use the Eigen solver to find out the eigen-values and eigen-vectors:
+    Eigen::EigenSolver<decltype(m)> es(m);
+    auto evec = es.eigenvectors();
+    auto eval = es.eigenvalues();
+
+    // sometimes sorting is needed (ex finding out normals of point cloud)
+    if (doSort) // was not tested after code modification
+    {
+        // first sort the columns in the ascending order by corresponding eigenvalue:
+        map<T, VectorT, greater<T>> val2vec;
+        for (int cc1 = 0; cc1 < DIM; ++cc1)
+        {
+            for (int cc2 = 0; cc2 < DIM; ++cc2)
+                val2vec[(T)eval(cc1, 0).real()][cc2] = (T)evec(cc2, cc1).real();
+        }
+        // then fill out the output:
+        int vc = 0; // eigen vectors/values counter
+        for (auto it = val2vec.begin(); it != val2vec.end(); ++it, ++vc)
+        {
+            retV[vc] = it->first;
+            retM.block(0,vc,3,1) = it->second;
+        }
+    }
+    else
+    {
+        retV = eval.real();
+        retM = evec.real();
+    }
+
+    return std::pair<VectorT, MatrixT>(retV, retM);
+}
+
 struct BBox
 {
     void addPoint(float v [3])
@@ -81,8 +158,13 @@ struct BBoxPC : public std::deque<Point>
     }
     BBox bbox;
 
+    // This one works fine for PCs with ~ equal X and Y components of the local bbox
     static void removeOutliers(BBoxPC & pc)
     {
+        // very simple and naive algorithm:
+        // 1. the center of PC is found
+        // 2. the middle distance from center is found (R)
+        // 3. the points with distance larger than 5*R to center are discarded as outliers
         if (pc.size() < 3) return;
 
         using namespace Eigen;
@@ -95,14 +177,15 @@ struct BBoxPC : public std::deque<Point>
         for (auto && p : pc)
             R += (Vector3f(p.v[0], p.v[1], p.v[2]) - center).norm();
         R /= pc.size();
-        auto newpc = pc; newpc.clear(); newpc.bbox.clear();
+        BBoxPC newpc;
         for (auto && p : pc)
             if ((Vector3f(p.v[0], p.v[1], p.v[2]) - center).norm() < 5*R)
                 newpc.push_back(p);
 
-        pc = newpc;
+        pc = move(newpc);
     }
 
+    // PCA based should work better, but still not tested thoroughly
     // static void removeOutliers(BBoxPC & pc)
     // {
     //     using namespace Eigen;
@@ -114,16 +197,17 @@ struct BBoxPC : public std::deque<Point>
     //     Vector3f center(0,0,0);
     //     for (auto && v : vv) center += v; center /= vv.size();
 
-    //     auto res = getPCEigenvalues<decltype(vv), Vector3f, Matrix3f>(vv);
+    //     auto res = getPCEigenvalues<decltype(vv), Vector3f, Matrix3f>(vv, true);
     //     // eigenvalues are variances! Get standard deviation:
     //     float devX = sqrt(res.first[0]);
     //     float devY = sqrt(res.first[1]);
+    //     //float devZ = sqrt(res.first[2]);
 
     //     BBoxPC newpc;
 
     //     for (int i = 0; i < vv.size(); ++i)
     //     {
-    //         Vector3f v = res.second*(vv[i] - center);
+    //         Vector3f v = res.second.transpose() * (vv[i] - center);
     //         // check only x and y:
     //         if ( (abs(v[0]) < 3*devX) && (abs(v[1]) < 3*devY) )
     //             newpc.push_back(pc[i]);
@@ -133,79 +217,5 @@ struct BBoxPC : public std::deque<Point>
     // }
 };
 
-template <typename ContainerT, typename VectorT, typename MatrixT>
-std::pair<VectorT, MatrixT> getPCEigenvalues(const ContainerT & values, bool doSort = false)
-{
-    using namespace std;
-    using namespace Eigen;
 
-    typedef typename VectorT::value_type T; // standard type (float, double ...)
-
-    const int DIM = VectorT::RowsAtCompileTime; // must be implemented in the customer's class!
-
-    VectorT retV; // eigenvalues
-    MatrixT retM; // eigenvectors
-
-    if (values.empty()) return pair<VectorT, MatrixT>(retV, retM); // zero values
-
-    // make structure of arrays out of array of structures
-    // this will make more efficient multiplication row x col to find covariance matrix
-
-    // values (size n+1 x 3):       components (size 3 x n+1):
-
-    //  v0 v1 v2     vn             x| x0 x1 x2 ... xn
-    // |x0|x1|x2|...|xn|              ---------------
-    // |y0|y1|y2|...|yn|     ->     y| y0 y1 y2 ... yn
-    // |z0|z1|z2|...|zn|              ---------------
-    //                              z| z0 z1 z2 ... zn
-
-    vector<vector<T>> components; components.resize(DIM);
-    for (int cc = 0; cc < DIM; ++cc) components[cc].reserve(values.size());
-
-    // find the center of the neighbours PC:
-    VectorT center; // unfortunately Eigen does not initialize with zeros, we must fill out to be sure:
-    for (int cc = 0; cc < DIM; ++cc) center[cc] = 0;
-    for (const VectorT & v : values) center += v; center /= (double)values.size();
-    // fill out the X,Y and Z:
-    for (size_t vc = 0; vc < values.size(); ++vc) // vc == vector or value counter
-        for (int cc = 0; cc < DIM; ++cc)
-            components[cc].emplace_back(values[vc][cc] - center[cc]);
-
-    // fill out co-variance matrix:
-    Eigen::Matrix<T, DIM, DIM> m;
-    for (int cc1 = 0; cc1 < DIM; ++cc1)
-        for (int cc2 = 0; cc2 < DIM; ++cc2)
-            m(cc1, cc2) = (T)inner_product(components[cc1].begin(), components[cc1].end(), components[cc2].begin(), T())/components[cc1].size();
-
-    // use the Eigen solver to find out the eigen-values and eigen-vectors:
-    Eigen::EigenSolver<decltype(m)> es(m);
-    auto evec = es.eigenvectors();
-    auto eval = es.eigenvalues();
-
-    // sometimes sorting is needed (ex finding out normals of point cloud)
-    if (doSort) // was not tested after code modification
-    {
-        // first sort the columns in the ascending order by corresponding eigenvalue:
-        map<T, VectorT> val2vec;
-        for (int cc1 = 0; cc1 < DIM; ++cc1)
-        {
-            for (int cc2 = 0; cc2 < DIM; ++cc2)
-                val2vec[(T)eval(cc1, 0).real()][cc2] = (T)evec(cc2, cc1).real();
-        }
-        // then fill out the output:
-        int vc = 0; // eigen vectors/values counter
-        for (auto it = val2vec.begin(); it != val2vec.end(); ++it, ++vc)
-        {
-            retV[vc] = it->first;
-            retM.block(0,vc,3,1) = it->second;
-        }
-    }
-    else
-    {
-        retV = eval.real();
-        retM = evec.real();
-    }
-
-    return std::pair<VectorT, MatrixT>(retV, retM);
-}
 

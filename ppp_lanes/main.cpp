@@ -5,7 +5,7 @@
 #include "quantizer.h"
 #include "pathfinder.h"
 #include "pathmerger.h"
-#include "laneaggregator.h"
+#include "markingdetector.h"
 
 #include <omp.h>
 
@@ -24,7 +24,7 @@ using namespace sensor_msgs;
 using namespace geometry_msgs;
 using namespace Eigen;
 
-int LaneAggregator::laneID = 0;
+int MarkingDetector::markID = 0;
 
 void storePly(string folderName, string fileName, BBoxPC &lane)
 {
@@ -71,11 +71,11 @@ int main(int argc, char ** argv)
         {"stop", "/LanePoints/stop_lane"}
         };
 
-        map<string, LaneAggregator*> processors;
-        processors["cont"] = new LaneAggregatorCont(LANEW);
-        processors["curb"] = new LaneAggregatorCurb(LANEW);
-        processors["dash"] = new LaneAggregatorDash(LANEW);
-        processors["stop"] = new LaneAggregatorStop(0.5f*LANEW);
+        map<string, MarkingDetector*> processors; // use Quantizer, PathFinder or PathMerger for debugging these classes
+        processors["cont"] = new MarkingDetectorCont(LANEW);
+        processors["curb"] = new MarkingDetectorCurb(LANEW);
+        processors["dash"] = new MarkingDetectorDash(LANEW);
+        processors["stop"] = new MarkingDetectorStop(0.5f*LANEW);
 
         assert(topics.size() == processors.size());
 
@@ -88,7 +88,7 @@ int main(int argc, char ** argv)
             break;
 
 
-//#pragma omp parallel
+//#pragma omp parallel // KB: probably will not work if rosbag is open in threads, other solution for multithreding is to be found
         //for (int i = 0; i < topics.size(); ++i)
         for (auto && t : topics)
         {
@@ -100,7 +100,7 @@ int main(int argc, char ** argv)
             bag.open(fileName);
             int count = 0;
             auto && messages = rosbag::View(bag);
-            deque<BBoxPC> lanes;
+            deque<BBoxPC> lanes; // lanes is not the best name for the container, some other name should be used (paths, markings, points?)
 
             string outfolder = "./output/" + baseName  + "/" + t.first;
 
@@ -111,9 +111,6 @@ int main(int argc, char ** argv)
                 BBoxPC flatLane; map<int, BBoxPC> lanesmap;
                 // flatten the lanes into one array:
                 for (auto && l : lanes) copy(l.begin(), l.end(), back_inserter(flatLane));
-                //Quantizer q(flatLane, LANEW); // could be used for debugging
-                //PathFinder(flatLane, LANEW); // could be used for debugging
-                //PathMerger(flatLane, LANEW); // could be used for debugging
 
                 processors[t.first]->process(flatLane, lanesmap); // if this is commented the raw data will be stored (bunch of PCs from multiple messages)
 
@@ -143,7 +140,6 @@ int main(int argc, char ** argv)
                 BBoxPC::removeOutliers(lane);
                 if (lane.size() < 2) continue;
 
-
                 // sliding window principle. Add into lanes until the bboxes of front and end do not cross:
                 if (!lanes.empty() && !lanes.front().bbox.crossing(lane.bbox))
                 {
@@ -159,7 +155,7 @@ int main(int argc, char ** argv)
 
             // for Lanes aggregator - there still not aggregated lanes sitting there, get them:
             BBoxPC flatLane; map<int, BBoxPC> lanesmap;
-            processors[t.first]->getLanes(flatLane, lanesmap, true);
+            processors[t.first]->getResults(flatLane, lanesmap, true);
 
             if (!flatLane.empty())
                 storePly(outfolder, to_string(count++), flatLane);

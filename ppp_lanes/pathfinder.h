@@ -41,6 +41,8 @@ public:
 
         removeRedundansies();
 
+        // since buckets is a map, a bucket thereof can be located ANYWHERE
+        // this means that we could have started collecting a chain of points starting from a middle of a path
         // do another iteration to make sure the paths are spanning really the extreme start-end points:
         auto pathscp = move(paths);
         for (auto && l : pathscp)
@@ -55,7 +57,7 @@ public:
 
         removeRedundansies();
 
-        getLanes(container);
+        getResults(container);
     }
 
 
@@ -96,12 +98,34 @@ private:
 //       .
 //         .
                 Point nP = it->second.front();
-                if ((Vector3f(bP.v) - Vector3f(nP.v)).squaredNorm() > (NSCAN*cS)*(NSCAN*cS)) continue;
+                Vector3f nPbP = Vector3f(bP.v) - Vector3f(nP.v); // vector between nP and bP (A and B on the )
+                if (nPbP.squaredNorm() > (NSCAN*cS)*(NSCAN*cS)) continue;
 
-                // still another test could be very helpfull:
+                // still another additional test could be very helpfull:
                 // try to figure out if the neighbour will make a rapid turn (diverge from a straight line)
                 // In this case we will avoid jumping from A to B even if the distance is small between them
-                // TODO:
+                if (path.size() > NSCAN)
+                {
+                    deque<Vector3f> vv;
+                    // collect the NSCAN last neighbours of the path (plus the bP point), making 4 intervals (one interval is ~cS long)
+                    for (int i = 0; i < NSCAN + 1; ++i) vv.push_back(Vector3f(path[path.size() - 1 - i].v));
+                    auto eig = getPCEigenvalues<decltype(vv), Vector3f, Matrix3f>(vv, true);
+                    // make sure the main component (standard deviation) is significantly larger than the next largest one.
+                    // thereby the following assumption is taken: the current marking segment is ONE interval width (~cS) and NSCAN intervals long:
+                    if (sqrt(eig.first[1])/sqrt(eig.first[0]) < 1.0f/NSCAN) // NSCAN times larger than the other one
+                    {
+                        // make sure the nP is within the BBox of 8*NSCAN x 4*NSCAN (local x and y, assuming x is path direction) from the bP:
+                        BBox bbox;
+                        bbox.addPoint(Point(-4*NSCAN*cS, -2*NSCAN*cS, -2*NSCAN*cS).v);
+                        bbox.addPoint(Point( 4*NSCAN*cS,  2*NSCAN*cS,  2*NSCAN*cS).v);
+                        // is nP in the bbox?
+                        // Find the nP as vector from the bP and transform into local CS of the bbox:
+                        Vector3f nPlocal = eig.second.transpose() * nPbP;
+                        if (!bbox.hasPoint(Point(nPlocal[0], nPlocal[1], nPlocal[2])))
+                            continue;
+                    }
+                }
+                // ----- end of the additional test (the block is not tested thoroughly yet)
 
                 local.push_back(it->second.front());
             }
@@ -174,7 +198,7 @@ private:
 
 protected:
 
-    void getLanes(BBoxPC & container)
+    void getResults(BBoxPC & container)
     {
         container.clear();
         auto pathscp = move(paths);

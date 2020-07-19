@@ -3,8 +3,8 @@
 #include "pathfinder.h"
 #include <algorithm>
 
-#define HSCAN 8 // distance (in meters) for closing holes
-#define HNSCAN 8 // number of neighbours to scan for closing holes
+#define HSCAN 8 // default maximal distance (in meters) for closing holes
+#define HNSCAN 8 // default number of neighbours to scan for closing holes
 
 class PathMerger : public PathFinder
 {
@@ -48,9 +48,9 @@ public:
                 for (int i = 0; i < HNSCAN; ++i)
                 {
                     const Point & p1 = (*it1);
-                    for (int wc = 0; wc < p1.weight; ++wc) pcl1.push_back(Vector3f(p1.v)); ++it1; if (it1 == it1end) break;
+                    pcl1.push_back(Vector3f(p1.v)); ++it1; if (it1 == it1end) break;
                     const Point & p2 = (*it2);
-                    for (int wc = 0; wc < p2.weight; ++wc) pcl2.push_back(Vector3f(p2.v)); ++it2; if (it2 == it2end) break;
+                    pcl2.push_back(Vector3f(p2.v)); ++it2; if (it2 == it2end) break;
                 }
             }
         };
@@ -69,6 +69,11 @@ public:
                 D = MAXVAL;
                 bridge = Vector3f(0,0,0);
 
+//                           max HSCAN (bridge)
+//                            |     |
+//  ..........................      .............................
+
+                // since we do not know WHERE the begin and end of each of the paths we need to check all four combinations:
                 fillForPCA(l1.rbegin(), l1.rend(), l2.begin(), l2.end());
                 fillForPCA(l1.begin(),  l1.end(),  l2.rbegin(),l2.rend());
                 fillForPCA(l1.begin(),  l1.end(),  l2.begin(), l2.end());
@@ -81,8 +86,8 @@ public:
                 bridge.normalize();
 
                 // now check if the pca1 and pca2 main components and the bridge between pclounds are aligned
-                Vector3f v1 = pca1.second.block(0,2,3,1);
-                Vector3f v2 = pca2.second.block(0,2,3,1);
+                Vector3f v1 = pca1.second.block(0,0,3,1);
+                Vector3f v2 = pca2.second.block(0,0,3,1);
                 if (abs(v1.dot(v2))     < 0.98f) continue;
                 if (abs(bridge.dot(v1)) < 0.98f) continue;
                 if (abs(bridge.dot(v2)) < 0.98f) continue;
@@ -94,12 +99,12 @@ public:
                 l2.clear();
             }
         }
-        paths = move(pathscp);
+        for (auto && path : pathscp) if (!path.empty()) paths.push_back(path);
         // sort with greater predicate
         sort(paths.begin(), paths.end(), [](const BBoxPC & pc1, const BBoxPC & pc2){ return pc1.size() > pc2.size(); });
-        getLanes(container);
+        getResults(container);
     }
 
-    const int holesSZ;
+    const int holesSZ; // maximal holes closing size for this PathMerger
 
 };
