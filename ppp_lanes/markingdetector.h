@@ -19,7 +19,10 @@ public:
         using namespace std;
         using namespace Eigen;
 
-        bbox = container.bbox; // remember for figuring out the direction of motion (nice to have feature)
+        direction = container.bbox.center() - bbox.center();
+        // On start (first bbox) the direction is a value without meaning
+        // However this should not be a problem since the marksmap will always be zero on start and will not be output
+        bbox = container.bbox;
 
         marksmap.clear();
         container.clear();
@@ -105,7 +108,6 @@ public:
             if (mark.empty()) continue;
 
             // set proper begin - end for the mark, depending on the motion
-            Vector3f direction = bbox.center() - mark.bbox.center();
             if ((Vector3f(mark.back().v) - Vector3f(mark.front().v)).dot(direction) < 0)
                 reverse(mark.begin(), mark.end());
 
@@ -133,7 +135,7 @@ protected:
         // Remember the start point of mark:
         auto st = mark.front();
         // resample with a new step size (ex. 1 meter), we set the closing holes a bit larger than before due to new (larger) quantizing
-        PathMerger pf(1.0f, 10.0f); pf.process(mark);
+        PathMerger pf(1.0f, holesSZ + 2.0f); pf.process(mark);
         // After resampling the mark may lose all points, i.e. become empty, discard it
         if (mark.empty()) return;
         // The mark may be now reversed, check this:
@@ -144,6 +146,7 @@ protected:
 private:
     std::deque<BBoxPC> marks;
     BBox bbox; // to figure out the direction of motion
+    Eigen::Vector3f direction;
     static int markID;
 };
 
