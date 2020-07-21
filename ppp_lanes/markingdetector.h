@@ -124,6 +124,10 @@ public:
             }
             ++li;
         }
+
+        // remove the empty elements from marksmap (can happen after resampling):
+        auto cpmarksmap = move(marksmap);
+        for (auto && mark : cpmarksmap) if (!mark.second.empty()) marksmap[mark.first] = mark.second;
     }
 
 protected:

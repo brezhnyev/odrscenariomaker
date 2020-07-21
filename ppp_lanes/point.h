@@ -28,7 +28,6 @@ static std::map<int, std::array<unsigned char,3>> colors =
 struct __attribute__((packed)) Point
 {
     Point() {}
-    Point(int _id) : index(_id) {}
     Point(float x, float y, float z)
     {
         v[0] = x;
