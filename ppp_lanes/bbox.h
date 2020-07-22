@@ -132,7 +132,10 @@ struct BBoxPC : public std::deque<Point>
     BBoxPC() = default;
     BBoxPC(const BBoxPC & b) = default;
     BBoxPC & operator = (const BBoxPC & b) = default;
-    ~BBoxPC() = default;
+    ~BBoxPC()
+    {
+        if (nextContainer) delete nextContainer; // will go recursivelly until the leaf container
+    }
 
     BBoxPC(BBoxPC && b)
     {
@@ -157,6 +160,10 @@ struct BBoxPC : public std::deque<Point>
         bbox.clear();
     }
     BBox bbox;
+
+    BBoxPC * addNext() { if (nextContainer) return nullptr; nextContainer = new BBoxPC(); return nextContainer; }
+    BBoxPC * getNext() { return nextContainer; }
+    BBoxPC * nextContainer { nullptr };
 
     // This one works fine for PCs with ~ equal X and Y components of the local bbox
     static void removeOutliers(BBoxPC & pc)

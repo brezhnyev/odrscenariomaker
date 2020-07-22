@@ -57,7 +57,7 @@ public:
 
         removeRedundansies();
 
-        getResults(container);
+        finishProcess(container);
     }
 
 
@@ -198,7 +198,7 @@ private:
 
 protected:
 
-    void getResults(BBoxPC & container)
+    void finishProcess(BBoxPC & container)
     {
         container.clear();
         auto pathscp = move(paths);

@@ -109,7 +109,7 @@ public:
         for (auto && path : pathscp) if (!path.empty()) paths.push_back(path);
         // sort with greater predicate
         sort(paths.begin(), paths.end(), [](const BBoxPC & pc1, const BBoxPC & pc2){ return pc1.size() > pc2.size(); });
-        getResults(container);
+        finishProcess(container);
     }
 
     const int holesSZ; // maximal holes closing size for this PathMerger

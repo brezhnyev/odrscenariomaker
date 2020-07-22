@@ -12,7 +12,7 @@ public:
 
 public:
 
-    void process(BBoxPC & container, std::map<int, BBoxPC> & marksmap)
+    void process(BBoxPC & container)
     {
         PathMerger::process(container);
 
@@ -26,9 +26,8 @@ public:
         // However this should not be a problem since the marksmap will always be zero on start and will not be output
         bbox = container.bbox;
 
-        marksmap.clear();
+        outmarks.clear();
         container.clear();
-
 
         auto aggregate = [](BBoxPC & path1, BBoxPC & path2, float cS, float hS) -> bool
         {
@@ -55,7 +54,7 @@ public:
             if (!isOverlap)
             {
                 if (mark.size() > MINLANESZ) // filter out too short marks
-                    marksmap[markID++] = move(mark);
+                    outmarks.push_back(move(mark));
                 else
                     mark.clear();
             }
@@ -83,27 +82,29 @@ public:
         for (auto && path : paths) if (!path.empty()) marks.push_front(move(path));
 
         // PATHS ARE EMPTY at this point !!!!!!!!!
-        getResults(container, marksmap);
+        finishProcess(container);
     }
 
 public:
 
-    void getResults(BBoxPC & container, std::map<int, BBoxPC> & marksmap, bool isFinal = false)
+    void finishProcess(BBoxPC & container, bool isFinal = false)
     {
         using namespace Eigen;
 
         container.clear();
         if (isFinal)
-            for (auto && mark : marks) if (mark.size() > MINLANESZ) marksmap[markID++] = move(mark);
+        {
+            outmarks.clear();
+            for (auto && mark : marks) if (mark.size() > MINLANESZ) outmarks.push_back(move(mark));
+        }
 
-        if (marksmap.empty()) return;
+        if (outmarks.empty()) return;
 
         // Fillout the container
-        int li = 0;
-        for (auto && it : marksmap)
+        BBoxPC * containerP = &container;
+        for (int li = 0; li < outmarks.size(); ++li)
         {
-            auto && mark = it.second;
-
+            auto && mark = outmarks[li];
             resample(mark);
             // After resampling the mark may lose all points, i.e. become empty, discard it
             if (mark.empty()) continue;
@@ -112,23 +113,22 @@ public:
             if ((Vector3f(mark.back().v) - Vector3f(mark.front().v)).dot(direction) < 0)
                 reverse(mark.begin(), mark.end());
 
+            if (!container.empty()) containerP = containerP->addNext();
+
             for (int i = 0; i < mark.size(); ++i)
             {
                 if (i != 0)
-                    memcpy(mark[i].color, &colors[li][0], 3*sizeof(unsigned char)); 
+                {
+                    memcpy(mark[i].color, &colors[li][0], 3*sizeof(unsigned char));
+                }
                 else 
                 {
                     unsigned char RGB[3] = {255,255,255}; // This will visually mark the start of the path
                     memcpy(mark[i].color, RGB, 3*sizeof(unsigned char));
                 }
-                container.push_back(mark[i]);
+                containerP->push_back(mark[i]);
             }
-            ++li;
         }
-
-        // remove the empty elements from marksmap (can happen after resampling):
-        auto cpmarksmap = move(marksmap);
-        for (auto && mark : cpmarksmap) if (!mark.second.empty()) marksmap[mark.first] = mark.second;
     }
 
 protected:
@@ -150,6 +150,7 @@ protected:
 
 private:
     std::deque<BBoxPC> marks;
+    std::deque<BBoxPC> outmarks;
     BBox bbox; // to figure out the direction of motion
     Eigen::Vector3f direction;
     static int markID;

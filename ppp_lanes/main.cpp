@@ -25,17 +25,19 @@ using namespace sensor_msgs;
 using namespace geometry_msgs;
 using namespace Eigen;
 
-int MarkingDetector::markID = 0;
-
-void storePly(string folderName, int index, BBoxPC &lane)
+void storePly(string folderName, string type, BBoxPC & lane)
 {
-    ofstream ofs(folderName + "/" + to_string(index) + ".ply");
-    ofs << R"(ply
+    static int counter = 0;
+    BBoxPC *lanep = &lane;
+    while(lanep)
+    {
+        ofstream ofs(folderName + "/" + to_string(counter++) + ".ply");
+        ofs << R"(ply
 format ascii 1.0
 comment VCGLIB generated
 element vertex )";
-    ofs << lane.size() << endl;
-    ofs << R"(property float x
+        ofs << lanep->size() << endl;
+        ofs << R"(property float x
 property float y
 property float z
 property uchar red
@@ -43,20 +45,34 @@ property uchar green
 property uchar blue
 end_header
 )";
-    for (auto && p : lane)
-    {
-        ofs << p[0] << " " << p[1] << " " << p[2] << " " << (int)p.color[0] << " " << (int)p.color[1] << " " << (int)p.color[2] << endl;
+        for (int i = 0; i < lanep->size(); ++i)
+        {
+            auto && p = (*lanep)[i];
+            ofs << p[0] << " " << p[1] << " " << p[2];
+            if (i == 0) ofs << " 255 255 255";
+            else
+            {
+                if (type == "cont") ofs << " 255 0 0";
+                if (type == "curb") ofs << " 0 255 0";
+                if (type == "dash") ofs << " 0 0 255";
+                if (type == "stop") ofs << " 255 255 0";
+            }
+        }
+        ofs.close();
+        lanep = lanep->getNext();
     }
-    ofs.close();
 }
 
-void storeLines(ofstream & ofs, string type, map<int, BBoxPC> & lanesmap)
+void storeLines(ofstream & ofs, string type, BBoxPC & lane)
 {
-    for (auto && it : lanesmap)
+    static int counter = 0;
+    BBoxPC *lanep = &lane;
+    while(lanep)
     {
-        ofs << it.first << " " << type << " ";
-        for (auto & p : it.second) { ofs << p.v[0] << " " << p.v[1] << " " << p.v[2] << " "; }
+        ofs << counter++ << " " << type << " ";
+        for (auto & p : *lanep) { ofs << p.v[0] << " " << p.v[1] << " " << p.v[2] << " "; }
         ofs << endl;
+        lanep = lanep->getNext();
     }
 }
 
@@ -114,16 +130,15 @@ int main(int argc, char ** argv)
         auto processPC = [&](string type)
         {
             BBoxPC flatLane;
-            map<int, BBoxPC> outlanes;
             // flatten the lanes into one array:
             for (auto && l : inlanes[type]) copy(l.begin(), l.end(), back_inserter(flatLane));
 
-            processors[type]->process(flatLane, outlanes); // if this is commented the raw data will be stored (bunch of PCs from multiple messages)
+            processors[type]->process(flatLane); // if this is commented the raw data will be stored (bunch of PCs from multiple messages)
 
             if (!flatLane.empty())
             {
-                storePly(outfolders[type], outlanes.begin()->first, flatLane);
-                storeLines(ofslines, type, outlanes);
+                storePly(outfolders[type], type, flatLane);
+                storeLines(ofslines, type, flatLane);
             }
         };
 
@@ -160,7 +175,7 @@ int main(int argc, char ** argv)
             {
                 processPC(t.first);
                 size_t s = lanes.size();
-                // Remove half of the elements from the from of queue:
+                // Remove half of the elements from of queue:
                 while (!lanes.empty() && lanes.size() > 0.5*s) lanes.pop_front();
             }
             else lanes.push_back(lane);
@@ -172,13 +187,13 @@ int main(int argc, char ** argv)
             processPC(t.first);
 
             // for Lanes aggregator - there still not aggregated lanes sitting there, get them:
-            BBoxPC flatLane; map<int, BBoxPC> outlanes;
-            processors[t.first]->getResults(flatLane, outlanes, true);
+            BBoxPC flatLane;
+            processors[t.first]->finishProcess(flatLane, true);
 
             if (!flatLane.empty())
             {
-                storePly(outfolders[t.first], outlanes.begin()->first, flatLane);
-                storeLines(ofslines, t.first, outlanes);
+                storePly(outfolders[t.first], t.first, flatLane);
+                storeLines(ofslines, t.first, flatLane);
             }
         }
 
