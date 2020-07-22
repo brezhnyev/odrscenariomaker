@@ -41,8 +41,6 @@ property float z
 property uchar red
 property uchar green
 property uchar blue
-element face 0
-property list uchar int vertex_indices
 end_header
 )";
     for (auto && p : lane)

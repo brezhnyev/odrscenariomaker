@@ -19,6 +19,8 @@ public:
         using namespace std;
         using namespace Eigen;
 
+        if (paths.empty()) return;
+
         direction = container.bbox.center() - bbox.center();
         // On start (first bbox) the direction is a value without meaning
         // However this should not be a problem since the marksmap will always be zero on start and will not be output
@@ -27,7 +29,6 @@ public:
         marksmap.clear();
         container.clear();
 
-        if (paths.empty()) return;
 
         auto aggregate = [](BBoxPC & path1, BBoxPC & path2, float cS, float hS) -> bool
         {

@@ -95,6 +95,13 @@ public:
                 // the actual merging:
                 if (l1.back() .index != index1) reverse(l1.begin(), l1.end());
                 if (l2.front().index != index2) reverse(l2.begin(), l2.end());
+                // fill out the gap as well:
+                Vector3f dir = (Vector3f(l2.front().v) - Vector3f(l1.back().v)).normalized();
+                for (int i = 0; i < ceil(bridge.norm()/cS); ++i)
+                {
+                    Vector3f np = Vector3f(l1.back().v) + dir*cS;
+                    l1.push_back(Point(np[0], np[1], np[2]));
+                }
                 for (auto && p : l2) l1.push_back(p);
                 l2.clear();
             }
