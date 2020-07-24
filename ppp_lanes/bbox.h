@@ -161,6 +161,8 @@ struct BBoxPC : public std::deque<Point>
     }
     BBox bbox;
 
+    // The nextContainer is added: a poiniter to next BBoxPC, which makes a singly linked list
+    // For back compatibility with existing classes the BBoxPC can still be used as flat container
     BBoxPC * addNext() { if (nextContainer) return nullptr; nextContainer = new BBoxPC(); return nextContainer; }
     BBoxPC * getNext() { return nextContainer; }
     BBoxPC * nextContainer { nullptr };

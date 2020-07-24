@@ -34,7 +34,7 @@ void storePly(string folderName, string type, BBoxPC & lane)
         ofstream ofs(folderName + "/" + to_string(counter++) + ".ply");
         ofs << R"(ply
 format ascii 1.0
-comment VCGLIB generated
+comment Altran generated
 element vertex )";
         ofs << lanep->size() << endl;
         ofs << R"(property float x
@@ -57,6 +57,7 @@ end_header
                 if (type == "dash") ofs << " 0 0 255";
                 if (type == "stop") ofs << " 255 255 0";
             }
+            ofs << endl;
         }
         ofs.close();
         lanep = lanep->getNext();

@@ -42,7 +42,7 @@ public:
         removeRedundansies();
 
         // since buckets is a map, a bucket thereof can be located ANYWHERE
-        // this means that we could have started collecting a chain of points starting from a middle of a path
+        // this means that we could have started collecting a chain of points from a middle of a path
         // do another iteration to make sure the paths are spanning really the extreme start-end points:
         auto pathscp = move(paths);
         for (auto && l : pathscp)

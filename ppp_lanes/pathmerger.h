@@ -69,8 +69,8 @@ public:
                 D = MAXVAL;
                 bridge = Vector3f(0,0,0);
 
-//                           max HSCAN (bridge)
-//                            |     |
+//                        max HSCAN (bridge)
+//                           |      |
 //  ..........................      .............................
 
                 // since we do not know WHERE the begin and end of each of the paths we need to check all four combinations:
@@ -107,7 +107,7 @@ public:
             }
         }
         for (auto && path : pathscp) if (!path.empty()) paths.push_back(path);
-        // sort with greater predicate
+        // sort with "greater" predicate, i.e. starting with longest path
         sort(paths.begin(), paths.end(), [](const BBoxPC & pc1, const BBoxPC & pc2){ return pc1.size() > pc2.size(); });
         finishProcess(container);
     }
