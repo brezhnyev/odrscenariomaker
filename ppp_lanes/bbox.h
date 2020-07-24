@@ -158,6 +158,8 @@ struct BBoxPC : public std::deque<Point>
     {
         std::deque<Point>::clear();
         bbox.clear();
+        if (nextContainer) delete nextContainer; // will go recursivelly until the leaf container
+        nextContainer = nullptr;
     }
     BBox bbox;
 

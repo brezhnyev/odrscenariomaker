@@ -9,6 +9,7 @@
 
 #define NSCAN 4 // distance (in cells) for neighbours scan for longest path detection
 
+
 class PathFinder : public Quantizer
 {
 public:
@@ -41,6 +42,12 @@ public:
 
         removeRedundansies();
 
+        if (paths.empty())
+        {
+            container.clear();
+            return;
+        }
+
         // since buckets is a map, a bucket thereof can be located ANYWHERE
         // this means that we could have started collecting a chain of points from a middle of a path
         // do another iteration to make sure the paths are spanning really the extreme start-end points:
@@ -56,6 +63,12 @@ public:
         }
 
         removeRedundansies();
+
+        if (paths.empty())
+        {
+            container.clear();
+            return;
+        }
 
         finishProcess(container);
     }
@@ -80,7 +93,8 @@ private:
             for (int nr = 0; nr >= -NSCAN; nr = nr < 0 ? -nr : -(nr + 1) ) // neighbour row
             {
                 int i = (r + nr) * W + (c + nc);
-                if (i >= W*H) continue;
+                if (i >= W*H)
+                    continue;
                 auto it = buckets.find(i);
                 if (it == buckets.end())
                     continue;
@@ -109,15 +123,22 @@ private:
                     deque<Vector3f> vv;
                     // collect the NSCAN last neighbours of the path (plus the bP point), making 4 intervals (one interval is ~cS long)
                     for (int i = 0; i < NSCAN + 1; ++i) vv.push_back(Vector3f(path[path.size() - 1 - i].v));
-                    auto eig = getPCEigenvalues<decltype(vv), Vector3f, Matrix3f>(vv, true);
+                    auto eig = getPCEigenvalues<decltype(vv), Vector3f, Matrix3f>(vv);
                     // make sure the main component (standard deviation) is significantly larger than the next largest one.
                     // thereby the following assumption is taken: the current marking segment is ONE interval width (~cS) and NSCAN intervals long:
-                    if (sqrt(eig.first[1])/sqrt(eig.first[0]) < 1.0f/NSCAN) // NSCAN times larger than the other one
+                    Vector3f eigv = eig.first; sort(&eigv[0], &eigv[0] + 3);
+                    if (sqrt(eigv[1])/sqrt(eigv[2]) < 1.0f/NSCAN) // NSCAN times larger than the other one
                     {
-                        // make sure the nP is within the BBox of 8*NSCAN x 4*NSCAN (local x and y, assuming x is path direction) from the bP:
+                        // make sure the nP is within the BBox of NSCAN x 0.5*NSCAN (local x and y, assuming x is path direction) from the bP:
                         BBox bbox;
-                        bbox.addPoint(Point(-4*NSCAN*cS, -2*NSCAN*cS, -2*NSCAN*cS).v);
-                        bbox.addPoint(Point( 4*NSCAN*cS,  2*NSCAN*cS,  2*NSCAN*cS).v);
+                        bbox.addPoint(Point(-0.5f*NSCAN*cS, -0.5f*NSCAN*cS, -0.5f*NSCAN*cS).v);
+                        bbox.addPoint(Point( 0.5f*NSCAN*cS,  0.5f*NSCAN*cS,  0.5f*NSCAN*cS).v);
+                        map<float, int> eigvmap;
+                        eigvmap[eig.first[0]] = 0;
+                        eigvmap[eig.first[1]] = 1;
+                        eigvmap[eig.first[2]] = 2;
+                        bbox.minp[eigvmap.rbegin()->second] *= 2;
+                        bbox.maxp[eigvmap.rbegin()->second] *= 2;
                         // is nP in the bbox?
                         // Find the nP as vector from the bP and transform into local CS of the bbox:
                         Vector3f nPlocal = eig.second.transpose() * nPbP;
@@ -204,20 +225,23 @@ protected:
         auto pathscp = move(paths);
         // Fillout the container
         int li = 0;
+        BBoxPC * containerP = &container;
         for (auto && l : pathscp)
         {
             if (l.size() < NSCAN) continue;
 
+            if (!container.empty()) containerP = containerP->addNext();
+
             for (int i = 0; i < l.size(); ++i)
             {
                 if (i != 0)
-                    memcpy(l[i].color, &colors[li][0], 3*sizeof(unsigned char)); 
+                    memcpy(l[i].color, &colors[li][0], 3*sizeof(unsigned char));
                 else 
                 {
                     unsigned char RGB[3] = {255,255,255}; // This will visually mark the start of the path
                     memcpy(l[i].color, RGB, 3*sizeof(unsigned char));
                 }
-                container.push_back(l[i]);
+                containerP->push_back(l[i]);
             }
             ++li;
             paths.push_back(l);

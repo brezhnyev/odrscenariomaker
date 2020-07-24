@@ -187,7 +187,7 @@ int main(int argc, char ** argv)
             // Process the remaining pc (still in lanes):
             processPC(t.first);
 
-            // for Lanes aggregator - there still not aggregated lanes sitting there, get them:
+            // for Lanes marks detector: there still not aggregated lanes sitting there, get them:
             BBoxPC flatLane;
             processors[t.first]->finishProcess(flatLane, true);
 
