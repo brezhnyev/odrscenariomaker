@@ -63,15 +63,16 @@ DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES the path to the boost_1_73_0
 
 
 
-# Building Client application
-To build the Client application cd ppp_simulation/cpp:
+# Building Client application(s)
+The client applications majorly signle file applications created for testing the Carla client coding, like setting weather, map (Townxx) etc. The PPPScene is the most advance one, it is storing the RGB, Lidar, SemSeg images onto disk. Potentially the PPPScene code can go into the ODRScenariomaker GUI application (see below) to extend the functionalities.  
+To build the Client applications cd ppp_simulation/cpp:
 1. Make include directory with mkdir include. There should be two soft links in the include folder:  
 * ln -s /path/to/carla_repo/Build/boost-1.72.0-c8-install/include
 * ln -s /path/to/carla_repo/LibCarla/source/carla
 2. Make lib folder. There should be the following soft links int the lib folder:  
-* boost -> /path/to/carla_repo/Build/boost-1.72.0-c8-install/lib/
-* carla_debug -> /path/to/carla_repo/Build/<libcarla-client-build.debug>/LibCarla/cmake/client  (libcarla-client-build.debug is optional)
-* carla_release -> /path/to/carla_repo/Build/<libcarla-client-build.release>/LibCarla/cmake/client (libcarla-client-build.debug is optional)
+* ln -s /path/to/carla_repo/Build/boost-1.72.0-c8-install/libs/ boost
+* ln -s /path/to/carla_repo/Build/<libcarla-client-build.debug>/LibCarla/cmake/client carla_debug (libcarla-client-build.debug is optional and is relevant if the Carla Legacy way is used)
+* ln -s /path/to/carla_repo/Build/<libcarla-client-build.release>/LibCarla/cmake/client carla_release (libcarla-client-build.release is optional and is relevant if the Carla Legacy way is used)
 3. Make the debug and/or release directories:
 * Debug:   mkdir debug, cd debug, cmake .. -DCMAKE_BUILD_TYPE=Debug
 * Release: mkdir release,  cd release, cmake .. -DCMAKE_BUILD_TYPE=Release
@@ -87,6 +88,7 @@ Example of the files structure in the ppp_simulation/cpp folder:
 │   ├── boost -> /home/kbrezhnyev/BUILDS/carla/Build/boost-1.72.0-c8-install/include/
 │   └── carla -> /home/kbrezhnyev/BUILDS/carla/LibCarla/source/
 ├── lib
+|   |── boost -> /home/kbrezhnyev/tools/boost_1_73_0/libs/
 │   ├── carla_debug -> /home/kbrezhnyev/BUILDS/carla/Build/LibCarla/cmake/client
 │   ├── carla_release -> /home/kbrezhnyev/BUILDS/carla/Build/LibCarla/cmake/client
 │   └── lib -> /home/kbrezhnyev/BUILDS/carla/Build/boost-1.72.0-c8-install/lib/
