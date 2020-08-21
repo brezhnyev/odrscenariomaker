@@ -16,8 +16,8 @@ add_executable(${PROJECT_NAME} main.cpp
 MainWindow.cpp Viewer.cpp Canvas.cpp Waypath.cpp Waypoint.cpp treeitem.cpp treemodel.cpp treeview.cpp 
 scenario.cpp WaypointProps.cpp Vehicle.cpp Selectable.cpp WaypathProps.cpp Actor.cpp ActorProps.cpp IPC.cpp Serializer.cpp ScenarioProps.cpp)
 
-target_link_libraries(${PROJECT_NAME} libQGLViewer-qt5.so Qt5::Core Qt5::Gui Qt5::Widgets libOpenGL.so Qt5::OpenGL libpthread.so yaml-cpp)
+target_link_libraries(${PROJECT_NAME} libQGLViewer-qt5.so Qt5::Core Qt5::Gui Qt5::Widgets libOpenGL.so Qt5::OpenGL libpthread.so yaml-cpp -lGL)
 
-add_library(ser Serializer.cpp scenario.cpp Vehicle.cpp Waypath.cpp Waypoint.cpp)
+add_library(ser Serializer.cpp scenario.cpp Vehicle.cpp Waypath.cpp Waypoint.cpp Actor.cpp)
 
 add_subdirectory(client)

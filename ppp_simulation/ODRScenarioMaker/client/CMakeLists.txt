@@ -9,15 +9,12 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Widgets Xml OpenGL REQUIRED)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/boost)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/carla/)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set (SOURCE play.cpp ../Selectable.cpp ../Waypath.cpp ../Waypoint.cpp)
 
 link_directories(/usr/local/lib/)
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/carla_debug)
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/carla_release)
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/boost)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 add_executable(${PROJECT_NAME} ${SOURCE})
 

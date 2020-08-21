@@ -147,8 +147,9 @@ int main(int argc, char ** argv)
         // Set the scenario start position:
         Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
         auto wit = waypath.children().begin();
-        auto wp1 = dynamic_cast<Waypoint*>(wit->second); ++wit;
-        auto wp2 = dynamic_cast<Waypoint*>(wit->second);
+        auto wp1 = dynamic_cast<Waypoint*>(wit->second); wp1->flipY(); // Since Carla is LEFT handed - flip Y
+        ++wit;
+        auto wp2 = dynamic_cast<Waypoint*>(wit->second); wp2->flipY(); // Since Carla is LEFT handed - flip Y
         auto dir = wp2->getPosition() - wp1->getPosition();
         auto yaw = (atan2(dir.y(), dir.x()))*90/M_PI_2;
         cg::Transform transform(cg::Location(wp1->getPosition().x(), wp1->getPosition().y(), wp1->getPosition().z()), cg::Rotation(0,yaw,0));
@@ -215,13 +216,13 @@ int main(int argc, char ** argv)
                 Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
 
                 // Get the next waypoints in some distance away:
-                Eigen::Vector3f peigen(trf.location.x, trf.location.y, trf.location.z);
+                Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
                 if (!waypath.getNext(peigen))
                 {
                     isStopped = true;
                     break;
                 }
-                cg::Transform p(cg::Location(peigen.x(), peigen.y(), peigen.z()));
+                cg::Transform p(cg::Location(peigen.x(), -peigen.y(), peigen.z()));
                 auto dir = (p.location - trf.location).MakeUnitVector();
                 auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
                 auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;

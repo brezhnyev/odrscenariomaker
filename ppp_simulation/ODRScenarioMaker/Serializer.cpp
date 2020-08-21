@@ -58,7 +58,7 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
         node["type"] = "Waypoint";
         YAML::Node location;
         location["x"] = waypoint->getPosition().x();
-        location["y"] =-waypoint->getPosition().y();
+        location["y"] = waypoint->getPosition().y();
         location["z"] = waypoint->getPosition().z();
         node["location"] = location;
         parent.push_back(node);
