@@ -46,3 +46,10 @@ For Linux users the process a bit more complicated:
 ![final_import](./images/final_import.jpg)  
 
 
+Extra references:  
+* https://docs.unrealengine.com/en-US/Platforms/Linux/BeginnerLinuxDeveloper/SettingUpAnUnrealWorkflow/index.html
+* https://github.com/carla-simulator/carla/issues/1998
+* https://github.com/carla-simulator/carla/issues/1015
+* https://docs.unrealengine.com/en-US/Engine/Landscape/Creation/index.html?utm_source=editor&utm_medium=docs&utm_campaign=tutorials
+* https://sumo.dlr.de/docs/netedit.html
+* https://sumo.dlr.de/docs/netconvert.html
