@@ -168,3 +168,7 @@ Another possible view (after first start is complete). Here the properly loaded 
 Press **Play**. The two cars (Audi and VW mini bus) will move in opposite directions making two curves: 
 
 ![During play](./images/during_play.jpg)  
+
+**KNOWN ISSUES**: closing the ODRScenarioMaker not always closes the TCP connection. So check the "client" application in system to avoid dozens of open TCP connections:
+
+![client system heck](./images/system_check_client.jpg)  
