@@ -1,14 +1,116 @@
-# Steps to compile Carla 0.9.9 and the Examples/CppClient.<br>
+# Alternatives to compile/start Carla 0.9.9 and the Examples/CppClient/ODRScenarioMaker.<br>
+
+There are some alternatives to start working with carla and the clients to it. In any of the alternatives the following steps are suggested:
+1. After cloning the Carla repo checkout the version 0.9.9 since the higher versions have bugs and crash for C++ clients.
+2. Apply the patch.txt. This is optional and may be skipped. This is apparently a bug in the Carla tag 0.9.9. This bug will NOT produce a crash BUT will make the cars "blind to see" the walkers **on (re)loading a map** which causes too many accidents. This bug is reported as merge request to the main Carla branch. However before the request is merged there is no handy way to provide this change other than using the patch.
+
+## Using standalone Carla engine.
+This is a relative easy way to quickly start working with Carla. Using this way will not require installation of lots of dependancies the legacy installation needs (ex. clang and ninja).
+1. Install the Carla Engine (server). Download a pre-compiled ready-to-use standalone Carla engine from the official carla releases: https://github.com/carla-simulator/carla/releases: CARLA_0.9.9.tar.gz unpack and start ./CarlaUE4.sh. This should run the Carla as a standalone application. You can navigate the scene. Also you can start some scripts from PythonAPI/examples, ex. spawn:  
+![Carla_and_spawn](./images/Carla_and_spawn.jpg)  
+1. Build the C++ libraries (carla_client.so and carla_client_debug.so) to "talk" with the Carla Engine.  
+1.1. Download rpclib. git clone https://github.com/rpclib/rpclib.git, build as usual and sudo checkinstall.  
+1.2 Download recastnavigation. git clone https://github.com/carla-simulator/recastnavigation.git, build as usual and sudo checkinstall
+**Important!** the recastnavigation exists as forks in different repos in internet. **Important to use the one for carla + "recast_builder" branch.**
+ Build with -fPIC flag (this may be needed if the carla library is built as shared in p.5).  
+1.3. Download boost_1_73_0 as zip package. Start ./bootstrap.sh and then ./b2 to build the libs. Do NOT install, since this may cause conflict with existing boost (1.65 is standard for Ubuntu18)  
+1.4. Download sdl: sudo apt install libsdl2-2.0-0  
+1.5. Clone the carla: git clone https://github.com/carla-simulator/carla.git, checkout version 0.9.9  
+* mkdir Build (if does not exist, beware of capital **B**build)
+* cd Build  
+* touch CMakeLists.txt.in (needed by the CMakeLists.txt) 
+* copy Version.h into ./LibCarla/source/carla 
+* cmake .. -DCMAKE_BUILD_TYPE=Client -DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/home/kbrezhnyev/BUILDS/boost_1_73_0  
+where the DCMAKE_BUILD_TYPE can be Server (not relevant in our case) and
+DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES the path to the boost_1_73_0
+
+
 ## Legacy way.
-This would require clang and ninja installed on the system.
-1. Checkout the Carla 0.9.9. **Important!** The master branch has now a bug in commit c45614c983fa72b971dde1964b85aeb15e5a4ac7 that will crash any client. So use the above 0.9.9 tag! The bug was reported to the author.
-2. Apply the provided patch for carla. This is apparently a bug in the Carla tag 0.9.9. This bug will NOT produce a crash BUT will make the cars "blind to see" the walkers **on (re)loading a map** which causes too many accidents. This bug is reported as merge request to the main Carla branch. However before the request is merged there is no handy way to provide this change other than using the patch.
-3. run "make rebuild" from the root folder. Follow the error messages about the missing components (ex. clang and ninja).
-4. The whole compilation process will download all required libraries (boost, recast, etc) and will take ~15-30 minutes to finish.
-5. After the build is done it is possible to build only the "client" part (i.e. libcarla_client_debug.a and libcarla_client.a) as follows:
-* cd Build
-* cmake .. -DCMAKE_BUILD_TYPE=Client -DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=~/path/to/carla_repo/Build/boost-1.72.0-c8-install/include
-There is apparently a more clever way to use the "make" command to build only the client target (i.e. libcarla_client_debug.a and libcarla_client.a), however no way was found.
+The legacy way is laid out in the Carla official site:  
+https://carla.readthedocs.io/en/latest/build_linux/  
+Here is the copy-paste from the unfolded "Show command lines to build on Linux". Below see the  guidelines to install the UE4Editor. 
+<pre>
+# Make sure to meet the minimum requirements and read the documentation to understand each step.
+
+# Install dependencies.
+sudo apt-get update &&
+sudo apt-get install wget software-properties-common &&
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test &&
+wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - &&
+sudo apt-add-repository "deb http://apt.llvm.org/$(lsb_release -c --short)/ llvm-toolchain-$(lsb_release -c --short)-8 main" &&
+sudo apt-get update
+
+# Additional dependencies for Ubuntu 18.04.
+sudo apt-get install build-essential clang-8 lld-8 g++-7 cmake ninja-build libvulkan1 python python-pip python-dev python3-dev python3-pip libpng-dev libtiff5-dev libjpeg-dev tzdata sed curl unzip autoconf libtool rsync libxml2-dev libxerces-c-dev &&
+pip2 install --user setuptools &&
+pip3 install --user -Iv setuptools==47.3.1
+
+# Additional dependencies for previous Ubuntu versions.
+sudo apt-get install build-essential clang-8 lld-8 g++-7 cmake ninja-build libvulkan1 python python-pip python-dev python3-dev python3-pip libpng16-dev libtiff5-dev libjpeg-dev tzdata sed curl unzip autoconf libtool rsync libxml2-dev libxerces-c-dev &&
+pip2 install --user setuptools &&
+pip3 install --user -Iv setuptools==47.3.1 &&
+pip2 install --user distro &&
+pip3 install --user distro
+
+# Change default clang version.
+sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/lib/llvm-8/bin/clang++ 180 &&
+sudo update-alternatives --install /usr/bin/clang clang /usr/lib/llvm-8/bin/clang 180
+
+# Get a GitHub and a UE account, and link both.
+# Install git.
+
+# Download Unreal Engine 4.24.
+git clone --depth=1 -b 4.24 https://github.com/EpicGames/UnrealEngine.git ~/UnrealEngine_4.24
+cd ~/UnrealEngine_4.24
+
+# Download and install the UE patch
+wget https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/UE_Patch/430667-13636743-patch.txt ~/430667-13636743-patch.txt
+patch --strip=4 < ~/430667-13636743-patch.txt
+
+# Build UE
+./Setup.sh && ./GenerateProjectFiles.sh && make
+
+# Open the UE Editor to check everything works properly.
+cd ~/UnrealEngine_4.24/Engine/Binaries/Linux && ./UE4Editor
+
+# Clone the CARLA repository.
+git clone https://github.com/carla-simulator/carla
+
+# Get the CARLA assets.
+cd ~/carla
+./Update.sh
+
+# Set the environment variable.
+export UE4_ROOT=~/UnrealEngine_4.24
+
+# make the CARLA server and the CARLA client.
+make launch
+make PythonAPI
+
+# Press play in the Editor to initialize the server, and run an example script to test CARLA.
+cd PythonAPI/examples
+python3 spawn_npc.py
+</pre>
+
+Starting with  **make launch** may take a lot of time if started right after the build first time. Use **make launch-only** to avoid rebuilding later. Checkout all options starting **make** without arguments.
+
+![epic-carla_in_UE4Editor](./images/carla_in_UE4Editor.jpg)  
+
+## Installing UE4Editor
+
+To install UE4Editor one must have an account in Epic.
+1. One must have an account in git.
+1. Go to https://www.epicgames.com/account/personal -> connection. Choose git. Follow the Connection Wizzard (check e-mail may be needed). After the connection is established you will have access to the UE4 git repo.
+1. git clone https://github.com/EpicGames/UnrealEngine.git
+1. Follow the instructions: https://docs.unrealengine.com/en-US/Platforms/Linux/BeginnerLinuxDeveloper/SettingUpAnUnrealWorkflow/index.html. Beware to run "make" without the "-j" key. The build process may take long (around one hour).
+1. start the editor <pre>~/BUILDS/UnrealEngine/Engine/Binaries/Linux$ ./UE4Editor</pre>
+1. starting editor for the first time may take long, so wait.
+
+![epic-connection](./images/epic_connections.jpg)  
+![build_UE4](./images/build_UE4.jpg)  
+Starting as mentioned above (cd ~/UnrealEngine_4.24/Engine/Binaries/Linux && ./UE4Editor)  
+![staring_ue4_editor](./images/staring_ue4_editor.jpg)
+
 
 The Build folder after running "make rebuild" and "cmake .." as above:
 <pre>
@@ -43,24 +145,6 @@ kbrezhnyev@kbrezhnyev-Precision-7510:~/BUILDS/carla/Build$ find . -iname libcarl
 ./libcarla-client-build.debug/LibCarla/cmake/client/libcarla_client_debug.a          // built with the "make rebuild" command
 ./LibCarla/cmake/client/libcarla_client_debug.a                                      // build "with cmake .." command
 </pre>
-
-## Alternative way.
-The following alternative will need to install the required components manually and **avoid installing clang and ninja**.
-1. Download rpclib. git clone https://github.com/rpclib/rpclib.git, build as usual and sudo checkinstall
-1. Download recastnavigation. git clone https://github.com/carla-simulator/recastnavigation.git, build as usual and sudo checkinstall
-**Important!** the recastnavigation exists as forks in different repos in internet. **Important to use the one for carla + "recast_builder" branch.**
- Build with -fPIC flag (this may be needed if the carla library is built as shared in p.5).
-1. Download boost_1_73_0 as zip package. Start ./bootstrap.sh and then ./b2 to build the libs. Do NOT install, since this may cause conflict with existing boost (1.65 is standard for Ubuntu18)
-1. Download sdl: sudo apt install libsdl2-2.0-0
-1. Clone the carla: git clone https://github.com/carla-simulator/carla.git, checkout version 0.9.9  
-* mkdir Build (if does not exist, beware of capital **B**build)
-* cd Build  
-* touch CMakeLists.txt.in (needed by the CMakeLists.txt) 
-* copy Version.h into ./LibCarla/source/carla 
-* cmake .. -DCMAKE_BUILD_TYPE=Client -DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/home/kbrezhnyev/BUILDS/boost_1_73_0  
-where the DCMAKE_BUILD_TYPE can be Server (not relevant in our case) and
-DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES the path to the boost_1_73_0
-
 
 
 # Building Client application(s)
@@ -148,7 +232,7 @@ The same issues hold with the soft links: for the Carla-client there should be p
 ...
 </pre>
 
-# Starting ODRScenarioMaker
+# Starting ODRScenarioMaker with standalone Carla Engine
 The ODRScenarioMaker is started in a standard was as a standalone application. At this point there is no need to have Carla Engine running, since the ODRScenarioMaker will not need carla during the setup/edditing.  
 Select the scenario (Scenario 0) and "Add Vehicle" on the right panel:
 ![Add Vehicle](./images/Add_Vehicle.jpg)  
@@ -159,7 +243,9 @@ Add Waypath for the selected Vehicle. Select the newly created Waypath in the tr
 
 Another car maybe added with waypaths/waypoints. (Only one waypath will be played back now per vehicle)
 
-After the scenario is prepared the carla engine should be started. Go to the folder with Carla and start ./CarlaEU4.sh on the first start:
+After the scenario is prepared the carla engine should be started. Go to the folder with Carla and start Carla with  
+**./CarlaEU4.sh**   
+The look of Carla on the first start:
 
 ![Before play](./images/before_play.jpg)  
 Another possible view (after first start is complete). Here the properly loaded Map is displayed:  
@@ -172,3 +258,12 @@ Press **Play**. The two cars (Audi and VW mini bus) will move in opposite direct
 **KNOWN ISSUES**: closing the ODRScenarioMaker not always closes the TCP connection. So check the "client" application in system to avoid dozens of open TCP connections:
 
 ![client system heck](./images/system_check_client.jpg)  
+
+
+# Starting ODRScenarioMaker with UE4Editor
+Very similar to the previous procedure, just instead of the standalone Carla the Carla-project should be started as mentioned in the "Legacy Way" from the "carla" folder:  
+**make launch-only**
+Press "Play" to start the server inside the UE4Editor:  
+![playing_in_UE4Editor](./images/playing_in_UE4Editor.jpg)  
+Start "play" in the ODRScenarioMaker:  
+![playing_ODR_UE4Editor](./images/playing_ODR_UE4Editor.jpg)  
