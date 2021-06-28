@@ -115,7 +115,7 @@ int main(int argc, char ** argv)
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
     crpc::EpisodeSettings wsettings(true, false, 1.0 / 30); // (synchrone, noRender, interval)
-    world.ApplySettings(wsettings);
+    world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     world.SetWeather(crpc::WeatherParameters::ClearNoon);
 
     // Spawn Vehicles:
@@ -250,7 +250,7 @@ int main(int argc, char ** argv)
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
 
-    world.ApplySettings(defaultSettings);
+    world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     for (auto v : vehicles) v->Destroy();
     send(new_socket, "*", 1, 0 );
     usleep(1e6);

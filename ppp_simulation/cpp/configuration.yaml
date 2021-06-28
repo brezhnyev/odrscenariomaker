@@ -26,6 +26,7 @@ weather :
   precipitation_deposits : 10.0
   wind_intensity : 10.0
   fog_density : 10.0
+  fog_falloff : 1.0
   fog_distance : 100.0
   wetness : 10.0
   sun_azimuth_angle : 40.0

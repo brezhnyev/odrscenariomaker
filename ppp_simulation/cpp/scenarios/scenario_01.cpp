@@ -56,7 +56,7 @@ int main(int argc, const char *argv[])
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
     crpc::EpisodeSettings wsettings(true, false, 1.0 / 30); // (synchrone, noRender, interval)
-    world.ApplySettings(wsettings);
+    world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     world.SetWeather(crpc::WeatherParameters::ClearNoon);
 
     PTrafficManager tm(world, confname);
@@ -81,7 +81,7 @@ int main(int argc, const char *argv[])
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
 
-    world.ApplySettings(defaultSettings);
+    world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
 
     return 0;
 }

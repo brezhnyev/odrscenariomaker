@@ -105,7 +105,7 @@ int main(int argc, const char *argv[])
     // Synchronous mode:
     auto defaultSettings = m_world.GetSettings();
     crpc::EpisodeSettings wsettings(true, false, 1.0 / 30); // (synchrone, noRender, interval)
-    m_world.ApplySettings(wsettings);
+    m_world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     m_world.SetWeather(crpc::WeatherParameters::ClearNoon);
 
     // Spawn Vehicles:
@@ -239,10 +239,10 @@ int main(int argc, const char *argv[])
             // we choose the left most point to compute the direction of movement and the angular speed:
             auto p = waypoints[indices.rbegin()->second]; // left most
             auto dir = (p->GetTransform().location - trf.location).MakeUnitVector();
-            vehicle->SetVelocity(dir*SPEED);
+            vehicle->SetTargetVelocity(dir*SPEED);
             auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
             auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
-            vehicle->SetAngularVelocity(cg::Vector3D(0.0f,0.0f, SPEED * sign * arc.Length()/0.0333));
+            vehicle->SetTargetAngularVelocity(cg::Vector3D(0.0f,0.0f, SPEED * sign * arc.Length()/0.0333));
 
             // COMMENT:
             // here the p MAY happen to be a waypoint from a IMPROPER track!!!
@@ -255,7 +255,7 @@ int main(int argc, const char *argv[])
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
 
-    m_world.ApplySettings(defaultSettings);
+    m_world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     for (auto v : vehicles) v->Destroy();
 
     return 0;

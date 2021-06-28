@@ -98,7 +98,7 @@ PPPScene::PPPScene(string confname) : m_doRun(false), m_isInitialized(false), m_
         int fps = config["common"]["fps"].as<int>();
         m_defaultSettings = m_world->GetSettings();
         EpisodeSettings wsettings(true, false, 1.0 / fps); // (synchrone, noRender, interval)
-        m_world->ApplySettings(wsettings);
+        m_world->ApplySettings(wsettings, carla::time_duration::seconds(10));
 
         // Spawn vehicles:
         spawnVehicles();
@@ -232,7 +232,7 @@ void PPPScene::stop(bool abort)
         cout << "***Gracefull quit failed. Abnormally exiting application.***" << endl;
     }
     // KB: ApplySettings must be called before deleting the actors, otherwise crash
-    m_world->ApplySettings(m_defaultSettings); // reset again to the asynchronous mode
+    m_world->ApplySettings(m_defaultSettings, carla::time_duration::seconds(10)); // reset again to the asynchronous mode
 
     try
     {
@@ -289,6 +289,7 @@ void PPPScene::setWeather()
             config["weather"]["sun_altitude_angle"].as<float>(),
             config["weather"]["fog_density"].as<float>(),
             config["weather"]["fog_distance"].as<float>(),
+            config["weather"]["fog_falloff"].as<float>(),
             config["weather"]["wetness"].as<float>()
         );
         m_world->SetWeather(weather);

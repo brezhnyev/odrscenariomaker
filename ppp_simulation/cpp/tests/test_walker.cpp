@@ -80,7 +80,7 @@ int main(int argc, const char *argv[])
     // Synchronous mode:
     auto defaultSettings = m_world.GetSettings();
     crpc::EpisodeSettings wsettings(true, false, 1.0 / 30); // (synchrone, noRender, interval)
-    m_world.ApplySettings(wsettings);
+    m_world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     m_world.SetWeather(crpc::WeatherParameters::ClearNoon);
 
     // Spawn walkers:
@@ -140,7 +140,7 @@ int main(int argc, const char *argv[])
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
 
-    m_world.ApplySettings(defaultSettings);
+    m_world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     for (auto w : walkers)  w->Destroy();
 
     return 0;
