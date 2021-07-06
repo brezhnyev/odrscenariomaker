@@ -19,6 +19,7 @@
 
 #include <map>
 #include <set>
+#include <eigen3/Eigen/Eigen>
 
 // Print progress to console while loading (large models)
 //#define OBJL_CONSOLE_OUTPUT
@@ -82,6 +83,8 @@ namespace objl
         {
             return X*X + Y*Y;
         }
+
+		operator Eigen::Vector2f() { return Eigen::Vector2f(X,Y); }
 
 		// Positional Variables
 		float X;
@@ -147,6 +150,8 @@ namespace objl
         {
             return X*X + Y*Y + Z*Z;
         }
+
+		operator Eigen::Vector3f() { return Eigen::Vector3f(X,Y,Z); }
 
 		// Positional Variables
 		float X;
