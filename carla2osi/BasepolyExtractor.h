@@ -19,7 +19,7 @@ public:
             std::cout << e.x() << " " << e.y() << " " << e.z() << std::endl;
     }
 
-    static std::vector<Eigen::Vector3f> Obj2basepoly(const objl::Mesh & mesh, const objl::Loader & loader, bool isConcave)
+    static std::vector<Eigen::Vector2f> Obj2basepoly(const objl::Mesh & mesh, const objl::Loader & loader, bool isConcave)
     {
         using namespace std;
         using namespace objl;
@@ -27,7 +27,7 @@ public:
 
         // Jarvi's march to find the convex hull
 
-        vector<Vector3f> baseline;
+        vector<Vector2f> baseline;
 
         Vertex blp, blpc; // base line point, base line point candidate
         blp.Position = Vector3(0, 0, __FLT_MAX__);

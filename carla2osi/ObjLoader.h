@@ -151,7 +151,8 @@ namespace objl
             return X*X + Y*Y + Z*Z;
         }
 
-		operator Eigen::Vector3f() { return Eigen::Vector3f(X,Y,Z); }
+		operator Eigen::Vector3f() { return Eigen::Vector3f(X,-Z, Y); }
+		operator Eigen::Vector2f() { return Eigen::Vector2f(X,-Z); }
 
 		// Positional Variables
 		float X;

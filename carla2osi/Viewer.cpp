@@ -1,7 +1,7 @@
 #include <Viewer.h>
 
 
-void Viewer::addData(std::vector<Eigen::Vector3f> & v)
+void Viewer::addData(std::vector<Eigen::Vector2f> && v)
 {
     data.push_back(v);
 }
@@ -14,9 +14,9 @@ void Viewer::draw()
         glBegin(GL_LINE_STRIP);
         for (auto && p : v)
         {
-            glVertex3f(p.x(), p.y(), p.z());
+            glVertex2f(p.x(), p.y());
         }
-        glVertex3f(v[0].x(), v[0].y(), v[0].z());
+        glVertex2f(v[0].x(), v[0].y());
         glEnd();
     }
 }

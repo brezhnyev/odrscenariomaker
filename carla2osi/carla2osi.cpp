@@ -3,11 +3,11 @@
 #include <assert.h>
 #include <list>
 
-#include "Viewer.h"
-
-#include "BasepolyExtractor.h"
-
 #include <qapplication.h>
+
+#include "Viewer.h"
+#include "BasepolyExtractor.h"
+#include "Osiexporter.h"
 
 using namespace std;
 using namespace objl;
@@ -39,32 +39,51 @@ int main(int argc, char ** argv)
     viewer.setWindowTitle("Base_polygon visualizer");
     viewer.show();
 
-    for (auto && mesh : loader.LoadedMeshes)
+    Osiexporter osiex;
+
+    uint64_t id = 0;
+
+    // simulate 10 frames:
+    for (int fr = 0; fr < 2; ++fr)
     {
-        if (mesh.MeshName.find("Fence") != string::npos)
+        osiex.setFrameTime(fr,0);
+        for (auto && mesh : loader.LoadedMeshes)
         {
-            vector<Vector3f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
-            vector<Vector3f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
-            // degenerated geometry case:
-            if (convexBaseline.size() < 3)
+            if (mesh.MeshName.find("Building") != string::npos)
             {
-                cout << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
-                concaveBaseline = convexBaseline;
+                vector<Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
+                vector<Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
+                // degenerated geometry case:
+                if (convexBaseline.size() < 3)
+                {
+                    cout << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
+                    concaveBaseline = convexBaseline;
+                }
+                // concave cannot be smaller than convex (something went wrong in computing the concave form):
+                if (concaveBaseline.size() < convexBaseline.size())
+                {
+                    cout << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
+                    concaveBaseline = convexBaseline;
+                }
+                // if computation of concave hull went into iternal loop and was broken by "convex.size > mesh.size" condition:
+                if (concaveBaseline.size() > mesh.Vertices.size())
+                {
+                    cout << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
+                    concaveBaseline = convexBaseline;
+                }
+                // store the stationary object into OSI:
+                vector<Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
+                for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
+                
+                reverse(concaveBaseline.begin(), concaveBaseline.end());
+                osiex.addStaticObject(v3d, concaveBaseline, id, "building");
+
+                // visualize
+                viewer.addData(move(concaveBaseline));
+                ++id;
             }
-            // concave cannot be smaller than convex (something went wrong in computing the concave form):
-            if (concaveBaseline.size() < convexBaseline.size())
-            {
-                cout << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
-                concaveBaseline = convexBaseline;
-            }
-            // if computation of concave hull went into iternal loop and was broken by "convex.size > mesh.size" condition:
-            if (concaveBaseline.size() > mesh.Vertices.size())
-            {
-                cout << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
-                concaveBaseline = convexBaseline;
-            }
-            viewer.addData(concaveBaseline);
         }
+        osiex.writeFrame();
     }
 
     application.exec();

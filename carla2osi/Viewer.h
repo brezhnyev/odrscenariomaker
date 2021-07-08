@@ -10,7 +10,7 @@ class Viewer : public QGLViewer
 
 public:
 
-    void addData(std::vector<Eigen::Vector3f> & v);
+    void addData(std::vector<Eigen::Vector2f> && v);
 
 signals:
     void ClosingWindow();
@@ -20,5 +20,5 @@ protected :
     virtual void init();
     
 private:
-    std::vector<std::vector<Eigen::Vector3f>> data;
+    std::vector<std::vector<Eigen::Vector2f>> data;
 };
