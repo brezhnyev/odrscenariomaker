@@ -2,6 +2,7 @@
 
 #include <eigen3/Eigen/Eigen>
 #include <osi3/osi_sensorview.pb.h>
+#include "odrparser/odr_1_5.h"
 
 #include <vector>
 #include <string>
@@ -13,7 +14,8 @@ public:
     Osiexporter();
     ~Osiexporter();
 
-    void addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vector<Eigen::Vector2f> & base_polygon, uint64_t id, std::string type);
+    void addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, std::string type);
+    void addRoads(const odr_1_5::OpenDRIVE &, uint64_t & id, std::vector<std::vector<Eigen::Vector2f>> & roads);
     void setFrameTime(uint32_t seconds, uint32_t nanos);
     void writeFrame();
 

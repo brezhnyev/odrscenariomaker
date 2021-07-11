@@ -1,6 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include <assert.h>
+#include <vector>
 #include <list>
 
 #include <qapplication.h>
@@ -9,9 +10,13 @@
 #include "BasepolyExtractor.h"
 #include "Osiexporter.h"
 
+#include "odrparser/odrparser.h"
+
 using namespace std;
 using namespace objl;
 using namespace Eigen;
+using namespace odr;
+using namespace odr_1_5;
 
 
 static void printMeshvertexes(const std::vector<Vertex> & v)
@@ -24,9 +29,9 @@ static void printMeshvertexes(const std::vector<Vertex> & v)
 int main(int argc, char ** argv)
 {
     
-    if (argc == 1)
+    if (argc < 3)
     {
-        cout << "Specify the OBJ file as argument: carla2osi /path/to/file.obj" << endl;
+        cout << "Specify the OBJ and XODR file as arguments: carla2osi /path/to/file.obj /path/to/file.xodr" << endl;
         return 0;
     }
 
@@ -44,9 +49,11 @@ int main(int argc, char ** argv)
     uint64_t id = 0;
 
     // simulate 10 frames:
-    for (int fr = 0; fr < 2; ++fr)
+    for (int fr = 0; fr < 1; ++fr)
     {
         osiex.setFrameTime(fr,0);
+
+        // export stationary
         for (auto && mesh : loader.LoadedMeshes)
         {
             if (mesh.MeshName.find("Building") != string::npos)
@@ -79,10 +86,17 @@ int main(int argc, char ** argv)
                 osiex.addStaticObject(v3d, concaveBaseline, id, "building");
 
                 // visualize
-                viewer.addData(move(concaveBaseline));
-                ++id;
+                viewer.addDataStatic(move(concaveBaseline));
             }
         }
+
+        // export road
+        OpenDRIVEFile odr;
+        loadFile(argv[2], odr);
+        vector<vector<Vector2f>> roads;
+        osiex.addRoads(*odr.OpenDRIVE1_5, id, roads);
+        viewer.updateDataRoads(move(roads));
+
         osiex.writeFrame();
     }
 

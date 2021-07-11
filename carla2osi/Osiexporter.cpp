@@ -1,11 +1,14 @@
 #include "Osiexporter.h"
+#include "odrparser/odr_1_5.hpp"
 
 #include <osi3/osi_object.pb.h>
 
 #include <map>
+#include <iostream>
 
 using namespace osi3;
 using namespace std;
+using namespace odr_1_5;
 
 static map<string, StationaryObject_Classification_Type> str2OsiType
 {
@@ -58,12 +61,12 @@ void Osiexporter::setFrameTime(uint32_t seconds, uint32_t nanos)
     gt_->clear_stationary_object();
 }
 
-void Osiexporter::addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vector<Eigen::Vector2f> & base_polygon, uint64_t id, string type)
+void Osiexporter::addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, string type)
 {
     StationaryObject * object = gt_->add_stationary_object();
     // set id:
     Identifier * oid = new Identifier();
-    oid->set_value(id); object->set_allocated_id(oid);
+    oid->set_value(id++); object->set_allocated_id(oid);
     // set classification:
     StationaryObject_Classification * classification = new StationaryObject_Classification();
     classification->set_type(str2OsiType[type]);
@@ -111,4 +114,32 @@ void Osiexporter::addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vecto
 
     return;
 
+}
+
+void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<Eigen::Vector2f>> & roads)
+{
+    // export center line:
+    roads.reserve(odr.sub_road.size());
+
+    for (auto && road : odr.sub_road)
+    {
+        //if (*road._name != "Taunusstraße") continue;
+
+        Lane * lane = gt_->add_lane();
+        Identifier * oid = new Identifier();
+        oid->set_value(id++); lane->set_allocated_id(oid);
+        Lane_Classification * lc = new Lane_Classification();
+        lane->set_allocated_classification(lc);
+
+        vector<Eigen::Vector2f> r;
+        r.reserve(road.sub_planView->sub_geometry.size());
+
+        for (auto && cline : road.sub_planView->sub_geometry)
+        {
+            Vector3d * center = lc->add_centerline();
+            center->set_x(*cline._x); center->set_y(*cline._y); center->set_z(0); // Z is 0 !!!
+            r.emplace_back(*cline._x, *cline._y);
+        }
+        roads.push_back(move(r));
+    }
 }
