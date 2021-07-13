@@ -81,10 +81,7 @@ int main(int argc, char ** argv)
                 // store the stationary object into OSI:
                 vector<Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
                 for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
-                
-                reverse(concaveBaseline.begin(), concaveBaseline.end());
                 osiex.addStaticObject(v3d, concaveBaseline, id, "building");
-
                 // visualize
                 viewer.addDataStatic(move(concaveBaseline));
             }
@@ -95,6 +92,7 @@ int main(int argc, char ** argv)
         loadFile(argv[2], odr);
         vector<vector<Vector2f>> centerlines, boundaries;
         osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
+        // visualize
         viewer.updateDataRoads(move(centerlines), move(boundaries));
 
         osiex.writeFrame();
