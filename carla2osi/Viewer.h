@@ -11,7 +11,7 @@ class Viewer : public QGLViewer
 public:
 
     void addDataStatic(std::vector<Eigen::Vector2f> && v);
-    void updateDataRoads(std::vector<std::vector<Eigen::Vector2f>> && v);
+    void updateDataRoads(std::vector<std::vector<Eigen::Vector2f>> &&, std::vector<std::vector<Eigen::Vector2f>> &&);
 
 signals:
     void ClosingWindow();
@@ -21,6 +21,7 @@ protected :
     virtual void init();
     
 private:
-    std::vector<std::vector<Eigen::Vector2f>> dataStatic;
-    std::vector<std::vector<Eigen::Vector2f>> dataRoads;
+    std::vector<std::vector<Eigen::Vector2f>> dataStatic_;
+    std::vector<std::vector<Eigen::Vector2f>> centerlines_;
+    std::vector<std::vector<Eigen::Vector2f>> boundaries_;
 };

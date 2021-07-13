@@ -93,9 +93,9 @@ int main(int argc, char ** argv)
         // export road
         OpenDRIVEFile odr;
         loadFile(argv[2], odr);
-        vector<vector<Vector2f>> roads;
-        osiex.addRoads(*odr.OpenDRIVE1_5, id, roads);
-        viewer.updateDataRoads(move(roads));
+        vector<vector<Vector2f>> centerlines, boundaries;
+        osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
+        viewer.updateDataRoads(move(centerlines), move(boundaries));
 
         osiex.writeFrame();
     }

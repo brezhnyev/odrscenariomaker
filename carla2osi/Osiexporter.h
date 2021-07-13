@@ -15,7 +15,7 @@ public:
     ~Osiexporter();
 
     void addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, std::string type);
-    void addRoads(const odr_1_5::OpenDRIVE &, uint64_t & id, std::vector<std::vector<Eigen::Vector2f>> & roads);
+    void addRoads(const odr_1_5::OpenDRIVE &, uint64_t & id, std::vector<std::vector<Eigen::Vector2f>> & centerlines, std::vector<std::vector<Eigen::Vector2f>> & boundaries);
     void setFrameTime(uint32_t seconds, uint32_t nanos);
     void writeFrame();
 

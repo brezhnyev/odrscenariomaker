@@ -3,20 +3,22 @@
 
 void Viewer::addDataStatic(std::vector<Eigen::Vector2f> && v)
 {
-    dataStatic.push_back(v);
+    dataStatic_.push_back(v);
 }
 
-void Viewer::updateDataRoads(std::vector<std::vector<Eigen::Vector2f>> && v)
+void Viewer::updateDataRoads(std::vector<std::vector<Eigen::Vector2f>> && centerlines, std::vector<std::vector<Eigen::Vector2f>> && boundaries)
 {
-    dataRoads = v;
+    centerlines_ = centerlines;
+    boundaries_ = boundaries;
 }
 
 void Viewer::draw()
 {
+    // static
     glDisable(GL_LIGHTING);
     glColor3f(1,1,1);
-    glLineWidth(2);
-    for (auto && v : dataStatic)
+    glLineWidth(3);
+    for (auto && v : dataStatic_)
     {
         glBegin(GL_LINE_STRIP);
         for (auto && p : v)
@@ -26,23 +28,29 @@ void Viewer::draw()
         glVertex2f(v[0].x(), v[0].y());
         glEnd();
     }
-    glColor3f(1,1,0);
-    for (auto && v : dataRoads)
+    // centerlines
+    glLineWidth(1);
+    glColor3f(0,1,1);
+    for (auto && v : centerlines_)
     {
         glBegin(GL_LINE_STRIP);
         for (auto && p : v)
         {
-            glVertex2f(p.x()-520, p.y()-90);
+            glVertex2f(p.x(), p.y());
         }
         glEnd();
     }
-    glPointSize(4);
-    for (auto && v : dataRoads)
+
+    // boundaries
+    // centerlines
+    glLineWidth(3);
+    glColor3f(1,1,0);
+    for (auto && v : boundaries_)
     {
-        glBegin(GL_POINTS);
+        glBegin(GL_LINE_STRIP);
         for (auto && p : v)
         {
-            glVertex2f(p.x()-520, p.y()-90);
+            glVertex2f(p.x(), p.y());
         }
         glEnd();
     }
