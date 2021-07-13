@@ -31,7 +31,7 @@ find_package(QGLViewer REQUIRED)
 include_directories(${QGLVIEWER_INCLUDE_DIR})
 message(STATUS ${QGLVIEWER_INCLUDE_DIR})
 
-set (SOURCE carla2osi.cpp Viewer.cpp Osiexporter.cpp odrparser/odr_1_5.cc odrparser/loadFile.cc)
+set (SOURCE Viewer.cpp Osiexporter.cpp odrparser/odr_1_5.cc odrparser/loadFile.cc)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR})
 include_directories(${CMAKE_CURRENT_LIST_DIR}/odrparser/include)
@@ -45,8 +45,11 @@ link_directories("/usr/local/lib/osi3")
 link_directories("~/tools/carla/Util/OSM2ODR/build/src")
 link_directories("~/tools/carla/Build/xerces-c-3.2.3-install/lib/")
 
-add_executable(${PROJECT_NAME} ${SOURCE})
-target_link_libraries(${PROJECT_NAME} ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf -ltinyxml2)
+add_executable(${PROJECT_NAME} carla2osi.cpp ${SOURCE})
+target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf -ltinyxml2)
+
+add_executable(static2odr static2osi.cpp ${SOURCE})
+target_link_libraries(static2odr ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf -ltinyxml2)
 
 add_executable(osm2odr osm2odr.cpp)
 target_link_libraries(osm2odr -losm2odr -lxerces-c -lz)

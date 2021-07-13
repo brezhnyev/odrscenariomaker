@@ -40,8 +40,8 @@ endif()
 # add_executable(test_spawn ./tests//test_spawn.cpp)
 # target_link_libraries(test_spawn ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
-add_executable(test_osi ./tests/test_osi.cpp)
-target_link_libraries(test_osi ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+# add_executable(test_custom_map ./tests/test_custom_map.cpp)
+# target_link_libraries(test_custom_map ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
 # add_executable(test_left_turns ./tests/test_left_turns.cpp)
 # target_link_libraries(test_left_turns ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
@@ -52,5 +52,10 @@ target_link_libraries(test_osi ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour 
 # add_executable(test_walker ./tests/test_walker.cpp)
 # target_link_libraries(test_walker ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
-add_executable(scenario_01 ./scenarios/scenario_01.cpp ./scenarios/pwalker.cpp ./scenarios/pvehicle.cpp ./scenarios/ptrafficmanager.cpp)
-target_link_libraries(scenario_01 ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
+# add_executable(scenario_01 ./scenarios/scenario_01.cpp ./scenarios/pwalker.cpp ./scenarios/pvehicle.cpp ./scenarios/ptrafficmanager.cpp)
+# target_link_libraries(scenario_01 ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
+
+# add_executable(carla2osi ./carla2osi/carla2osi.cpp)
+# target_link_libraries(carla2osi ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+
+add_subdirectory(carla2osi)

@@ -10,6 +10,11 @@ using namespace osi3;
 using namespace std;
 using namespace odr_1_5;
 
+namespace cc = carla::client;
+namespace cg = carla::geom;
+namespace csd = carla::sensor::data;
+namespace crpc = carla::rpc;
+
 static map<string, StationaryObject_Classification_Type> str2OsiType
 {
     {"unknown", StationaryObject_Classification::TYPE_UNKNOWN },
@@ -275,5 +280,36 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                 vizCenterLines.push_back(move(c.second));
         }
         // for visual check:
+    }
+}
+
+void Osiexporter::updateMovingObjects(std::vector<carla::client::Actor*> actors, std::vector<Eigen::Matrix4f> & vizActors)
+{
+    for (auto && actor : actors)
+    {
+        if (actor->GetTypeId().find("vehicle"))
+        {
+            cc::Vehicle * vehicle = static_cast<cc::Vehicle*>(actor);
+            cg::BoundingBox bbox = vehicle->GetBoundingBox();
+            // We will use the 4x4 matrix to fill out vizActors as follows:
+            // M.block(0,0,3,3) - rotation
+            // M.block(0,3,3,1) - translation
+            // M.block(3,0,1,3) - scale
+            // M.block(3,3,1,1) - type
+            Eigen::Matrix4f M; M.setIdentity();
+            M.block(0,0,3,3) = (
+                Eigen::AngleAxisf(bbox.rotation.yaw, Eigen::Vector3f::UnitZ())*
+                Eigen::AngleAxisf(bbox.rotation.pitch, Eigen::Vector3f::UnitY())*
+                Eigen::AngleAxisf(bbox.rotation.roll, Eigen::Vector3f::UnitX())).toRotationMatrix();
+
+            M.block(0,0,3,1) = Eigen::Vector3f(bbox.location.x, bbox.location.y, bbox.location.z);
+            M.block(3,0,1,3) = Eigen::Vector3f(bbox.extent.x, bbox.extent.y, bbox.extent.z).transpose();
+            M(3,3) = 0.0f;
+            vizActors.push_back(M);
+        }
+        else if (actor->GetTypeId().find("walker"))
+        {
+
+        }
     }
 }

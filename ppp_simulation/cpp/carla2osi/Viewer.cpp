@@ -1,5 +1,11 @@
 #include <Viewer.h>
 
+void Viewer::init()
+{
+    camera()->setSceneRadius(100);
+    camera()->fitSphere(qglviewer::Vec(0, 0, 0), 100);
+    resize(1920,1080);
+}
 
 void Viewer::addDataStatic(std::vector<Eigen::Vector2f> && v)
 {
@@ -55,9 +61,17 @@ void Viewer::draw()
         glEnd();
     }
 }
-void Viewer::init()
+
+void Viewer::updateMovingObjects(std::vector<Eigen::Matrix4f> && v)
 {
-    camera()->setSceneRadius(100);
-    camera()->fitSphere(qglviewer::Vec(0, 0, 0), 100);
-    resize(1920,1080);
+    glPointSize(5);
+    for (auto && o : v)
+    {
+        if (0 == o(3,3)) // car
+        {
+            glBegin(GL_POINTS);
+            glVertex3f(o(0,3), o(1,3), o(2,3));
+            glEnd();
+        }
+    }
 }
