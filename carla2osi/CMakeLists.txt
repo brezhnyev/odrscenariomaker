@@ -39,8 +39,11 @@ include_directories(${Qt5Core_INCLUDE_DIRS})
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
 include_directories(${Qt5Xml_INCLUDE_DIRS})
 include_directories(${Qt5OpenGL_INCLUDE_DIRS})
+include_directories(/home/kbrezhnyev/tools/carla/Util/OSM2ODR/src/)
 
 link_directories("/usr/local/lib/osi3")
+link_directories("~/tools/carla/Util/OSM2ODR/build/src")
+link_directories("~/tools/carla/Build/xerces-c-3.2.3-install/lib/")
 
 add_executable(${PROJECT_NAME} ${SOURCE})
 target_link_libraries(${PROJECT_NAME} ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf -ltinyxml2)
