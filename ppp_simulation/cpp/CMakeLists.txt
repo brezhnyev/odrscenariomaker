@@ -13,6 +13,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/boost)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/carla/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/rpc/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/recast/)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/scenarios)
 
 link_directories(/usr/local/lib/)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/carla_debug)
@@ -39,8 +40,8 @@ endif()
 # add_executable(test_spawn ./tests//test_spawn.cpp)
 # target_link_libraries(test_spawn ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
-add_executable(test_osi ./tests/test_osi.cpp)
-target_link_libraries(test_osi ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+# add_executable(test_osi ./tests/test_osi.cpp)
+# target_link_libraries(test_osi ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
 # add_executable(test_left_turns ./tests/test_left_turns.cpp)
 # target_link_libraries(test_left_turns ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
@@ -51,5 +52,5 @@ target_link_libraries(test_osi ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour 
 # add_executable(test_walker ./tests/test_walker.cpp)
 # target_link_libraries(test_walker ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
-# add_executable(scenario_01 ./scenarios/scenario_01.cpp pwalker.cpp pvehicle.cpp ptrafficmanager.cpp)
-# target_link_libraries(scenario_01 ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
+add_executable(scenario_01 ./scenarios/scenario_01.cpp ./scenarios/pwalker.cpp ./scenarios/pvehicle.cpp ./scenarios/ptrafficmanager.cpp)
+target_link_libraries(scenario_01 ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
