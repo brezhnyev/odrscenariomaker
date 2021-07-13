@@ -47,3 +47,6 @@ link_directories("~/tools/carla/Build/xerces-c-3.2.3-install/lib/")
 
 add_executable(${PROJECT_NAME} ${SOURCE})
 target_link_libraries(${PROJECT_NAME} ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf -ltinyxml2)
+
+add_executable(osm2odr osm2odr.cpp)
+target_link_libraries(osm2odr -losm2odr -lxerces-c -lz)
