@@ -6,6 +6,8 @@
 #include <map>
 #include <iostream>
 
+#define DEG2RAD M_PI/180
+
 using namespace osi3;
 using namespace std;
 using namespace odr_1_5;
@@ -283,13 +285,14 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
     }
 }
 
-void Osiexporter::updateMovingObjects(std::vector<carla::client::Actor*> actors, std::vector<Eigen::Matrix4f> & vizActors)
+void Osiexporter::updateMovingObjects(std::vector<carla::client::Actor*> & actors, std::vector<Eigen::Matrix4f> & vizActors)
 {
     for (auto && actor : actors)
     {
-        if (actor->GetTypeId().find("vehicle"))
+        cc::Vehicle * vehicle = dynamic_cast<cc::Vehicle*>(actor);
+        if (vehicle)
         {
-            cc::Vehicle * vehicle = static_cast<cc::Vehicle*>(actor);
+            cg::Transform trf = vehicle->GetTransform();
             cg::BoundingBox bbox = vehicle->GetBoundingBox();
             // We will use the 4x4 matrix to fill out vizActors as follows:
             // M.block(0,0,3,3) - rotation
@@ -298,16 +301,19 @@ void Osiexporter::updateMovingObjects(std::vector<carla::client::Actor*> actors,
             // M.block(3,3,1,1) - type
             Eigen::Matrix4f M; M.setIdentity();
             M.block(0,0,3,3) = (
-                Eigen::AngleAxisf(bbox.rotation.yaw, Eigen::Vector3f::UnitZ())*
-                Eigen::AngleAxisf(bbox.rotation.pitch, Eigen::Vector3f::UnitY())*
-                Eigen::AngleAxisf(bbox.rotation.roll, Eigen::Vector3f::UnitX())).toRotationMatrix();
+                Eigen::AngleAxisf(trf.rotation.yaw*DEG2RAD, Eigen::Vector3f::UnitZ())*
+                Eigen::AngleAxisf(trf.rotation.pitch*DEG2RAD, Eigen::Vector3f::UnitY())*
+                Eigen::AngleAxisf(trf.rotation.roll*DEG2RAD, Eigen::Vector3f::UnitX())).toRotationMatrix();
 
-            M.block(0,0,3,1) = Eigen::Vector3f(bbox.location.x, bbox.location.y, bbox.location.z);
+            M.block(0,3,3,1) = Eigen::Vector3f(trf.location.x, trf.location.y, trf.location.z);
             M.block(3,0,1,3) = Eigen::Vector3f(bbox.extent.x, bbox.extent.y, bbox.extent.z).transpose();
             M(3,3) = 0.0f;
             vizActors.push_back(M);
+
+            cout << trf.location.x << " " << trf.location.y << " " << trf.location.z << endl;
         }
-        else if (actor->GetTypeId().find("walker"))
+        cc::Walker * walker = dynamic_cast<cc::Walker*>(actor);
+        if (walker)
         {
 
         }

@@ -4,7 +4,7 @@ void Viewer::init()
 {
     camera()->setSceneRadius(100);
     camera()->fitSphere(qglviewer::Vec(0, 0, 0), 100);
-    resize(1920,1080);
+    resize(800,600);
 }
 
 void Viewer::addDataStatic(std::vector<Eigen::Vector2f> && v)
@@ -16,6 +16,12 @@ void Viewer::updateDataRoads(std::vector<std::vector<Eigen::Vector2f>> && center
 {
     centerlines_ = centerlines;
     boundaries_ = boundaries;
+}
+
+void Viewer::updateMovingObjects(std::vector<Eigen::Matrix4f> v)
+{
+    actors_ = v;
+    update();
 }
 
 void Viewer::draw()
@@ -36,7 +42,7 @@ void Viewer::draw()
     }
     // centerlines
     glLineWidth(1);
-    glColor3f(0,1,1);
+    glColor3f(1,1,0.5);
     for (auto && v : centerlines_)
     {
         glBegin(GL_LINE_STRIP);
@@ -60,18 +66,35 @@ void Viewer::draw()
         }
         glEnd();
     }
-}
 
-void Viewer::updateMovingObjects(std::vector<Eigen::Matrix4f> && v)
-{
-    glPointSize(5);
-    for (auto && o : v)
+    glLineWidth(2);
+    glColor3f(0,1,0);
+    for (auto && a : actors_)
     {
-        if (0 == o(3,3)) // car
+        if (0 == a(3,3)) // car
         {
-            glBegin(GL_POINTS);
-            glVertex3f(o(0,3), o(1,3), o(2,3));
+            a(3,3) = 1.0f;
+            Eigen::Vector3f bbox = a.block(3,0,1,3).transpose();
+            a.block(3,0,1,3).setZero();
+
+            glPushMatrix();
+
+            glMultMatrixf(a.data());
+
+            glBegin(GL_LINE_LOOP);
+            glVertex3f(-bbox.x(),-bbox.y(),-bbox.z());
+            glVertex3f( bbox.x(),-bbox.y(),-bbox.z());
+            glVertex3f( bbox.x(), bbox.y(),-bbox.z());
+            glVertex3f(-bbox.x(), bbox.y(),-bbox.z());
             glEnd();
+            glBegin(GL_LINE_LOOP);
+            glVertex3f(-bbox.x(),-bbox.y(), bbox.z());
+            glVertex3f( bbox.x(),-bbox.y(), bbox.z());
+            glVertex3f( bbox.x(), bbox.y(), bbox.z());
+            glVertex3f(-bbox.x(), bbox.y(), bbox.z());
+            glEnd();
+
+            glPopMatrix();
         }
     }
 }
