@@ -511,7 +511,7 @@ namespace objl
 				#endif
 
 				// Generate a Mesh Object or Prepare for an object to be created
-				if (algorithm::firstToken(curline) == "o")
+				if (algorithm::firstToken(curline) == "o" || algorithm::firstToken(curline) == "g")
 				{
                     // Generate the mesh to put into the array
                     if (!Indices.empty() && !Vertices.empty())

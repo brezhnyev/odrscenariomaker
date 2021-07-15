@@ -23,6 +23,7 @@ static map<string, StationaryObject_Classification_Type> str2OsiType
     {"other", StationaryObject_Classification::TYPE_OTHER },
     {"bridge", StationaryObject_Classification::TYPE_BRIDGE },
     {"building", StationaryObject_Classification::TYPE_BUILDING },
+    {"house", StationaryObject_Classification::TYPE_BUILDING },
     {"pole", StationaryObject_Classification::TYPE_POLE },
     {"pylon", StationaryObject_Classification::TYPE_PYLON },
     {"delineator", StationaryObject_Classification::TYPE_DELINEATOR },
@@ -301,6 +302,8 @@ void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, st
 {
     for (auto && actor : *actors)
     {
+        if (!dynamic_cast<cc::Vehicle*>(actor.get()) && !dynamic_cast<cc::Walker*>(actor.get())) continue;
+
         cg::Transform trf = actor->GetTransform();
         cg::BoundingBox bbox = actor->GetBoundingBox();
         // We will use the 4x4 matrix to fill out vizActors as follows:

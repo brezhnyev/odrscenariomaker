@@ -37,8 +37,8 @@ endif()
 # add_executable(originalExample ./originalExample.cpp)
 # target_link_libraries(originalExample ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
-# add_executable(test_spawn ./tests//test_spawn.cpp)
-# target_link_libraries(test_spawn ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+add_executable(test_spawn ./tests//test_spawn.cpp)
+target_link_libraries(test_spawn ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
 # add_executable(test_custom_map ./tests/test_custom_map.cpp)
 # target_link_libraries(test_custom_map ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)

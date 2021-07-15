@@ -117,7 +117,7 @@ int main(int argc, const char *argv[])
     }
 
     // Spawn walkers:
-    const int number_of_walkers = 50;
+    const int number_of_walkers = 0;
     vector<ShrdPtrActor> walkers; walkers.reserve(number_of_walkers);
     vector<ShrdPtrActor> wControllers; wControllers.reserve(number_of_walkers);
 
