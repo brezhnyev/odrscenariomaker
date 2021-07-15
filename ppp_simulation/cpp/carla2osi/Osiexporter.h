@@ -20,6 +20,7 @@ public:
     void addRoads(const odr_1_5::OpenDRIVE &, uint64_t & id, std::vector<std::vector<Eigen::Vector2f>> & vizCenterlines, std::vector<std::vector<Eigen::Vector2f>> & vizBoundaries);
     void updateMovingObjects(std::vector<carla::client::Actor*> & actors, std::vector<Eigen::Matrix4f> & vizActors);
     void setFrameTime(uint32_t seconds, uint32_t nanos);
+    std::string toValidType(std::string);
     void writeFrame();
 
     osi3::GroundTruth * gt_;

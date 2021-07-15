@@ -56,10 +56,11 @@ int main(int argc, char ** argv)
         // export stationary
         for (auto && mesh : loader.LoadedMeshes)
         {
-            if (mesh.MeshName.find("Building") != string::npos)
+            string type = osiex.toValidType(mesh.MeshName);
+            if (!type.empty())
             {
-                vector<Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
-                vector<Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
+                vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
+                vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
                 // degenerated geometry case:
                 if (convexBaseline.size() < 3)
                 {
@@ -79,11 +80,11 @@ int main(int argc, char ** argv)
                     concaveBaseline = convexBaseline;
                 }
                 // store the stationary object into OSI:
-                vector<Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
+                vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
                 for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
-                osiex.addStaticObject(v3d, concaveBaseline, id, "building");
+                osiex.addStaticObject(v3d, concaveBaseline, id, type);
                 // visualize
-                viewer.addDataStatic(move(concaveBaseline));
+                viewer->addDataStatic(move(concaveBaseline));
             }
         }
 

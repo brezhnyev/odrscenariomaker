@@ -68,6 +68,18 @@ void Osiexporter::setFrameTime(uint32_t seconds, uint32_t nanos)
     gt_->clear_moving_object();
 }
 
+string Osiexporter::toValidType(string type)
+{
+    string typelow;
+    for (auto && c : type) typelow.push_back(tolower(c));
+    for (auto && el : str2OsiType)
+    {
+        if (typelow.find(el.first) != string::npos)
+            return el.first;
+    }
+    return "";
+}
+
 void Osiexporter::addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, string type)
 {
     StationaryObject * object = gt_->add_stationary_object();
