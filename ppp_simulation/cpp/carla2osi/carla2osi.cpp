@@ -75,6 +75,10 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    string mapName = "Munich02";
+    if (argc > 3)
+        mapName = argv[3];
+
     // first start the Qt part in a thread and loader (this will make loading in parallel to Carla Map computation):
     Osiexporter osiex;
     Loader loader;
@@ -149,7 +153,7 @@ int main(int argc, char *argv[])
     cout << "Client API version : " << client.GetClientVersion() << '\n';
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    auto world = client.LoadWorld("Munich02");
+    auto world = client.LoadWorld(mapName);
 
     // Here we will set the vehicle, walker and point our spectator camera:
     cg::Transform transform, stransform;
@@ -227,10 +231,6 @@ int main(int argc, char *argv[])
 
     world.SetPedestriansCrossFactor(0.0f);
 
-    vector<cc::Actor*> actors;
-    actors.push_back(vehicle);
-    actors.push_back(walker);
-
     uint64_t seconds;
     uint64_t nanos;
 
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
             vehicle->ApplyControl(control);
             // add to osi:
             vector<Eigen::Matrix4f> vizActors;
-            osiex.updateMovingObjects(actors, vizActors);
+            osiex.updateMovingObjects(world.GetActors(), vizActors);
             osiex.writeFrame();
             // visuaization:
             viewer->updateMovingObjects(move(vizActors));

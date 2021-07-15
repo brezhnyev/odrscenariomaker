@@ -5,6 +5,8 @@
 #include "odrparser/odr_1_5.h"
 
 #include <carla/client/Client.h>
+#include <carla/client/ActorList.h>
+#include <carla/Memory.h>
 
 #include <vector>
 #include <string>
@@ -18,7 +20,7 @@ public:
 
     void addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, std::string type);
     void addRoads(const odr_1_5::OpenDRIVE &, uint64_t & id, std::vector<std::vector<Eigen::Vector2f>> & vizCenterlines, std::vector<std::vector<Eigen::Vector2f>> & vizBoundaries);
-    void updateMovingObjects(std::vector<carla::client::Actor*> & actors, std::vector<Eigen::Matrix4f> & vizActors);
+    void updateMovingObjects(carla::SharedPtr<carla::client::ActorList> actors, std::vector<Eigen::Matrix4f> & vizActors);
     void setFrameTime(uint32_t seconds, uint32_t nanos);
     std::string toValidType(std::string);
     void writeFrame();

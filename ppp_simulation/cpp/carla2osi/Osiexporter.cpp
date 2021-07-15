@@ -297,9 +297,9 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
     }
 }
 
-void Osiexporter::updateMovingObjects(std::vector<carla::client::Actor*> & actors, std::vector<Eigen::Matrix4f> & vizActors)
+void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, std::vector<Eigen::Matrix4f> & vizActors)
 {
-    for (auto && actor : actors)
+    for (auto && actor : *actors)
     {
         cg::Transform trf = actor->GetTransform();
         cg::BoundingBox bbox = actor->GetBoundingBox();
@@ -326,7 +326,7 @@ void Osiexporter::updateMovingObjects(std::vector<carla::client::Actor*> & actor
         oid->set_value(actor->GetId()); mo->set_allocated_id(oid);
 
         // set type:
-        if (dynamic_cast<cc::Vehicle*>(actor))
+        if (dynamic_cast<cc::Vehicle*>(actor.get()))
         {
             mo->set_type(MovingObject_Type_TYPE_VEHICLE);
             // classification of vehicle:
@@ -335,7 +335,7 @@ void Osiexporter::updateMovingObjects(std::vector<carla::client::Actor*> & actor
             mo->set_allocated_vehicle_classification(classification);
             M(3,3) = 0.0f;
         }
-        else if (dynamic_cast<cc::Walker*>(actor))
+        else if (dynamic_cast<cc::Walker*>(actor.get()))
         {
             mo->set_type(MovingObject_Type_TYPE_PEDESTRIAN);
             M(3,3) = 1.0f;
