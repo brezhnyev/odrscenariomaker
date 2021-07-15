@@ -4,22 +4,21 @@
 
 using namespace std;
 
+Viewer::Viewer(
+    vector<vector<Eigen::Vector2f>> && staticObjects,
+    vector<vector<Eigen::Vector2f>> && centerlines,
+    vector<vector<Eigen::Vector2f>> && boundaries)
+{
+    dataStatic_ = staticObjects;
+    centerlines_ = centerlines;
+    boundaries_ = boundaries;
+}
+
 void Viewer::init()
 {
     camera()->setSceneRadius(100);
     camera()->fitSphere(qglviewer::Vec(0, 0, 0), 100);
     resize(800,600);
-}
-
-void Viewer::addDataStatic(std::vector<Eigen::Vector2f> && v)
-{
-    dataStatic_.push_back(v);
-}
-
-void Viewer::updateDataRoads(std::vector<std::vector<Eigen::Vector2f>> && centerlines, std::vector<std::vector<Eigen::Vector2f>> && boundaries)
-{
-    centerlines_ = centerlines;
-    boundaries_ = boundaries;
 }
 
 void Viewer::updateMovingObjects(std::vector<Eigen::Matrix4f> && v)

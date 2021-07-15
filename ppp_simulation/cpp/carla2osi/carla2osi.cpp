@@ -44,7 +44,9 @@ typedef carla::SharedPtr<carla::client::Actor> ShrdPtrActor;
 
 bool isStopped;
 condition_variable cv;
-bool isStaticLoaded = false;
+bool isObjParsed = false;
+bool isXodrParsed = false;
+bool isQtReady = false;
 
 void sighandler(int sig)
 {
@@ -82,71 +84,64 @@ int main(int argc, char *argv[])
     if (argc > 3)
         mapName = argv[3];
 
-    // first start the Qt part in a thread and loader (this will make loading in parallel to Carla Map computation):
+    // Load the static parts:
+    uint64_t id;
     Osiexporter osiex;
     Loader loader;
-    Viewer * viewer = nullptr;
+    vector<vector<Eigen::Vector2f>> baselines;
 
-    thread t([&]()
-    {
-        QApplication application(argc, argv);
-
-        viewer = new Viewer();
-        viewer->setWindowTitle("Osi visualizer");
-        viewer->show();
-        uint64_t id;
-
-        // loader.LoadFile(argv[1]);
-        // // export stationary
-        // for (auto && mesh : loader.LoadedMeshes)
-        // {
-        //     string type = osiex.toValidType(mesh.MeshName);
-        //     if (!type.empty())
-        //     {
-        //         vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
-        //         vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
-        //         // degenerated geometry case:
-        //         if (convexBaseline.size() < 3)
-        //         {
-        //             cout << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
-        //             concaveBaseline = convexBaseline;
-        //         }
-        //         // concave cannot be smaller than convex (something went wrong in computing the concave form):
-        //         if (concaveBaseline.size() < convexBaseline.size())
-        //         {
-        //             cout << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
-        //             concaveBaseline = convexBaseline;
-        //         }
-        //         // if computation of concave hull went into iternal loop and was broken by "convex.size > mesh.size" condition:
-        //         if (concaveBaseline.size() > mesh.Vertices.size())
-        //         {
-        //             cout << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
-        //             concaveBaseline = convexBaseline;
-        //         }
-        //         // store the stationary object into OSI:
-        //         vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
-        //         for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
-        //         osiex.addStaticObject(v3d, concaveBaseline, id, type);
-        //         // visualize
-        //         viewer->addDataStatic(move(concaveBaseline));
-        //     }
-        // }
-
-        // // export road
-        // OpenDRIVEFile odr;
-        // loadFile(argv[2], odr);
-        // vector<vector<Eigen::Vector2f>> centerlines, boundaries;
-        // osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
-        // // visualize
-        // viewer->updateDataRoads(move(centerlines), move(boundaries));
-
-        isStaticLoaded = true;
-
+    thread t1([&](){
+        loader.LoadFile(argv[1]);
+        // export stationary
+        for (auto && mesh : loader.LoadedMeshes)
+        {
+            string type = osiex.toValidType(mesh.MeshName);
+            if (!type.empty())
+            {
+                vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
+                vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
+                // degenerated geometry case:
+                if (convexBaseline.size() < 3)
+                {
+                    cout << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
+                    concaveBaseline = convexBaseline;
+                }
+                // concave cannot be smaller than convex (something went wrong in computing the concave form):
+                if (concaveBaseline.size() < convexBaseline.size())
+                {
+                    cout << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
+                    concaveBaseline = convexBaseline;
+                }
+                // if computation of concave hull went into iternal loop and was broken by "convex.size > mesh.size" condition:
+                if (concaveBaseline.size() > mesh.Vertices.size())
+                {
+                    cout << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
+                    concaveBaseline = convexBaseline;
+                }
+                // store the stationary object into OSI:
+                vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
+                for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
+                osiex.addStaticObject(v3d, concaveBaseline, id, type);
+                baselines.push_back(move(concaveBaseline));
+            }
+        }
+        isObjParsed = true;
         cv.notify_all();
+    }
+    );
 
-        application.exec();
-    });
-    // ----------------
+
+    vector<vector<Eigen::Vector2f>> centerlines, boundaries;
+    thread t2([&](){
+        // export road
+        OpenDRIVEFile odr;
+        loadFile(argv[2], odr);
+        osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
+        isXodrParsed = true;
+        cv.notify_all();
+    }
+    );
+
 
     // Carla set up:
     isStopped = false;
@@ -174,12 +169,67 @@ int main(int argc, char *argv[])
     world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     world.SetWeather(crpc::WeatherParameters::ClearNoon);
 
-    uint64_t seconds;
-    uint64_t nanos;
+
+    // Spawn Vehicles:
+    const int number_of_vehicles = 50;
+    auto blueprints = world.GetBlueprintLibrary()->Filter("vehicle.*");
+    auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
+    vector<ShrdPtrActor> vehicles; vehicles.reserve(number_of_vehicles);
+
+    for (int i = 0; i < number_of_vehicles; ++i)
+    {
+        auto blueprint = RandomChoice(*blueprints, rng);
+        // Find a valid spawn point.
+        auto transform = RandomChoice(spawn_points, rng);
+
+        // Randomize the blueprint.
+        if (blueprint.ContainsAttribute("color"))
+        {
+            auto &attribute = blueprint.GetAttribute("color");
+            blueprint.SetAttribute("color", RandomChoice(attribute.GetRecommendedValues(), rng));
+        }
+        if (i==0)
+            blueprint.SetAttribute("role_name", "hero");
+        else
+            blueprint.SetAttribute("role_name", "autopilot");
+
+        // Spawn the vehicle.
+        auto actor = world.TrySpawnActor(blueprint, transform);
+        if (!actor) continue;
+        // Finish and store the vehicle
+        traffic_manager.SetPercentageIgnoreWalkers(actor, 0.0f);
+        static_cast<cc::Vehicle*>(actor.get())->SetAutopilot(true);
+        vehicles.push_back(actor);
+        cout << "Spawned " << vehicles.back()->GetDisplayId() << '\n';
+    }
 
     mutex mtx;
     unique_lock<std::mutex> lk(mtx);
-    cv.wait(lk, [&]{return isStaticLoaded;});
+    cv.wait(lk, [&]{return isObjParsed && isXodrParsed;});
+
+    // Qt part should come after spawning, otherwise the application suspends
+    Viewer * viewer = nullptr;
+    thread t([&]()
+    {
+        QApplication application(argc, argv);
+
+        viewer = new Viewer(move(baselines), move(centerlines), move(boundaries));
+        viewer->setWindowTitle("Osi visualizer");
+        viewer->show();
+
+        isQtReady = true;
+
+        cv.notify_all();
+
+        application.exec();
+    });
+    cv.wait(lk, [&]{return isQtReady;});
+
+    // ----------------
+
+
+    uint64_t seconds;
+    uint64_t nanos;
 
     while (!isStopped)
     {
@@ -207,6 +257,8 @@ int main(int argc, char *argv[])
     t.join();
 
     //world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
+    for (auto && actor : *world.GetActors())
+        actor->Destroy();
 
     return 0;
 }

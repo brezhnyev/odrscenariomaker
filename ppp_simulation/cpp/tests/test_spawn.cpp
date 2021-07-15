@@ -93,7 +93,6 @@ int main(int argc, const char *argv[])
         auto blueprint = RandomChoice(*blueprints, rng);
         // Find a valid spawn point.
         auto transform = RandomChoice(spawn_points, rng);
-        transform.location.z = 10;
 
         // Randomize the blueprint.
         if (blueprint.ContainsAttribute("color"))
@@ -117,7 +116,7 @@ int main(int argc, const char *argv[])
     }
 
     // Spawn walkers:
-    const int number_of_walkers = 0;
+    const int number_of_walkers = 50;
     vector<ShrdPtrActor> walkers; walkers.reserve(number_of_walkers);
     vector<ShrdPtrActor> wControllers; wControllers.reserve(number_of_walkers);
 
