@@ -289,65 +289,65 @@ void Osiexporter::updateMovingObjects(std::vector<carla::client::Actor*> & actor
 {
     for (auto && actor : actors)
     {
-        cc::Vehicle * vehicle = dynamic_cast<cc::Vehicle*>(actor);
-        if (vehicle)
+        cg::Transform trf = actor->GetTransform();
+        cg::BoundingBox bbox = actor->GetBoundingBox();
+        // We will use the 4x4 matrix to fill out vizActors as follows:
+        // M.block(0,0,3,3) - rotation
+        // M.block(0,3,3,1) - translation
+        // M.block(3,0,1,3) - scale
+        // M.block(3,3,1,1) - type
+        Eigen::Matrix4f M; M.setIdentity();
+
+        M.block(0,0,3,3) = (
+            Eigen::AngleAxisf(trf.rotation.yaw*DEG2RAD, Eigen::Vector3f::UnitZ())*
+            Eigen::AngleAxisf(trf.rotation.pitch*DEG2RAD, Eigen::Vector3f::UnitY())*
+            Eigen::AngleAxisf(trf.rotation.roll*DEG2RAD, Eigen::Vector3f::UnitX())).toRotationMatrix();
+
+        M.block(0,3,3,1) = Eigen::Vector3f(trf.location.x, trf.location.y, trf.location.z);
+        M.block(3,0,1,3) = Eigen::Vector3f(bbox.extent.x, bbox.extent.y, bbox.extent.z).transpose();
+        // transform from Left-hand to Right-hand system:
+        Eigen::Matrix4f mirror; mirror.setIdentity(); mirror(1,1) = -1;
+        M = mirror*M;
+
+        MovingObject * mo = gt_->add_moving_object();
+        Identifier * oid = new Identifier();
+        oid->set_value(actor->GetId()); mo->set_allocated_id(oid);
+
+        // set type:
+        if (dynamic_cast<cc::Vehicle*>(actor))
         {
-            cg::Transform trf = vehicle->GetTransform();
-            cg::BoundingBox bbox = vehicle->GetBoundingBox();
-            // We will use the 4x4 matrix to fill out vizActors as follows:
-            // M.block(0,0,3,3) - rotation
-            // M.block(0,3,3,1) - translation
-            // M.block(3,0,1,3) - scale
-            // M.block(3,3,1,1) - type
-            Eigen::Matrix4f M; M.setIdentity();
-            M.block(0,0,3,3) = (
-                Eigen::AngleAxisf(trf.rotation.yaw*DEG2RAD, Eigen::Vector3f::UnitZ())*
-                Eigen::AngleAxisf(trf.rotation.pitch*DEG2RAD, Eigen::Vector3f::UnitY())*
-                Eigen::AngleAxisf(trf.rotation.roll*DEG2RAD, Eigen::Vector3f::UnitX())).toRotationMatrix();
-
-            M.block(0,3,3,1) = Eigen::Vector3f(trf.location.x, trf.location.y, trf.location.z);
-            M.block(3,0,1,3) = Eigen::Vector3f(bbox.extent.x, bbox.extent.y, bbox.extent.z).transpose();
-            M(3,3) = 0.0f;
-            // transform from Left-hand to Right-hand system:
-            Eigen::Matrix4f mirror; mirror.setIdentity(); mirror(1,1) = -1;
-            M = mirror*M;
-            vizActors.push_back(M);
-
-            MovingObject * mo = gt_->add_moving_object();
-            Identifier * oid = new Identifier();
-            oid->set_value(vehicle->GetId()); mo->set_allocated_id(oid);
-            // set type:
             mo->set_type(MovingObject_Type_TYPE_VEHICLE);
             // classification of vehicle:
             MovingObject_VehicleClassification * classification = new MovingObject_VehicleClassification();
             classification->set_type(MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR);
             mo->set_allocated_vehicle_classification(classification);
-
-            // set moving base:
-            BaseMoving * base = new BaseMoving();
-            // set bounding box:
-            Dimension3d * dim = new Dimension3d();
-            dim->set_length(2*bbox.extent.x); dim->set_width(2*bbox.extent.y); dim->set_height(2*bbox.extent.z);
-            base->set_allocated_dimension(dim);
-
-            cout << bbox.extent.x << endl;
-        
-            // set position:
-            Vector3d * pos =  new Vector3d();
-            pos->set_x(M(0,3)); pos->set_y(M(1,3)); pos->set_z(M(2,3));
-            base->set_allocated_position(pos);
-
-            // set orientation:
-            Orientation3d * ori = new Orientation3d();
-            ori->set_roll(trf.rotation.roll*DEG2RAD); ori->set_pitch(trf.rotation.pitch*DEG2RAD); ori->set_yaw(-trf.rotation.yaw*DEG2RAD);
-            base->set_allocated_orientation(ori);
-
-            mo->set_allocated_base(base);
+            M(3,3) = 0.0f;
         }
-        cc::Walker * walker = dynamic_cast<cc::Walker*>(actor);
-        if (walker)
+        else if (dynamic_cast<cc::Walker*>(actor))
         {
-
+            mo->set_type(MovingObject_Type_TYPE_PEDESTRIAN);
+            M(3,3) = 1.0f;
         }
+
+        vizActors.push_back(M);
+
+        // set moving base:
+        BaseMoving * base = new BaseMoving();
+        // set bounding box:
+        Dimension3d * dim = new Dimension3d();
+        dim->set_length(2*bbox.extent.x); dim->set_width(2*bbox.extent.y); dim->set_height(2*bbox.extent.z);
+        base->set_allocated_dimension(dim);
+
+        // set position:
+        Vector3d * pos =  new Vector3d();
+        pos->set_x(M(0,3)); pos->set_y(M(1,3)); pos->set_z(M(2,3));
+        base->set_allocated_position(pos);
+
+        // set orientation:
+        Orientation3d * ori = new Orientation3d();
+        ori->set_roll(trf.rotation.roll*DEG2RAD); ori->set_pitch(trf.rotation.pitch*DEG2RAD); ori->set_yaw(-trf.rotation.yaw*DEG2RAD);
+        base->set_allocated_orientation(ori);
+
+        mo->set_allocated_base(base);
     }
 }

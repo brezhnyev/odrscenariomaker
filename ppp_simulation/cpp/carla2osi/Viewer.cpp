@@ -73,36 +73,50 @@ void Viewer::draw()
         glEnd();
     }
 
-    glColor3f(0,1,0);
     {
         lock_guard<mutex> lk(mtx_);
         for (auto a : actors_) // auto && a : actors_   causes flickering
         {
             if (0 == a(3,3)) // car
             {
-                a(3,3) = 1.0f;
-                Eigen::Vector3f bbox = a.block(3,0,1,3).transpose();
-                a.block(3,0,1,3).setZero();
-
-                glPushMatrix();
-
-                glMultMatrixf(a.data());
-
-                glBegin(GL_LINE_LOOP);
-                glVertex3f(-bbox.x(),-bbox.y(),-bbox.z());
-                glVertex3f( bbox.x(),-bbox.y(),-bbox.z());
-                glVertex3f( bbox.x(), bbox.y(),-bbox.z());
-                glVertex3f(-bbox.x(), bbox.y(),-bbox.z());
-                glEnd();
-                glBegin(GL_LINE_LOOP);
-                glVertex3f(-bbox.x(),-bbox.y(), bbox.z());
-                glVertex3f( bbox.x(),-bbox.y(), bbox.z());
-                glVertex3f( bbox.x(), bbox.y(), bbox.z());
-                glVertex3f(-bbox.x(), bbox.y(), bbox.z());
-                glEnd();
-
-                glPopMatrix();
+                glColor3f(0,1,0);
             }
+            else if (1 == a(3,3)) // walker
+            {
+                glColor3f(0,0,1);
+            }
+            a(3,3) = 1.0f;
+            Eigen::Vector3f bbox = a.block(3,0,1,3).transpose();
+            a.block(3,0,1,3).setZero();
+
+            glPushMatrix();
+
+            glMultMatrixf(a.data());
+
+            glBegin(GL_LINE_LOOP);
+            glVertex3f(-bbox.x(),-bbox.y(),-bbox.z());
+            glVertex3f( bbox.x(),-bbox.y(),-bbox.z());
+            glVertex3f( bbox.x(), bbox.y(),-bbox.z());
+            glVertex3f(-bbox.x(), bbox.y(),-bbox.z());
+            glEnd();
+            glBegin(GL_LINE_LOOP);
+            glVertex3f(-bbox.x(),-bbox.y(), bbox.z());
+            glVertex3f( bbox.x(),-bbox.y(), bbox.z());
+            glVertex3f( bbox.x(), bbox.y(), bbox.z());
+            glVertex3f(-bbox.x(), bbox.y(), bbox.z());
+            glEnd();
+            glBegin(GL_LINES);
+            glVertex3f(-bbox.x(),-bbox.y(),-bbox.z());
+            glVertex3f(-bbox.x(),-bbox.y(), bbox.z());
+            glVertex3f( bbox.x(),-bbox.y(),-bbox.z());
+            glVertex3f( bbox.x(),-bbox.y(), bbox.z());
+            glVertex3f( bbox.x(), bbox.y(),-bbox.z());
+            glVertex3f( bbox.x(), bbox.y(), bbox.z());
+            glVertex3f(-bbox.x(), bbox.y(),-bbox.z());
+            glVertex3f(-bbox.x(), bbox.y(), bbox.z());
+            glEnd();
+
+            glPopMatrix();
         }
     }
 }
