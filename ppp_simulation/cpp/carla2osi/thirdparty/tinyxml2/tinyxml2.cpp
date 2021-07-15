@@ -23,6 +23,9 @@ distribution.
 
 #include "tinyxml2.h"
 
+#include <string>
+#include <sstream>
+
 #include <new>		// yes, this one new style header, is in the Android SDK.
 #if defined(ANDROID_NDK) || defined(__BORLANDC__) || defined(__QNXNTO__)
 #   include <stddef.h>
@@ -31,6 +34,14 @@ distribution.
 #   include <cstddef>
 #   include <cstdarg>
 #endif
+
+template <typename T>
+static int str2Type(std::string str, const char *, T * v)
+{
+    std::stringstream ss(str);
+    ss >> *v;
+    return 1;
+}
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1400 ) && (!defined WINCE)
 	// Microsoft Visual Studio, version 2005 and higher. Not WinCE.
@@ -97,7 +108,8 @@ distribution.
 		TIXMLASSERT( len >= 0 );
 		return len;
 	}
-	#define TIXML_SSCANF   sscanf
+	//#define TIXML_SSCANF   sscanf
+	#define TIXML_SSCANF str2Type
 #endif
 
 #if defined(_WIN64)

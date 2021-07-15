@@ -1,5 +1,9 @@
 #include <Viewer.h>
 
+#include <thread>
+
+using namespace std;
+
 void Viewer::init()
 {
     camera()->setSceneRadius(100);
@@ -18,9 +22,12 @@ void Viewer::updateDataRoads(std::vector<std::vector<Eigen::Vector2f>> && center
     boundaries_ = boundaries;
 }
 
-void Viewer::updateMovingObjects(std::vector<Eigen::Matrix4f> v)
+void Viewer::updateMovingObjects(std::vector<Eigen::Matrix4f> && v)
 {
-    actors_ = v;
+    {
+        lock_guard<mutex> lk(mtx_);
+        actors_ = v;
+    }
     update();
 }
 
@@ -28,7 +35,7 @@ void Viewer::draw()
 {
     // static
     glDisable(GL_LIGHTING);
-    glColor3f(1,1,1);
+    glColor3f(0.75,0.75,0.75);
     glLineWidth(3);
     for (auto && v : dataStatic_)
     {
@@ -42,10 +49,10 @@ void Viewer::draw()
     }
     // centerlines
     glLineWidth(1);
-    glColor3f(1,1,0.5);
+    glColor3f(0.75,0.75,1);
     for (auto && v : centerlines_)
     {
-        glBegin(GL_LINE_STRIP);
+        glBegin(GL_POINTS);
         for (auto && p : v)
         {
             glVertex2f(p.x(), p.y());
@@ -54,9 +61,8 @@ void Viewer::draw()
     }
 
     // boundaries
-    // centerlines
     glLineWidth(3);
-    glColor3f(1,1,0);
+    glColor3f(1,1,1);
     for (auto && v : boundaries_)
     {
         glBegin(GL_LINE_STRIP);
@@ -67,34 +73,36 @@ void Viewer::draw()
         glEnd();
     }
 
-    glLineWidth(2);
     glColor3f(0,1,0);
-    for (auto && a : actors_)
     {
-        if (0 == a(3,3)) // car
+        lock_guard<mutex> lk(mtx_);
+        for (auto a : actors_) // auto && a : actors_   causes flickering
         {
-            a(3,3) = 1.0f;
-            Eigen::Vector3f bbox = a.block(3,0,1,3).transpose();
-            a.block(3,0,1,3).setZero();
+            if (0 == a(3,3)) // car
+            {
+                a(3,3) = 1.0f;
+                Eigen::Vector3f bbox = a.block(3,0,1,3).transpose();
+                a.block(3,0,1,3).setZero();
 
-            glPushMatrix();
+                glPushMatrix();
 
-            glMultMatrixf(a.data());
+                glMultMatrixf(a.data());
 
-            glBegin(GL_LINE_LOOP);
-            glVertex3f(-bbox.x(),-bbox.y(),-bbox.z());
-            glVertex3f( bbox.x(),-bbox.y(),-bbox.z());
-            glVertex3f( bbox.x(), bbox.y(),-bbox.z());
-            glVertex3f(-bbox.x(), bbox.y(),-bbox.z());
-            glEnd();
-            glBegin(GL_LINE_LOOP);
-            glVertex3f(-bbox.x(),-bbox.y(), bbox.z());
-            glVertex3f( bbox.x(),-bbox.y(), bbox.z());
-            glVertex3f( bbox.x(), bbox.y(), bbox.z());
-            glVertex3f(-bbox.x(), bbox.y(), bbox.z());
-            glEnd();
+                glBegin(GL_LINE_LOOP);
+                glVertex3f(-bbox.x(),-bbox.y(),-bbox.z());
+                glVertex3f( bbox.x(),-bbox.y(),-bbox.z());
+                glVertex3f( bbox.x(), bbox.y(),-bbox.z());
+                glVertex3f(-bbox.x(), bbox.y(),-bbox.z());
+                glEnd();
+                glBegin(GL_LINE_LOOP);
+                glVertex3f(-bbox.x(),-bbox.y(), bbox.z());
+                glVertex3f( bbox.x(),-bbox.y(), bbox.z());
+                glVertex3f( bbox.x(), bbox.y(), bbox.z());
+                glVertex3f(-bbox.x(), bbox.y(), bbox.z());
+                glEnd();
 
-            glPopMatrix();
+                glPopMatrix();
+            }
         }
     }
 }

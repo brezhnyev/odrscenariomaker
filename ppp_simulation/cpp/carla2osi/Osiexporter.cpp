@@ -1,5 +1,5 @@
 #include "Osiexporter.h"
-#include "odrparser/odr_1_5.hpp"
+#include "odr_1_5.hpp"
 
 #include <osi3/osi_object.pb.h>
 
@@ -65,7 +65,7 @@ void Osiexporter::setFrameTime(uint32_t seconds, uint32_t nanos)
     Timestamp * ts = new Timestamp();
     ts->set_seconds(seconds); ts->set_nanos(nanos);
     gt_->set_allocated_timestamp(ts);
-    gt_->clear_stationary_object();
+    gt_->clear_moving_object();
 }
 
 void Osiexporter::addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, string type)
@@ -221,7 +221,7 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
 
                 }
 
-                P = P - Eigen::Vector4d(520, 90, 0, 0);
+                P = P - Eigen::Vector4d(520, 87, 0, 0);
 
                 for (auto && odr_lane : odr_road.sub_lanes->sub_laneSection)
                 {
@@ -308,9 +308,41 @@ void Osiexporter::updateMovingObjects(std::vector<carla::client::Actor*> & actor
             M.block(0,3,3,1) = Eigen::Vector3f(trf.location.x, trf.location.y, trf.location.z);
             M.block(3,0,1,3) = Eigen::Vector3f(bbox.extent.x, bbox.extent.y, bbox.extent.z).transpose();
             M(3,3) = 0.0f;
+            // transform from Left-hand to Right-hand system:
+            Eigen::Matrix4f mirror; mirror.setIdentity(); mirror(1,1) = -1;
+            M = mirror*M;
             vizActors.push_back(M);
 
-            cout << trf.location.x << " " << trf.location.y << " " << trf.location.z << endl;
+            MovingObject * mo = gt_->add_moving_object();
+            Identifier * oid = new Identifier();
+            oid->set_value(vehicle->GetId()); mo->set_allocated_id(oid);
+            // set type:
+            mo->set_type(MovingObject_Type_TYPE_VEHICLE);
+            // classification of vehicle:
+            MovingObject_VehicleClassification * classification = new MovingObject_VehicleClassification();
+            classification->set_type(MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR);
+            mo->set_allocated_vehicle_classification(classification);
+
+            // set moving base:
+            BaseMoving * base = new BaseMoving();
+            // set bounding box:
+            Dimension3d * dim = new Dimension3d();
+            dim->set_length(2*bbox.extent.x); dim->set_width(2*bbox.extent.y); dim->set_height(2*bbox.extent.z);
+            base->set_allocated_dimension(dim);
+
+            cout << bbox.extent.x << endl;
+        
+            // set position:
+            Vector3d * pos =  new Vector3d();
+            pos->set_x(M(0,3)); pos->set_y(M(1,3)); pos->set_z(M(2,3));
+            base->set_allocated_position(pos);
+
+            // set orientation:
+            Orientation3d * ori = new Orientation3d();
+            ori->set_roll(trf.rotation.roll*DEG2RAD); ori->set_pitch(trf.rotation.pitch*DEG2RAD); ori->set_yaw(-trf.rotation.yaw*DEG2RAD);
+            base->set_allocated_orientation(ori);
+
+            mo->set_allocated_base(base);
         }
         cc::Walker * walker = dynamic_cast<cc::Walker*>(actor);
         if (walker)
