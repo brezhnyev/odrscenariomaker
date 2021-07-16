@@ -32,7 +32,7 @@ void Viewer::updateMovingObjects(std::vector<Eigen::Matrix4f> && v)
 
 void Viewer::draw()
 {
-    // static
+    // static objects:
     glDisable(GL_LIGHTING);
     glColor3f(0.75,0.75,0.75);
     glLineWidth(3);
@@ -46,7 +46,7 @@ void Viewer::draw()
         glVertex2f(v[0].x(), v[0].y());
         glEnd();
     }
-    // centerlines
+    // road centerlines:
     glLineWidth(1);
     glColor3f(0.75,0.75,1);
     for (auto && v : centerlines_)
@@ -59,7 +59,7 @@ void Viewer::draw()
         glEnd();
     }
 
-    // boundaries
+    // road boundaries
     glLineWidth(3);
     glColor3f(1,1,1);
     for (auto && v : boundaries_)
@@ -72,6 +72,7 @@ void Viewer::draw()
         glEnd();
     }
 
+    // moving objects:
     {
         lock_guard<mutex> lk(mtx_);
         for (auto a : actors_) // auto && a : actors_   causes flickering

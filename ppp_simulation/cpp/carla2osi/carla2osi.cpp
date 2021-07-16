@@ -28,6 +28,7 @@
 
 #include <iostream>
 #include <signal.h>
+#include <omp.h>
 
 namespace cc = carla::client;
 namespace cg = carla::geom;
@@ -44,8 +45,7 @@ typedef carla::SharedPtr<carla::client::Actor> ShrdPtrActor;
 
 bool isStopped;
 condition_variable cv;
-bool isObjParsed = false;
-bool isXodrParsed = false;
+bool isStaticParsed = false;
 bool isQtReady = false;
 
 void sighandler(int sig)
@@ -84,17 +84,41 @@ int main(int argc, char *argv[])
     if (argc > 3)
         mapName = argv[3];
 
+    float scale = 1.0f;
+    if (argc > 4)
+    {
+        stringstream ss(argv[4]); // atof and stof are not reliable
+        ss >> scale;
+    }
+
     // Load the static parts:
     uint64_t id;
     Osiexporter osiex;
     Loader loader;
+    vector<vector<Eigen::Vector2f>> centerlines, boundaries;
     vector<vector<Eigen::Vector2f>> baselines;
 
     thread t1([&](){
+
+        cout << "Started parsing XODR file ..." << endl;
+        // export road
+        OpenDRIVEFile odr;
+        loadFile(argv[2], odr);
+        osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
+        cout << "Finished parsing XODR file ..." << endl;
+
+        cout << "Started parsing OBJ file ..." << endl;
         loader.LoadFile(argv[1]);
+        cout << "Started extracting base_poly ..." << endl;
+
         // export stationary
-        for (auto && mesh : loader.LoadedMeshes)
+        mutex mtx1;
+#pragma omp parallel for
+        //for (auto && mesh : loader.LoadedMeshes)
+        for (int i = 0; i < loader.LoadedMeshes.size(); ++i)
         {
+            cout << std::this_thread::get_id() << endl;
+            auto && mesh = loader.LoadedMeshes[i];
             string type = osiex.toValidType(mesh.MeshName);
             if (!type.empty())
             {
@@ -103,41 +127,34 @@ int main(int argc, char *argv[])
                 // degenerated geometry case:
                 if (convexBaseline.size() < 3)
                 {
-                    cout << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
+                    cerr << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
                     concaveBaseline = convexBaseline;
                 }
                 // concave cannot be smaller than convex (something went wrong in computing the concave form):
                 if (concaveBaseline.size() < convexBaseline.size())
                 {
-                    cout << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
+                    cerr << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
                     concaveBaseline = convexBaseline;
                 }
                 // if computation of concave hull went into iternal loop and was broken by "convex.size > mesh.size" condition:
                 if (concaveBaseline.size() > mesh.Vertices.size())
                 {
-                    cout << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
+                    cerr << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
                     concaveBaseline = convexBaseline;
                 }
-                // store the stationary object into OSI:
                 vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
+                for (auto && v: concaveBaseline) v = v*scale;
                 for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
-                osiex.addStaticObject(v3d, concaveBaseline, id, type);
-                baselines.push_back(move(concaveBaseline));
+                // store the stationary object into OSI:
+                {
+                    lock_guard<mutex> lk(mtx1);
+                    osiex.addStaticObject(v3d, concaveBaseline, id, type, scale);
+                    baselines.push_back(move(concaveBaseline));
+                }
             }
         }
-        isObjParsed = true;
-        cv.notify_all();
-    }
-    );
-
-
-    vector<vector<Eigen::Vector2f>> centerlines, boundaries;
-    thread t2([&](){
-        // export road
-        OpenDRIVEFile odr;
-        loadFile(argv[2], odr);
-        osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
-        isXodrParsed = true;
+        cout << "Finished extracting base_poly" << endl;
+        isStaticParsed = true;
         cv.notify_all();
     }
     );
@@ -155,8 +172,8 @@ int main(int argc, char *argv[])
     cout << "Client API version : " << client.GetClientVersion() << '\n';
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    //auto world = client.LoadWorld(mapName);
-    auto world = client.GetWorld();
+    auto world = client.LoadWorld(mapName);
+    //auto world = client.GetWorld();
 
     auto traffic_manager = client.GetInstanceTM(8000); //KB: the port
     traffic_manager.SetGlobalDistanceToLeadingVehicle(2.0);
@@ -203,9 +220,49 @@ int main(int argc, char *argv[])
         cout << "Spawned " << vehicles.back()->GetDisplayId() << '\n';
     }
 
+    // Spawn walkers:
+    const int number_of_walkers = 50;
+    vector<ShrdPtrActor> walkers; walkers.reserve(number_of_walkers);
+    vector<ShrdPtrActor> wControllers; wControllers.reserve(number_of_walkers);
+
+    auto w_bp = world.GetBlueprintLibrary()->Filter("walker.pedestrian.*"); // "Filter" returns BluePrintLibrary (i.e. wrapper about container of ActorBlueprints)
+
+    vector<float> speeds; speeds.reserve(number_of_walkers);
+
+    for (int i = 0; i < number_of_walkers; ++i)
+    {
+        auto location = world.GetRandomLocationFromNavigation();
+        if (!location.has_value()) continue;
+        auto walker_bp = RandomChoice(*w_bp, rng);
+        if (walker_bp.ContainsAttribute("is_invincible")) walker_bp.SetAttribute("is_invincible", "false");
+        auto walker = world.TrySpawnActor(walker_bp, location.value());
+        if (!walker) continue;
+
+        auto wc_bp = world.GetBlueprintLibrary()->Find("controller.ai.walker"); // "Find" returns pointer to the ActorBlueprint
+        auto controller = world.TrySpawnActor(*wc_bp, cg::Transform(), walker.get());
+        if (!controller) continue;
+
+        // Store the walker and its controller
+        walkers.push_back(walker);
+        speeds.push_back(atof(walker_bp.GetAttribute("speed").GetRecommendedValues()[1].c_str()));
+        wControllers.push_back(controller);
+        cout << "Spawned " << walkers.back()->GetDisplayId() << '\n';
+    }
+
+    world.Tick(carla::time_duration(chrono::seconds(10)));
+
+    for (int i = 0; i < wControllers.size(); ++i)
+    {
+        // KB: important! First Start then any settings like max speed.
+        static_cast<cc::WalkerAIController*>(wControllers[i].get())->Start();
+        static_cast<cc::WalkerAIController*>(wControllers[i].get())->SetMaxSpeed(speeds[i]);
+    }
+
+    world.SetPedestriansCrossFactor(0.0f);
+
     mutex mtx;
     unique_lock<std::mutex> lk(mtx);
-    cv.wait(lk, [&]{return isObjParsed && isXodrParsed;});
+    cv.wait(lk, [&]{return isStaticParsed;});
 
     // Qt part should come after spawning, otherwise the application suspends
     Viewer * viewer = nullptr;
@@ -226,7 +283,6 @@ int main(int argc, char *argv[])
     cv.wait(lk, [&]{return isQtReady;});
 
     // ----------------
-
 
     uint64_t seconds;
     uint64_t nanos;

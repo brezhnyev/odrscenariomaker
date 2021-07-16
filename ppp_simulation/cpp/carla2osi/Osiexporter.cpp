@@ -81,7 +81,7 @@ string Osiexporter::toValidType(string type)
     return "";
 }
 
-void Osiexporter::addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, string type)
+void Osiexporter::addStaticObject(const std::vector<Eigen::Vector3f> & v3d, const std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, string type, float scale)
 {
     StationaryObject * object = gt_->add_stationary_object();
     // set id:
@@ -109,12 +109,12 @@ void Osiexporter::addStaticObject(std::vector<Eigen::Vector3f> & v3d, std::vecto
 
     // set bounding box:
     Dimension3d * bbox = new Dimension3d();
-    bbox->set_length(maxx - minx); bbox->set_width(maxy - miny); bbox->set_height(maxz - minz);
+    bbox->set_length(scale*(maxx - minx)); bbox->set_width(scale*(maxy - miny)); bbox->set_height(scale*(maxz - minz));
     base->set_allocated_dimension(bbox);
  
     // set position:
     Vector3d * pos =  new Vector3d();
-    pos->set_x(0.5f*(minx+maxx)); pos->set_y(0.5f*(miny+maxy)); pos->set_z(0.5f*(minz+maxz));
+    pos->set_x(0.5f*(minx+maxx)*scale); pos->set_y(0.5f*(miny+maxy)*scale); pos->set_z(0.5f*(minz+maxz)*scale);
     base->set_allocated_position(pos);
 
     // set orientation:
@@ -194,100 +194,113 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
             M.block(0,3,3,1) = Eigen::Vector3d(*odr_RefPoint._x, *odr_RefPoint._y, 0.0);
 
             // for OSI subdivide the length into segments of 1 meter:
-            for (double s = 0; s < (*odr_RefPoint._length + 1); ++s)
+            auto buildRoads = [&](const double & s)
             {
-                Eigen::Vector4d P(0,0,0,1);
-
-                if (s > *odr_RefPoint._length)
-                    s = *odr_RefPoint._length;
+                Eigen::Vector4d P(0, 0, 0, 1);
 
                 if (odr_RefPoint.sub_arc)
                 {
-
+                    double R = abs(1.0f/(*odr_RefPoint.sub_arc->_curvature));
+                    double radians = M_PI/2*s / (*odr_RefPoint._length);
+                    P = M * Eigen::Vector4d(R*cos(radians), R*sin(radians), 0.0, 1.0);
                 }
                 else if (odr_RefPoint.sub_line)
                 {
-                    P = M*Eigen::Vector4d(s, 0.0, 0.0, 1.0);
+                    P = M * Eigen::Vector4d(s, 0.0, 0.0, 1.0);
                 }
                 else if (odr_RefPoint.sub_paramPoly3 && odr_RefPoint._length)
                 {
                     auto poly3 = odr_RefPoint.sub_paramPoly3;
-                    double t = s/(*odr_RefPoint._length);
-                    P = M*Eigen::Vector4d(
-                        *poly3->_aU + *poly3->_bU*t + *poly3->_cU*t*t + *poly3->_dU*t*t*t,
-                        *poly3->_aV + *poly3->_bV*t + *poly3->_cV*t*t + *poly3->_dV*t*t*t,
-                        0.0,
-                        1.0);
+                    double t = s / (*odr_RefPoint._length);
+                    P = M * Eigen::Vector4d(
+                                *poly3->_aU + *poly3->_bU * t + *poly3->_cU * t * t + *poly3->_dU * t * t * t,
+                                *poly3->_aV + *poly3->_bV * t + *poly3->_cV * t * t + *poly3->_dV * t * t * t,
+                                0.0,
+                                1.0);
                 }
                 else if (odr_RefPoint.sub_poly3 && odr_RefPoint._length)
                 {
                     auto poly3 = odr_RefPoint.sub_paramPoly3;
-                    double t = s/(*odr_RefPoint._length);
-                    P = M*Eigen::Vector4d(
-                        s,
-                        *poly3->_aV + *poly3->_bV*t + *poly3->_cV*t*t + *poly3->_dV*t*t*t,
-                        0.0,
-                        1.0);
+                    double t = s / (*odr_RefPoint._length);
+                    P = M * Eigen::Vector4d(
+                                s,
+                                *poly3->_aV + *poly3->_bV * t + *poly3->_cV * t * t + *poly3->_dV * t * t * t,
+                                0.0,
+                                1.0);
                 }
                 else if (odr_RefPoint.sub_spiral)
                 {
-
+                    return;
                 }
+                else
+                    return;
 
-                P = P - Eigen::Vector4d(520, 87, 0, 0);
+                //P = P - Eigen::Vector4d(520, 87, 0, 0);
 
-                for (auto && odr_lane : odr_road.sub_lanes->sub_laneSection)
+                for (auto &&odr_lane : odr_road.sub_lanes->sub_laneSection)
                 {
                     if (odr_lane.sub_center)
-                        for (auto && odr_sublane : odr_lane.sub_center->sub_lane)
+                        for (auto &&odr_sublane : odr_lane.sub_center->sub_lane)
                         {
-                            LaneBoundary_BoundaryPoint * bp = bmap[*odr_sublane._id]->add_boundary_line();
-                            Vector3d * pos =  new Vector3d();
-                            pos->set_x(P.x()); pos->set_y(P.y()); pos->set_z(P.z());
+                            LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
+                            Vector3d *pos = new Vector3d();
+                            pos->set_x(P.x());
+                            pos->set_y(P.y());
+                            pos->set_z(P.z());
                             bp->set_allocated_position(pos);
                             vizBoundary[*odr_sublane._id].emplace_back(P.x(), P.y());
                         }
                     double width = 0;
                     if (odr_lane.sub_left)
-                        for (auto && odr_sublane : odr_lane.sub_left->sub_lane)
+                        for (auto &&odr_sublane : odr_lane.sub_left->sub_lane)
                         {
                             // Boundary:
-                            LaneBoundary_BoundaryPoint * bp = bmap[*odr_sublane._id]->add_boundary_line();
+                            LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
                             width += 4; // TODO!!!
-                            Vector3d * pos =  new Vector3d();
-                            Eigen::Vector3d Poff = P.block(0,0,3,1) + M.block(0,0,3,3)*Eigen::Vector3d(0,width,0);
-                            pos->set_x(Poff.x()); pos->set_y(Poff.y()); pos->set_z(Poff.z());
+                            Vector3d *pos = new Vector3d();
+                            Eigen::Vector3d Poff = P.block(0, 0, 3, 1) + M.block(0, 0, 3, 3) * Eigen::Vector3d(0, width, 0);
+                            pos->set_x(Poff.x());
+                            pos->set_y(Poff.y());
+                            pos->set_z(Poff.z());
                             bp->set_allocated_position(pos);
                             vizBoundary[*odr_sublane._id].emplace_back(Poff.x(), Poff.y());
                             // Center:
-                            Vector3d * center = lmap[*odr_sublane._id]->add_centerline();
-                            Poff = P.block(0,0,3,1) + M.block(0,0,3,3)*Eigen::Vector3d(0,width-2,0); // TODO!!!
-                            center->set_x(Poff.x()); center->set_y(Poff.y()); center->set_z(0); // Z is 0 !!!
+                            Vector3d *center = lmap[*odr_sublane._id]->add_centerline();
+                            Poff = P.block(0, 0, 3, 1) + M.block(0, 0, 3, 3) * Eigen::Vector3d(0, width - 2, 0); // TODO!!!
+                            center->set_x(Poff.x());
+                            center->set_y(Poff.y());
+                            center->set_z(0); // Z is 0 !!!
                             vizCenter[*odr_sublane._id].emplace_back(Poff.x(), Poff.y());
-
                         }
                     if (odr_lane.sub_right)
-                        for (auto && odr_sublane : odr_lane.sub_right->sub_lane)
+                        for (auto &&odr_sublane : odr_lane.sub_right->sub_lane)
                         {
                             // Boundary:
-                            LaneBoundary_BoundaryPoint * bp = bmap[*odr_sublane._id]->add_boundary_line();
+                            LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
                             width -= 4; // TODO!!!
-                            Vector3d * pos =  new Vector3d();
-                            Eigen::Vector3d Poff = P.block(0,0,3,1) + M.block(0,0,3,3)*Eigen::Vector3d(0,width,0);
-                            pos->set_x(Poff.x()); pos->set_y(Poff.y()); pos->set_z(Poff.z());
+                            Vector3d *pos = new Vector3d();
+                            Eigen::Vector3d Poff = P.block(0, 0, 3, 1) + M.block(0, 0, 3, 3) * Eigen::Vector3d(0, width, 0);
+                            pos->set_x(Poff.x());
+                            pos->set_y(Poff.y());
+                            pos->set_z(Poff.z());
                             bp->set_allocated_position(pos);
                             vizBoundary[*odr_sublane._id].emplace_back(Poff.x(), Poff.y());
                             // Center:
-                            Vector3d * center = lmap[*odr_sublane._id]->add_centerline();
-                            Poff = P.block(0,0,3,1) + M.block(0,0,3,3)*Eigen::Vector3d(0,width+2,0); // TODO!!!
-                            center->set_x(Poff.x()); center->set_y(Poff.y()); center->set_z(0); // Z is 0 !!!
+                            Vector3d *center = lmap[*odr_sublane._id]->add_centerline();
+                            Poff = P.block(0, 0, 3, 1) + M.block(0, 0, 3, 3) * Eigen::Vector3d(0, width + 2, 0); // TODO!!!
+                            center->set_x(Poff.x());
+                            center->set_y(Poff.y());
+                            center->set_z(0); // Z is 0 !!!
                             vizCenter[*odr_sublane._id].emplace_back(Poff.x(), Poff.y());
                         }
                 }
-
-                if (s == *odr_RefPoint._length)
-                    break;
+            };
+            for (double s = 0; s < *odr_RefPoint._length; ++s)
+            {
+                buildRoads(s);
             }
+            buildRoads(*odr_RefPoint._length);
+
             for (auto && b : vizBoundary)
                 vizBoundaries.push_back(move(b.second));
 

@@ -121,7 +121,6 @@ int main(int argc, const char *argv[])
     vector<ShrdPtrActor> wControllers; wControllers.reserve(number_of_walkers);
 
     auto w_bp = m_world.GetBlueprintLibrary()->Filter("walker.pedestrian.*"); // "Filter" returns BluePrintLibrary (i.e. wrapper about container of ActorBlueprints)
-    auto wc_bp = m_world.GetBlueprintLibrary()->Find("controller.ai.walker"); // "Find" returns pointer to the ActorBlueprint
 
     vector<float> speeds; speeds.reserve(number_of_walkers);
 
@@ -134,6 +133,7 @@ int main(int argc, const char *argv[])
         auto walker = m_world.TrySpawnActor(walker_bp, location.value());
         if (!walker) continue;
 
+        auto wc_bp = m_world.GetBlueprintLibrary()->Find("controller.ai.walker"); // "Find" returns pointer to the ActorBlueprint
         auto controller = m_world.TrySpawnActor(*wc_bp, cg::Transform(), walker.get());
         if (!controller) continue;
 
