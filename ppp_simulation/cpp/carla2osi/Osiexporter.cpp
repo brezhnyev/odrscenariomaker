@@ -272,6 +272,7 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                             center->set_z(0); // Z is 0 !!!
                             vizCenter[*odr_sublane._id].emplace_back(Poff.x(), Poff.y());
                         }
+                    width = 0;
                     if (odr_lane.sub_right)
                         for (auto &&odr_sublane : odr_lane.sub_right->sub_lane)
                         {
