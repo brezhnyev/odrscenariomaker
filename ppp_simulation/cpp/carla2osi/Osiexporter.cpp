@@ -192,6 +192,8 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
             Eigen::Matrix4d M; M.setIdentity();
             M.block(0,0,3,3) = Eigen::AngleAxisd(*odr_RefPoint._hdg, Eigen::Vector3d::UnitZ()).toRotationMatrix();
             M.block(0,3,3,1) = Eigen::Vector3d(*odr_RefPoint._x, *odr_RefPoint._y, 0.0);
+            Eigen::Vector4d velocity; velocity.setZero();
+            Eigen::Vector4d normal; normal.setZero();
 
             // for OSI subdivide the length into segments of 1 meter:
             auto buildRoads = [&](const double & s)
@@ -200,33 +202,44 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
 
                 if (odr_RefPoint.sub_arc)
                 {
-                    double R = abs(1.0f/(*odr_RefPoint.sub_arc->_curvature));
-                    double radians = M_PI/2*s / (*odr_RefPoint._length);
-                    P = M * Eigen::Vector4d(R*cos(radians), R*sin(radians), 0.0, 1.0);
+                    double R = -1.0/(*odr_RefPoint.sub_arc->_curvature);
+                    double radians = M_PI/2 * s / (*odr_RefPoint._length);
+                    P = Eigen::Vector4d(R*cos(radians), R*sin(radians), 0.0, 1.0);
+                    // velocity as first derivative of position:
+                    velocity.x() = R*sin(radians);
+                    velocity.y() =-R*cos(radians);
                 }
                 else if (odr_RefPoint.sub_line)
                 {
-                    P = M * Eigen::Vector4d(s, 0.0, 0.0, 1.0);
+                    P = Eigen::Vector4d(s, 0.0, 0.0, 1.0);
+                    // velocity:
+                    velocity.x() = 1;
+                    velocity.y() = 0;
                 }
                 else if (odr_RefPoint.sub_paramPoly3 && odr_RefPoint._length)
                 {
                     auto poly3 = odr_RefPoint.sub_paramPoly3;
                     double t = s / (*odr_RefPoint._length);
-                    P = M * Eigen::Vector4d(
-                                *poly3->_aU + *poly3->_bU * t + *poly3->_cU * t * t + *poly3->_dU * t * t * t,
-                                *poly3->_aV + *poly3->_bV * t + *poly3->_cV * t * t + *poly3->_dV * t * t * t,
-                                0.0,
-                                1.0);
+                    P = Eigen::Vector4d(
+                        *poly3->_aU + *poly3->_bU * t + *poly3->_cU * t * t + *poly3->_dU * t * t * t,
+                        *poly3->_aV + *poly3->_bV * t + *poly3->_cV * t * t + *poly3->_dV * t * t * t,
+                        0.0,
+                        1.0);
+                    // velocity as first derivative of position:
+                    velocity.x() = *poly3->_bU + *poly3->_cU * 2 * t + *poly3->_dU * 3 * t * t;
+                    velocity.y() = *poly3->_bV + *poly3->_cV * 2 * t + *poly3->_dV * 3 * t * t;
                 }
                 else if (odr_RefPoint.sub_poly3 && odr_RefPoint._length)
                 {
                     auto poly3 = odr_RefPoint.sub_paramPoly3;
-                    double t = s / (*odr_RefPoint._length);
-                    P = M * Eigen::Vector4d(
-                                s,
-                                *poly3->_aV + *poly3->_bV * t + *poly3->_cV * t * t + *poly3->_dV * t * t * t,
-                                0.0,
-                                1.0);
+                    P = Eigen::Vector4d(
+                        s,
+                        *poly3->_aV + *poly3->_bV * s + *poly3->_cV * s * s + *poly3->_dV * s * s * s,
+                        0.0,
+                        1.0);
+                    // velocity as first derivative of position:
+                    velocity.x() = 1;
+                    velocity.y() = *poly3->_bV + *poly3->_cV * 2 * s + *poly3->_dV * 3 * s * s;
                 }
                 else if (odr_RefPoint.sub_spiral)
                 {
@@ -236,6 +249,9 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     return;
 
                 //P = P - Eigen::Vector4d(520, 87, 0, 0);
+                velocity.normalize();
+                normal.x() =-velocity.y();
+                normal.y() = velocity.x();
 
                 for (auto &&odr_lane : odr_road.sub_lanes->sub_laneSection)
                 {
@@ -244,11 +260,12 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                         {
                             LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
                             Vector3d *pos = new Vector3d();
-                            pos->set_x(P.x());
-                            pos->set_y(P.y());
-                            pos->set_z(P.z());
+                            Eigen::Vector4d Ptrf = M * P;
+                            pos->set_x(Ptrf.x());
+                            pos->set_y(Ptrf.y());
+                            pos->set_z(Ptrf.z());
                             bp->set_allocated_position(pos);
-                            vizBoundary[*odr_sublane._id].emplace_back(P.x(), P.y());
+                            vizBoundary[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
                         }
                     double width = 0;
                     if (odr_lane.sub_left)
@@ -258,19 +275,19 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                             LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
                             width += 4; // TODO!!!
                             Vector3d *pos = new Vector3d();
-                            Eigen::Vector3d Poff = P.block(0, 0, 3, 1) + M.block(0, 0, 3, 3) * Eigen::Vector3d(0, width, 0);
-                            pos->set_x(Poff.x());
-                            pos->set_y(Poff.y());
-                            pos->set_z(Poff.z());
+                            Eigen::Vector4d Ptrf = M * (P + normal*width);
+                            pos->set_x(Ptrf.x());
+                            pos->set_y(Ptrf.y());
+                            pos->set_z(Ptrf.z());
                             bp->set_allocated_position(pos);
-                            vizBoundary[*odr_sublane._id].emplace_back(Poff.x(), Poff.y());
+                            vizBoundary[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
                             // Center:
                             Vector3d *center = lmap[*odr_sublane._id]->add_centerline();
-                            Poff = P.block(0, 0, 3, 1) + M.block(0, 0, 3, 3) * Eigen::Vector3d(0, width - 2, 0); // TODO!!!
-                            center->set_x(Poff.x());
-                            center->set_y(Poff.y());
+                            Ptrf = M* (P + normal*(width - 2)); // TODO!!!
+                            center->set_x(Ptrf.x());
+                            center->set_y(Ptrf.y());
                             center->set_z(0); // Z is 0 !!!
-                            vizCenter[*odr_sublane._id].emplace_back(Poff.x(), Poff.y());
+                            vizCenter[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
                         }
                     width = 0;
                     if (odr_lane.sub_right)
@@ -280,21 +297,21 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                             LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
                             width -= 4; // TODO!!!
                             Vector3d *pos = new Vector3d();
-                            Eigen::Vector3d Poff = P.block(0, 0, 3, 1) + M.block(0, 0, 3, 3) * Eigen::Vector3d(0, width, 0);
-                            pos->set_x(Poff.x());
-                            pos->set_y(Poff.y());
-                            pos->set_z(Poff.z());
+                            Eigen::Vector4d Ptrf = M * (P + normal*width);
+                            pos->set_x(Ptrf.x());
+                            pos->set_y(Ptrf.y());
+                            pos->set_z(Ptrf.z());
                             bp->set_allocated_position(pos);
-                            vizBoundary[*odr_sublane._id].emplace_back(Poff.x(), Poff.y());
+                            vizBoundary[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
                             // Center:
                             Vector3d *center = lmap[*odr_sublane._id]->add_centerline();
-                            Poff = P.block(0, 0, 3, 1) + M.block(0, 0, 3, 3) * Eigen::Vector3d(0, width + 2, 0); // TODO!!!
-                            center->set_x(Poff.x());
-                            center->set_y(Poff.y());
+                            Ptrf = M * (P + normal*(width + 2)); // TODO!!!
+                            center->set_x(Ptrf.x());
+                            center->set_y(Ptrf.y());
                             center->set_z(0); // Z is 0 !!!
-                            vizCenter[*odr_sublane._id].emplace_back(Poff.x(), Poff.y());
+                            vizCenter[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
                         }
-                }
+                 }
             };
             for (double s = 0; s < *odr_RefPoint._length; ++s)
             {

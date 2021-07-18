@@ -310,11 +310,11 @@ int main(int argc, char *argv[])
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
 
-    t.join();
-
     //world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     for (auto && actor : *world.GetActors())
         actor->Destroy();
+
+    t.join();
 
     return 0;
 }

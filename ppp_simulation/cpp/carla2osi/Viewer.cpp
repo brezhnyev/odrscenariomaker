@@ -3,6 +3,7 @@
 #include <thread>
 
 using namespace std;
+using namespace qglviewer;
 
 Viewer::Viewer(
     vector<vector<Eigen::Vector2f>> && staticObjects,
