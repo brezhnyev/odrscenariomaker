@@ -12,10 +12,12 @@ using namespace osi3;
 using namespace std;
 using namespace odr_1_5;
 
+#ifdef USE_CARLA
 namespace cc = carla::client;
 namespace cg = carla::geom;
 namespace csd = carla::sensor::data;
 namespace crpc = carla::rpc;
+#endif
 
 static map<string, StationaryObject_Classification_Type> str2OsiType
 {
@@ -186,12 +188,12 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                 }
         }
 
-        for (auto && odr_RefPoint : odr_road.sub_planView->sub_geometry)
+        for (auto && odr_subroad : odr_road.sub_planView->sub_geometry)
         {
             // starting matrix for this segment:
             Eigen::Matrix4d M; M.setIdentity();
-            M.block(0,0,3,3) = Eigen::AngleAxisd(*odr_RefPoint._hdg, Eigen::Vector3d::UnitZ()).toRotationMatrix();
-            M.block(0,3,3,1) = Eigen::Vector3d(*odr_RefPoint._x, *odr_RefPoint._y, 0.0);
+            M.block(0,0,3,3) = Eigen::AngleAxisd(*odr_subroad._hdg, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+            M.block(0,3,3,1) = Eigen::Vector3d(*odr_subroad._x, *odr_subroad._y, 0.0);
             Eigen::Vector4d velocity; velocity.setZero();
             Eigen::Vector4d normal; normal.setZero();
 
@@ -200,26 +202,29 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
             {
                 Eigen::Vector4d P(0, 0, 0, 1);
 
-                if (odr_RefPoint.sub_arc)
+                if (odr_subroad.sub_arc)
                 {
-                    double R = -1.0/(*odr_RefPoint.sub_arc->_curvature);
-                    double radians = M_PI/2 * s / (*odr_RefPoint._length);
-                    P = Eigen::Vector4d(R*cos(radians), R*sin(radians), 0.0, 1.0);
+                    double R = 1.0/(*odr_subroad.sub_arc->_curvature);
+                    double radians = s / R;
+                    M.block(0,0,3,3) = Eigen::AngleAxisd(*odr_subroad._hdg - M_PI_2, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+
+                    P = Eigen::Vector4d(R*cos(radians) - R, R*sin(radians), 0.0, 1.0);
                     // velocity as first derivative of position:
-                    velocity.x() = R*sin(radians);
-                    velocity.y() =-R*cos(radians);
+                    velocity.x() =-R*sin(radians);
+                    velocity.y() = R*cos(radians);
+                    if (R < 0) velocity = -velocity;
                 }
-                else if (odr_RefPoint.sub_line)
+                else if (odr_subroad.sub_line)
                 {
                     P = Eigen::Vector4d(s, 0.0, 0.0, 1.0);
                     // velocity:
                     velocity.x() = 1;
                     velocity.y() = 0;
                 }
-                else if (odr_RefPoint.sub_paramPoly3 && odr_RefPoint._length)
+                else if (odr_subroad.sub_paramPoly3 && odr_subroad._length)
                 {
-                    auto poly3 = odr_RefPoint.sub_paramPoly3;
-                    double t = s / (*odr_RefPoint._length);
+                    auto poly3 = odr_subroad.sub_paramPoly3;
+                    double t = s / (*odr_subroad._length);
                     P = Eigen::Vector4d(
                         *poly3->_aU + *poly3->_bU * t + *poly3->_cU * t * t + *poly3->_dU * t * t * t,
                         *poly3->_aV + *poly3->_bV * t + *poly3->_cV * t * t + *poly3->_dV * t * t * t,
@@ -229,9 +234,9 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     velocity.x() = *poly3->_bU + *poly3->_cU * 2 * t + *poly3->_dU * 3 * t * t;
                     velocity.y() = *poly3->_bV + *poly3->_cV * 2 * t + *poly3->_dV * 3 * t * t;
                 }
-                else if (odr_RefPoint.sub_poly3 && odr_RefPoint._length)
+                else if (odr_subroad.sub_poly3 && odr_subroad._length)
                 {
-                    auto poly3 = odr_RefPoint.sub_paramPoly3;
+                    auto poly3 = odr_subroad.sub_paramPoly3;
                     P = Eigen::Vector4d(
                         s,
                         *poly3->_aV + *poly3->_bV * s + *poly3->_cV * s * s + *poly3->_dV * s * s * s,
@@ -241,7 +246,7 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     velocity.x() = 1;
                     velocity.y() = *poly3->_bV + *poly3->_cV * 2 * s + *poly3->_dV * 3 * s * s;
                 }
-                else if (odr_RefPoint.sub_spiral)
+                else if (odr_subroad.sub_spiral)
                 {
                     return;
                 }
@@ -249,9 +254,9 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     return;
 
                 //P = P - Eigen::Vector4d(520, 87, 0, 0);
-                velocity.normalize();
                 normal.x() =-velocity.y();
                 normal.y() = velocity.x();
+                normal.normalize();
 
                 for (auto &&odr_lane : odr_road.sub_lanes->sub_laneSection)
                 {
@@ -267,57 +272,48 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                             bp->set_allocated_position(pos);
                             vizBoundary[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
                         }
-                    double width = 0;
+                    auto buildLane = [&](auto & odr_sublane, int dir, double & twidth)
+                    {
+                        // Boundary:
+                        LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
+                        auto w = odr_sublane.sub_width[0];
+                        double width = *w._a + *w._b*s + *w._c*s*s + *w._d;
+                        twidth += dir*width;
+                        Vector3d *pos = new Vector3d();
+                        Eigen::Vector4d tmp = P + normal*twidth;
+                        Eigen::Vector4d Ptrf = M * (P + normal*twidth);
+                        pos->set_x(Ptrf.x());
+                        pos->set_y(Ptrf.y());
+                        pos->set_z(Ptrf.z());
+                        bp->set_allocated_position(pos);
+                        vizBoundary[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                        // Center:
+                        Vector3d *center = lmap[*odr_sublane._id]->add_centerline();
+                        Ptrf = M * (P + normal*(twidth - dir*width/2)); // TODO!!!
+                        center->set_x(Ptrf.x());
+                        center->set_y(Ptrf.y());
+                        center->set_z(0); // Z is 0 !!!
+                        vizCenter[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                    };
+                    double twidth = 0;
                     if (odr_lane.sub_left)
                         for (auto &&odr_sublane : odr_lane.sub_left->sub_lane)
                         {
-                            // Boundary:
-                            LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
-                            width += 4; // TODO!!!
-                            Vector3d *pos = new Vector3d();
-                            Eigen::Vector4d Ptrf = M * (P + normal*width);
-                            pos->set_x(Ptrf.x());
-                            pos->set_y(Ptrf.y());
-                            pos->set_z(Ptrf.z());
-                            bp->set_allocated_position(pos);
-                            vizBoundary[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
-                            // Center:
-                            Vector3d *center = lmap[*odr_sublane._id]->add_centerline();
-                            Ptrf = M* (P + normal*(width - 2)); // TODO!!!
-                            center->set_x(Ptrf.x());
-                            center->set_y(Ptrf.y());
-                            center->set_z(0); // Z is 0 !!!
-                            vizCenter[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                            buildLane(odr_sublane, 1, twidth);
                         }
-                    width = 0;
+                    twidth = 0;
                     if (odr_lane.sub_right)
                         for (auto &&odr_sublane : odr_lane.sub_right->sub_lane)
                         {
-                            // Boundary:
-                            LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
-                            width -= 4; // TODO!!!
-                            Vector3d *pos = new Vector3d();
-                            Eigen::Vector4d Ptrf = M * (P + normal*width);
-                            pos->set_x(Ptrf.x());
-                            pos->set_y(Ptrf.y());
-                            pos->set_z(Ptrf.z());
-                            bp->set_allocated_position(pos);
-                            vizBoundary[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
-                            // Center:
-                            Vector3d *center = lmap[*odr_sublane._id]->add_centerline();
-                            Ptrf = M * (P + normal*(width + 2)); // TODO!!!
-                            center->set_x(Ptrf.x());
-                            center->set_y(Ptrf.y());
-                            center->set_z(0); // Z is 0 !!!
-                            vizCenter[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                            buildLane(odr_sublane, -1, twidth);
                         }
-                 }
+                  }
             };
-            for (double s = 0; s < *odr_RefPoint._length; ++s)
+            for (double s = 0; s < *odr_subroad._length; ++s)
             {
                 buildRoads(s);
             }
-            buildRoads(*odr_RefPoint._length);
+            buildRoads(*odr_subroad._length);
 
             for (auto && b : vizBoundary)
                 vizBoundaries.push_back(move(b.second));
@@ -325,10 +321,10 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
             for (auto && c : vizCenter)
                 vizCenterLines.push_back(move(c.second));
         }
-        // for visual check:
     }
 }
 
+#ifdef USE_CARLA
 void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, std::vector<Eigen::Matrix4f> & vizActors)
 {
     for (auto && actor : *actors)
@@ -397,3 +393,4 @@ void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, st
         mo->set_allocated_base(base);
     }
 }
+#endif

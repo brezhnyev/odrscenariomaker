@@ -37,6 +37,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
+set(USE_CARLA ON CACHE BOOL "TRUE")
+
 # set(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/ppp_sim_start.cpp ${CMAKE_CURRENT_SOURCE_DIR}/PPPScene.cpp)
 # add_executable(${PROJECT_NAME} ${SOURCE})
 # message("CARLA_LIB: ${CARLA_LIB}")
@@ -45,8 +47,10 @@ endif()
 # add_executable(originalExample ./originalExample.cpp)
 # target_link_libraries(originalExample ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
+if (USE_CARLA)
 add_executable(test_spawn ./tests//test_spawn.cpp)
 target_link_libraries(test_spawn ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+endif()
 
 # add_executable(test_custom_map ./tests/test_custom_map.cpp)
 # target_link_libraries(test_custom_map ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)

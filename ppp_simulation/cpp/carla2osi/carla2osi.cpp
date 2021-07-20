@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
     for (auto && actor : *world.GetActors())
         actor->Destroy();
 
-    t.join();
+    t1.join();
 
     return 0;
 }
