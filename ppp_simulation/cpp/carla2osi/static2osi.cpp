@@ -20,8 +20,8 @@ using namespace odr;
 using namespace odr_1_5;
 
 
-condition_variable cv;
-bool isStaticParsed = false;
+static condition_variable cv;
+static bool isStaticParsed = false;
 
 
 static void printMeshvertexes(const std::vector<Vertex> & v)

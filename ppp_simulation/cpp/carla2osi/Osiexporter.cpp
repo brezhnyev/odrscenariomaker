@@ -188,6 +188,7 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                 }
         }
 
+        double S = 0; // total length of road
         for (auto && odr_subroad : odr_road.sub_planView->sub_geometry)
         {
             // starting matrix for this segment:
@@ -198,7 +199,7 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
             Eigen::Vector4d normal; normal.setZero();
 
             // for OSI subdivide the length into segments of 1 meter:
-            auto buildRoads = [&](const double & s)
+            auto buildRoads = [&](double s, double S)
             {
                 Eigen::Vector4d P(0, 0, 0, 1);
 
@@ -254,14 +255,23 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     return;
 
                 //P = P - Eigen::Vector4d(520, 87, 0, 0);
+                // left normal:
                 normal.x() =-velocity.y();
                 normal.y() = velocity.x();
                 normal.normalize();
 
-                auto offsets = odr_road.sub_lanes->sub_laneOffset;
-                double offset = 0.0;
-                if (!offsets.empty()) offset = *offsets[0]._a + *offsets[0]._b*s + *offsets[0]._c*s*s + *offsets[0]._d*s*s*s;
+                auto polyInter = [&](double S, auto & polis, double (*getS)(void * itt) ) -> double
+                {
+                    auto it = polis.begin();
+                    for (; it != polis.end() && getS(&(*it)) < S; ++it);
+                    if (it != polis.begin()) --it;
+                    double t = S - getS(&(*it));
+                    return *(it->_a) + *(it->_b)*t + *(it->_c)*t*t + *(it->_d)*t*t*t;
+                };
 
+                double offset = 0.0;
+                if (odr_road.sub_lanes && !odr_road.sub_lanes->sub_laneOffset.empty())
+                    offset = polyInter(S, odr_road.sub_lanes->sub_laneOffset, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_lanes->sub_laneOffset[0])>(it)->_s; });
                 for (auto && odr_lane : odr_road.sub_lanes->sub_laneSection)
                 {
                     if (odr_lane.sub_center)
@@ -280,8 +290,7 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     {
                         // Boundary:
                         LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
-                        auto w = odr_sublane.sub_width[0];
-                        double width = *w._a + *w._b*s + *w._c*s*s + *w._d;
+                        double width = polyInter(S, odr_sublane.sub_width, [](void * it) ->double { return *static_cast<decltype(&odr_sublane.sub_width[0])>(it)->_sOffset; });
                         twidth += dir*width;
                         Vector3d *pos = new Vector3d();
                         Eigen::Vector4d Ptrf = M * (P + normal*twidth);
@@ -314,11 +323,13 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     }
                   }
             };
-            for (double s = 0; s < *odr_subroad._length; ++s)
+            double prevS = S;
+            for (double s = 0; s < *odr_subroad._length; s++, S++)
             {
-                buildRoads(s);
+                buildRoads(s, S);
             }
-            buildRoads(*odr_subroad._length);
+            S = prevS + *odr_subroad._length;
+            buildRoads(*odr_subroad._length, S);
 
             for (auto && b : vizBoundary)
                 vizBoundaries.push_back(move(b.second));
