@@ -147,48 +147,54 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
 
     for (auto && odr_road : odr.sub_road)
     {
-        map<int, LaneBoundary*> bmap;
-        map<int, Lane_Classification*> lmap;
-        map<int, vector<Eigen::Vector2f>> vizBoundary;
-        map<int, vector<Eigen::Vector2f>> vizCenter;
+        // key1 = section id of the road, key2 = lane id of the section
+        map<int, map<int, LaneBoundary*>> bmap;
+        map<int, map<int, Lane_Classification*>> lmap;
+        map<int, map<int, vector<Eigen::Vector2f>>> vizBoundary;
+        map<int, map<int, vector<Eigen::Vector2f>>> vizCenter;
 
         //if (*road._name != "Taunusstraße") continue;
+        uint32_t sindex = 0; // sections index (for storing for rendering)
         for (auto && odr_lane : odr_road.sub_lanes->sub_laneSection)
         {
-            auto addboundary = [&](int laneid, LaneBoundary * osiboundary)
+            auto addboundary = [&](int sindex, int laneid, LaneBoundary * osiboundary)
             {
                 Identifier * oid = new Identifier();
                 oid->set_value(id++); osiboundary->set_allocated_id(oid);
-                bmap[laneid] = osiboundary; // should be id=0 for center lane
+                bmap[sindex][laneid] = osiboundary; // should be id=0 for center lane
             };
-            auto addlane = [&](int laneid, Lane * osilane)
+            auto addlane = [&](int sindex, int laneid, Lane * osilane)
             {
                 Identifier * oid = new Identifier();
                 oid->set_value(id++); osilane->set_allocated_id(oid);
                 Lane_Classification * lc = new Lane_Classification();
                 osilane->set_allocated_classification(lc);
-                lmap[laneid] = lc; // should be id=0 for center lane
+                lmap[sindex][laneid] = lc; // should be id=0 for center lane
             };
             if (odr_lane.sub_center)
                 for (auto && odr_sublane : odr_lane.sub_center->sub_lane) // should be just one center
                 {
-                    addboundary(*odr_sublane._id, gt_->add_lane_boundary()); // should be lineid = 0 for center
+                    addboundary(sindex, *odr_sublane._id, gt_->add_lane_boundary()); // should be lineid = 0 for center
                 }
             if (odr_lane.sub_left)
                 for (auto && odr_sublane : odr_lane.sub_left->sub_lane)
                 {
-                    addboundary(*odr_sublane._id, gt_->add_lane_boundary());
-                    addlane(*odr_sublane._id, gt_->add_lane());
+                    addboundary(sindex, *odr_sublane._id, gt_->add_lane_boundary());
+                    addlane(sindex, *odr_sublane._id, gt_->add_lane());
                 }
             if (odr_lane.sub_right)
                 for (auto && odr_sublane : odr_lane.sub_right->sub_lane)
                 {
-                    addboundary(*odr_sublane._id, gt_->add_lane_boundary());
-                    addlane(*odr_sublane._id, gt_->add_lane());
+                    addboundary(sindex, *odr_sublane._id, gt_->add_lane_boundary());
+                    addlane(sindex, *odr_sublane._id, gt_->add_lane());
                 }
+            ++sindex;
         }
 
         double S = 0; // total length of road
+        sindex = 0; // sections index (for storing for rendering)
+
+        auto sit = odr_road.sub_lanes->sub_laneSection.begin(); // sections iterator
         for (auto && odr_subroad : odr_road.sub_planView->sub_geometry)
         {
             // starting matrix for this segment:
@@ -198,8 +204,7 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
             Eigen::Vector4d velocity; velocity.setZero();
             Eigen::Vector4d normal; normal.setZero();
 
-            // for OSI subdivide the length into segments of 1 meter:
-            auto buildRoads = [&](double s, double S)
+            auto buildSubroad = [&](double s, double S)
             {
                 Eigen::Vector4d P(0, 0, 0, 1);
 
@@ -260,82 +265,89 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                 normal.y() = velocity.x();
                 normal.normalize();
 
-                auto polyInter = [&](double S, auto & polis, double (*getS)(void * itt) ) -> double
+                auto polyInter = [&](double T, auto & polis, double (*getS)(void * itt) ) -> double
                 {
-                    auto it = polis.begin();
-                    for (; it != polis.end() && getS(&(*it)) < S; ++it);
-                    if (it != polis.begin()) --it;
-                    double t = S - getS(&(*it));
-                    return *(it->_a) + *(it->_b)*t + *(it->_c)*t*t + *(it->_d)*t*t*t;
+                    auto pit = polis.begin(); // polis iterator
+                    while (pit != polis.end() && getS(&(*pit)) < T) ++pit;
+                    if (pit != polis.begin()) --pit;
+                    double t = T - getS(&(*pit));
+                    return *(pit->_a) + *(pit->_b)*t + *(pit->_c)*t*t + *(pit->_d)*t*t*t;
                 };
 
+                // find out if we are at the proper section of the road:
+                ++sit; ++sindex;
+                if (sit == odr_road.sub_lanes->sub_laneSection.end() || *sit->_s > S) { --sit; --sindex; }
+                auto && odr_lane = *sit;
+
+                // set the lanes:
                 double offset = 0.0;
                 if (odr_road.sub_lanes && !odr_road.sub_lanes->sub_laneOffset.empty())
                     offset = polyInter(S, odr_road.sub_lanes->sub_laneOffset, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_lanes->sub_laneOffset[0])>(it)->_s; });
-                for (auto && odr_lane : odr_road.sub_lanes->sub_laneSection)
-                {
-                    if (odr_lane.sub_center)
-                        for (auto &&odr_sublane : odr_lane.sub_center->sub_lane)
-                        {
-                            LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
-                            Vector3d *pos = new Vector3d();
-                            Eigen::Vector4d Ptrf = M * (P + normal*offset);
-                            pos->set_x(Ptrf.x());
-                            pos->set_y(Ptrf.y());
-                            pos->set_z(Ptrf.z());
-                            bp->set_allocated_position(pos);
-                            vizBoundary[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
-                        }
-                    auto buildLane = [&](auto & odr_sublane, int dir, double & twidth)
+                
+                if (odr_lane.sub_center)
+                    for (auto && odr_sublane : odr_lane.sub_center->sub_lane)
                     {
-                        // Boundary:
-                        LaneBoundary_BoundaryPoint *bp = bmap[*odr_sublane._id]->add_boundary_line();
-                        double width = polyInter(S, odr_sublane.sub_width, [](void * it) ->double { return *static_cast<decltype(&odr_sublane.sub_width[0])>(it)->_sOffset; });
-                        twidth += dir*width;
+                        // ONLY 1 center line, actually loop not needed
+                        LaneBoundary_BoundaryPoint *bp = bmap[sindex][*odr_sublane._id]->add_boundary_line();
                         Vector3d *pos = new Vector3d();
-                        Eigen::Vector4d Ptrf = M * (P + normal*twidth);
+                        Eigen::Vector4d Ptrf = M * (P + normal*offset);
                         pos->set_x(Ptrf.x());
                         pos->set_y(Ptrf.y());
                         pos->set_z(Ptrf.z());
                         bp->set_allocated_position(pos);
-                        vizBoundary[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
-                        // Center:
-                        Vector3d *center = lmap[*odr_sublane._id]->add_centerline();
-                        Ptrf = M * (P + normal*(twidth - dir*width/2));
-                        center->set_x(Ptrf.x());
-                        center->set_y(Ptrf.y());
-                        center->set_z(0); // Z is 0 !!!
-                        vizCenter[*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
-                    };
-                    double twidth = offset;
-                    if (odr_lane.sub_left)
-                    {
-                        map<int, t_road_lanes_laneSection_left_lane> sublanes_map;
-                        for (auto && odr_sublane : odr_lane.sub_left->sub_lane) sublanes_map[abs<int>(*odr_sublane._id)] = odr_sublane;
-                        for (auto && it : sublanes_map) buildLane(it.second, 1, twidth);
+                        vizBoundary[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
                     }
-                    twidth = offset;
-                    if (odr_lane.sub_right)
-                    {
-                        map<int, t_road_lanes_laneSection_right_lane> sublanes_map;
-                        for (auto && odr_sublane : odr_lane.sub_right->sub_lane) sublanes_map[abs<int>(*odr_sublane._id)] = odr_sublane;
-                        for (auto && it : sublanes_map) buildLane(it.second, -1, twidth);
-                    }
-                  }
+                auto buildLane = [&](auto & odr_sublane, int dir, double & twidth)
+                {
+                    // Boundary:
+                    LaneBoundary_BoundaryPoint *bp = bmap[sindex][*odr_sublane._id]->add_boundary_line();
+                    double width = polyInter(S - *odr_lane._s, odr_sublane.sub_width, [](void * it) ->double { return *static_cast<decltype(&odr_sublane.sub_width[0])>(it)->_sOffset; });
+                    twidth += dir*width;
+                    Vector3d *pos = new Vector3d();
+                    Eigen::Vector4d Ptrf = M * (P + normal*twidth);
+                    pos->set_x(Ptrf.x());
+                    pos->set_y(Ptrf.y());
+                    pos->set_z(Ptrf.z());
+                    bp->set_allocated_position(pos);
+                    vizBoundary[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                    // Center:
+                    Vector3d *center = lmap[sindex][*odr_sublane._id]->add_centerline();
+                    Ptrf = M * (P + normal*(twidth - dir*width/2));
+                    center->set_x(Ptrf.x());
+                    center->set_y(Ptrf.y());
+                    center->set_z(0); // Z is 0 !!!
+                    vizCenter[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                };
+                double twidth = offset;
+                if (odr_lane.sub_left)
+                {
+                    map<int, t_road_lanes_laneSection_left_lane> sublanes_map;
+                    for (auto && odr_sublane : odr_lane.sub_left->sub_lane) sublanes_map[abs<int>(*odr_sublane._id)] = odr_sublane;
+                    for (auto && it : sublanes_map) buildLane(it.second, 1, twidth);
+                }
+                twidth = offset;
+                if (odr_lane.sub_right)
+                {
+                    map<int, t_road_lanes_laneSection_right_lane> sublanes_map;
+                    for (auto && odr_sublane : odr_lane.sub_right->sub_lane) sublanes_map[abs<int>(*odr_sublane._id)] = odr_sublane;
+                    for (auto && it : sublanes_map) buildLane(it.second, -1, twidth);
+                }
             };
             double prevS = S;
             for (double s = 0; s < *odr_subroad._length; s++, S++)
             {
-                buildRoads(s, S);
+                buildSubroad(s, S);
             }
             S = prevS + *odr_subroad._length;
-            buildRoads(*odr_subroad._length, S);
+            buildSubroad(*odr_subroad._length, S);
 
-            for (auto && b : vizBoundary)
-                vizBoundaries.push_back(move(b.second));
+            for (auto && bb : vizBoundary)
+                for (auto && b : bb.second)
+                    vizBoundaries.push_back(move(b.second));
 
-            for (auto && c : vizCenter)
-                vizCenterLines.push_back(move(c.second));
+            for (auto && cc : vizCenter)
+                for (auto && c : cc.second)
+                    vizCenterLines.push_back(move(c.second));
         }
     }
 }
