@@ -42,6 +42,41 @@ static map<string, StationaryObject_Classification_Type> str2OsiType
     //{"speed_bump", StationaryObject_Classification::TYPE_SPEED_BUMP },
 };
 
+static map<string, LaneBoundary_Classification_Color> str2OsiColor
+{
+    {"standard", LaneBoundary_Classification_Color_COLOR_WHITE},
+    {"while", LaneBoundary_Classification_Color_COLOR_WHITE},
+    {"yellow", LaneBoundary_Classification_Color_COLOR_YELLOW},
+    {"red", LaneBoundary_Classification_Color_COLOR_RED},
+    {"blue", LaneBoundary_Classification_Color_COLOR_BLUE},
+    {"green", LaneBoundary_Classification_Color_COLOR_GREEN}
+};
+
+static map<string, LaneBoundary_Classification_Type> str2OsiBoudary
+{
+    {"none",LaneBoundary_Classification_Type_TYPE_NO_LINE},
+    {"solid",LaneBoundary_Classification_Type_TYPE_SOLID_LINE},
+    {"broken",LaneBoundary_Classification_Type_TYPE_DASHED_LINE},
+    {"botts dots",LaneBoundary_Classification_Type_TYPE_BOTTS_DOTS},
+    {"grass",LaneBoundary_Classification_Type_TYPE_GRASS_EDGE},
+    {"curb",LaneBoundary_Classification_Type_TYPE_CURB}
+};
+
+static map<string, Lane_Classification_Subtype> str2LaneSubType
+{
+    {"stop", Lane_Classification_Subtype_SUBTYPE_STOP},
+    {"shoulder", Lane_Classification_Subtype_SUBTYPE_SHOULDER},
+    {"biking", Lane_Classification_Subtype_SUBTYPE_BIKING},
+    {"sidewalk", Lane_Classification_Subtype_SUBTYPE_SIDEWALK},
+    {"border", Lane_Classification_Subtype_SUBTYPE_BORDER},
+    {"restricted", Lane_Classification_Subtype_SUBTYPE_RESTRICTED},
+    {"parking", Lane_Classification_Subtype_SUBTYPE_PARKING},
+    {"entry", Lane_Classification_Subtype_SUBTYPE_ENTRY},
+    {"exit", Lane_Classification_Subtype_SUBTYPE_EXIT},
+    {"offRamp", Lane_Classification_Subtype_SUBTYPE_OFFRAMP},
+    {"onRamp", Lane_Classification_Subtype_SUBTYPE_ONRAMP}
+};
+
 Osiexporter::Osiexporter()
 {
     gt_ = new GroundTruth();
@@ -295,6 +330,18 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                         pos->set_y(Ptrf.y());
                         pos->set_z(Ptrf.z());
                         bp->set_allocated_position(pos);
+                        // Adding type and color properly for all xodr elements would mean subdividing the OSI boundaries (TODO)
+                        if (!odr_sublane.sub_roadMark.empty())
+                        {
+                            LaneBoundary_Classification * lbclassification = new LaneBoundary_Classification();
+                            if (odr_sublane.sub_roadMark[0]._width)
+                                bp->set_width(*odr_sublane.sub_roadMark[0]._width); // TODO
+                            if (odr_sublane.sub_roadMark[0]._type)
+                                lbclassification->set_type(str2OsiBoudary[*odr_sublane.sub_roadMark[0]._type]); // TODO: for all elements!!!
+                            if (odr_sublane.sub_roadMark[0]._color)
+                                lbclassification->set_color(str2OsiColor[*odr_sublane.sub_roadMark[0]._color]); // TODO: for all elements!!!
+                            bmap[sindex][*odr_sublane._id]->set_allocated_classification(lbclassification);
+                        }
                         vizBoundary[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
                     }
                 auto buildLane = [&](auto & odr_sublane, int dir, double & twidth)
@@ -309,6 +356,18 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     pos->set_y(Ptrf.y());
                     pos->set_z(Ptrf.z());
                     bp->set_allocated_position(pos);
+                    // Adding type and color properly for all xodr elements would mean subdividing the OSI boundaries (TODO)
+                    if (!odr_sublane.sub_roadMark.empty())
+                    {
+                        LaneBoundary_Classification * lbclassification = new LaneBoundary_Classification();
+                        if (odr_sublane.sub_roadMark[0]._width)
+                            bp->set_width(*odr_sublane.sub_roadMark[0]._width); // TODO
+                        if (odr_sublane.sub_roadMark[0]._type)
+                            lbclassification->set_type(str2OsiBoudary[*odr_sublane.sub_roadMark[0]._type]); // TODO: for all elements!!!
+                        if (odr_sublane.sub_roadMark[0]._color)
+                            lbclassification->set_color(str2OsiColor[*odr_sublane.sub_roadMark[0]._color]); // TODO: for all elements!!!
+                        bmap[sindex][*odr_sublane._id]->set_allocated_classification(lbclassification);
+                    }
                     vizBoundary[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
                     // Center:
                     Vector3d *center = lmap[sindex][*odr_sublane._id]->add_centerline();
@@ -317,6 +376,8 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     center->set_y(Ptrf.y());
                     center->set_z(0); // Z is 0 !!!
                     vizCenter[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                    if (odr_sublane._type)
+                        lmap[sindex][*odr_sublane._id]->set_subtype(str2LaneSubType[*odr_sublane._type]);
                 };
                 double twidth = offset;
                 if (odr_lane.sub_left)

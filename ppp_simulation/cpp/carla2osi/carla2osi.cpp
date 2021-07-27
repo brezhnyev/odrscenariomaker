@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
         //for (auto && mesh : loader.LoadedMeshes)
         for (int i = 0; i < loader.LoadedMeshes.size(); ++i)
         {
-            cout << std::this_thread::get_id() << endl;
+            //cout << std::this_thread::get_id() << endl;
             auto && mesh = loader.LoadedMeshes[i];
             string type = osiex.toValidType(mesh.MeshName);
             if (!type.empty())
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 
     // Qt part should come after spawning, otherwise the application suspends
     Viewer * viewer = nullptr;
-    thread t([&]()
+    thread t2([&]()
     {
         QApplication application(argc, argv);
 
@@ -279,6 +279,8 @@ int main(int argc, char *argv[])
         cv.notify_all();
 
         application.exec();
+
+        isStopped = true;
     });
     cv.wait(lk, [&]{return isQtReady;});
 
@@ -311,10 +313,12 @@ int main(int argc, char *argv[])
     }
 
     //world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
-    for (auto && actor : *world.GetActors())
-        actor->Destroy();
+    auto actors = world.GetActors();
+    for (auto v : vehicles) v->Destroy();
+    for (auto w : walkers)  w->Destroy();
 
     t1.join();
+    t2.join();
 
     return 0;
 }

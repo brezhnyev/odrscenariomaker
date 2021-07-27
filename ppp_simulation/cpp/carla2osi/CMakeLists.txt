@@ -47,13 +47,17 @@ link_directories("/usr/local/lib/osi3")
 link_directories("~/tools/carla/Util/OSM2ODR/build/src")
 link_directories("~/tools/carla/Build/xerces-c-3.2.3-install/lib/")
 
-if (USE_CARLA)
-add_executable(${PROJECT_NAME} carla2osi.cpp ${SOURCE})
-target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf)
+if(USE_CARLA)
+    ADD_DEFINITIONS(-DUSE_CARLA)
+endif()
 
-add_executable(osm2odr osm2odr.cpp)
-target_link_libraries(osm2odr -losm2odr -lxerces-c -lz)
+if (USE_CARLA)
+    add_executable(${PROJECT_NAME} carla2osi.cpp ${SOURCE})
+    target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf)
+
+    add_executable(osm2odr osm2odr.cpp)
+    target_link_libraries(osm2odr -losm2odr -lxerces-c -lz)
 endif()
 
 add_executable(static2osi static2osi.cpp ${SOURCE})
-target_link_libraries(static2osi ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf)
+target_link_libraries(static2osi ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf)
