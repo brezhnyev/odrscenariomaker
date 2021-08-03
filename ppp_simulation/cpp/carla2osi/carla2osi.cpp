@@ -14,6 +14,7 @@
 #include <carla/client/WalkerAIController.h>
 #include <carla/geom/Transform.h>
 #include <carla/rpc/EpisodeSettings.h>
+#include <carla/StringUtil.h>
 
 #include <chrono>
 #include <iostream>
@@ -43,10 +44,10 @@ using namespace odr_1_5;
 
 typedef carla::SharedPtr<carla::client::Actor> ShrdPtrActor;
 
-bool isStopped;
-condition_variable cv;
-bool isStaticParsed = false;
-bool isQtReady = false;
+static bool isStopped;
+static condition_variable cv;
+static bool isStaticParsed = false;
+static bool isQtReady = false;
 
 void sighandler(int sig)
 {
@@ -112,7 +113,6 @@ int main(int argc, char *argv[])
         cout << "Started extracting base_poly ..." << endl;
 
         // export stationary
-        mutex mtx1;
 #pragma omp parallel for
         //for (auto && mesh : loader.LoadedMeshes)
         for (int i = 0; i < loader.LoadedMeshes.size(); ++i)
@@ -147,7 +147,6 @@ int main(int argc, char *argv[])
                 for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
                 // store the stationary object into OSI:
                 {
-                    lock_guard<mutex> lk(mtx1);
                     osiex.addStaticObject(v3d, concaveBaseline, id, type, scale);
                     baselines.push_back(move(concaveBaseline));
                 }
@@ -158,7 +157,6 @@ int main(int argc, char *argv[])
         cv.notify_all();
     }
     );
-
 
     // Carla set up:
     isStopped = false;
@@ -181,11 +179,10 @@ int main(int argc, char *argv[])
 
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
-    uint32_t FPS = 30;
+    uint32_t FPS = 10;
     crpc::EpisodeSettings wsettings(true, false, 1.0 / FPS); // (synchrone, noRender, interval)
     world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     world.SetWeather(crpc::WeatherParameters::ClearNoon);
-
 
     // Spawn Vehicles:
     const int number_of_vehicles = 50;
@@ -217,7 +214,7 @@ int main(int argc, char *argv[])
         traffic_manager.SetPercentageIgnoreWalkers(actor, 0.0f);
         static_cast<cc::Vehicle*>(actor.get())->SetAutopilot(true);
         vehicles.push_back(actor);
-        cout << "Spawned " << vehicles.back()->GetDisplayId() << '\n';
+        //cout << "Spawned " << vehicles.back()->GetDisplayId() << '\n';
     }
 
     // Spawn walkers:
@@ -246,7 +243,7 @@ int main(int argc, char *argv[])
         walkers.push_back(walker);
         speeds.push_back(atof(walker_bp.GetAttribute("speed").GetRecommendedValues()[1].c_str()));
         wControllers.push_back(controller);
-        cout << "Spawned " << walkers.back()->GetDisplayId() << '\n';
+        //cout << "Spawned " << walkers.back()->GetDisplayId() << '\n';
     }
 
     world.Tick(carla::time_duration(chrono::seconds(10)));
@@ -304,6 +301,7 @@ int main(int argc, char *argv[])
 
             // add to osi:
             vector<Eigen::Matrix4f> vizActors;
+            // KB: assum that GetActors() should be called every time new for dynamic objects
             osiex.updateMovingObjects(world.GetActors(), vizActors);
             osiex.writeFrame();
             // visuaization:

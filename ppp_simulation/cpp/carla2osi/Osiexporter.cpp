@@ -77,6 +77,49 @@ static map<string, Lane_Classification_Subtype> str2LaneSubType
     {"onRamp", Lane_Classification_Subtype_SUBTYPE_ONRAMP}
 };
 
+static map<carla::rpc::TrafficLightState, TrafficLight_Classification_Color> carla2OsiTRLColor
+{
+  {carla::rpc::TrafficLightState::Unknown, TrafficLight_Classification_Color_COLOR_UNKNOWN},
+  {carla::rpc::TrafficLightState::Red, TrafficLight_Classification_Color_COLOR_RED},
+  {carla::rpc::TrafficLightState::Yellow, TrafficLight_Classification_Color_COLOR_YELLOW},
+  {carla::rpc::TrafficLightState::Green, TrafficLight_Classification_Color_COLOR_GREEN}
+};
+
+static map<string, MovingObject_VehicleClassification_Type> string2OsiVehicleType
+{
+    {"vehicle.audi.a2", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.tesla.model3", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.bh.crossbike", MovingObject_VehicleClassification_Type_TYPE_BICYCLE},
+    {"vehicle.bmw.grandtourer", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.audi.etron", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.seat.leon", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.volkswagen.t2", MovingObject_VehicleClassification_Type_TYPE_DELIVERY_VAN},
+    {"vehicle.kawasaki.ninja", MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE},
+    {"vehicle.mustang.mustang", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.tesla.cybertruck", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.lincoln.mkz2017", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.lincoln2020.mkz2020", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.dodge_charger.police", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.gazelle.omafiets", MovingObject_VehicleClassification_Type_TYPE_BICYCLE},
+    {"vehicle.yamaha.yzf", MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE},
+    {"vehicle.audi.tt", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.jeep.wrangler_rubicon", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.harley-davidson.low_rider", MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE},
+    {"vehicle.chevrolet.impala", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.nissan.patrol", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.nissan.micra", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.mercedesccc.mercedesccc", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.bmw.isetta", MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR},
+    {"vehicle.mini.cooperst", MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR},
+    {"vehicle.chargercop2020.chargercop2020", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.toyota.prius", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.mercedes-benz.coupe", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.diamondback.century", MovingObject_VehicleClassification_Type_TYPE_BICYCLE},
+    {"vehicle.citroen.c3", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR},
+    {"vehicle.charger2020.charger2020", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
+    {"vehicle.carlamotors.carlacola", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR}
+};
+
 Osiexporter::Osiexporter()
 {
     gt_ = new GroundTruth();
@@ -104,6 +147,7 @@ void Osiexporter::setFrameTime(uint32_t seconds, uint32_t nanos)
     ts->set_seconds(seconds); ts->set_nanos(nanos);
     gt_->set_allocated_timestamp(ts);
     gt_->clear_moving_object();
+    gt_->clear_traffic_light();
 }
 
 string Osiexporter::toValidType(string type)
@@ -416,70 +460,125 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
 #ifdef USE_CARLA
 void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, std::vector<Eigen::Matrix4f> & vizActors)
 {
-    for (auto && actor : *actors)
+    for (auto &&actor : *actors)
     {
-        if (!dynamic_cast<cc::Vehicle*>(actor.get()) && !dynamic_cast<cc::Walker*>(actor.get())) continue;
-
-        cg::Transform trf = actor->GetTransform();
-        cg::BoundingBox bbox = actor->GetBoundingBox();
-        // We will use the 4x4 matrix to fill out vizActors as follows:
-        // M.block(0,0,3,3) - rotation
-        // M.block(0,3,3,1) - translation
-        // M.block(3,0,1,3) - scale
-        // M.block(3,3,1,1) - type
-        Eigen::Matrix4f M; M.setIdentity();
-
-        M.block(0,0,3,3) = (
-            Eigen::AngleAxisf(trf.rotation.yaw*DEG2RAD, Eigen::Vector3f::UnitZ())*
-            Eigen::AngleAxisf(trf.rotation.pitch*DEG2RAD, Eigen::Vector3f::UnitY())*
-            Eigen::AngleAxisf(trf.rotation.roll*DEG2RAD, Eigen::Vector3f::UnitX())).toRotationMatrix();
-
-        M.block(0,3,3,1) = Eigen::Vector3f(trf.location.x, trf.location.y, trf.location.z);
-        M.block(3,0,1,3) = Eigen::Vector3f(bbox.extent.x, bbox.extent.y, bbox.extent.z).transpose();
-        // transform from Left-hand to Right-hand system:
-        Eigen::Matrix4f mirror; mirror.setIdentity(); mirror(1,1) = -1;
-        M = mirror*M;
-
-        MovingObject * mo = gt_->add_moving_object();
-        Identifier * oid = new Identifier();
-        oid->set_value(actor->GetId()); mo->set_allocated_id(oid);
-
-        // set type:
-        if (dynamic_cast<cc::Vehicle*>(actor.get()))
+        if (
+            dynamic_cast<cc::Vehicle *>(actor.get()) ||
+            dynamic_cast<cc::Walker *>(actor.get()) ||
+            dynamic_cast<cc::TrafficLight *>(actor.get()))
         {
-            mo->set_type(MovingObject_Type_TYPE_VEHICLE);
-            // classification of vehicle:
-            MovingObject_VehicleClassification * classification = new MovingObject_VehicleClassification();
-            classification->set_type(MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR);
-            mo->set_allocated_vehicle_classification(classification);
-            M(3,3) = 0.0f;
+            cg::Transform trf = actor->GetTransform();
+            cg::BoundingBox bbox = actor->GetBoundingBox();
+            // We will use the 4x4 matrix to fill out vizActors as follows:
+            // M.block(0,0,3,3) - rotation
+            // M.block(0,3,3,1) - translation
+            // M.block(3,0,1,3) - scale (bbox)
+            // M.block(3,3,1,1) - type
+            Eigen::Matrix4f M;
+            M.setIdentity();
+
+            M.block(0, 0, 3, 3) = (Eigen::AngleAxisf(trf.rotation.yaw * DEG2RAD, Eigen::Vector3f::UnitZ()) *
+                                   Eigen::AngleAxisf(trf.rotation.pitch * DEG2RAD, Eigen::Vector3f::UnitY()) *
+                                   Eigen::AngleAxisf(trf.rotation.roll * DEG2RAD, Eigen::Vector3f::UnitX()))
+                                      .toRotationMatrix();
+
+            M.block(0, 3, 3, 1) = Eigen::Vector3f(trf.location.x, trf.location.y, trf.location.z);
+            M.block(3, 0, 1, 3) = Eigen::Vector3f(bbox.extent.x, bbox.extent.y, bbox.extent.z).transpose();
+            // transform from Left-hand to Right-hand system:
+            Eigen::Matrix4f mirror;
+            mirror.setIdentity();
+            mirror(1, 1) = -1;
+            M = mirror * M;
+
+            // set bounding box:
+            Dimension3d *dim = new Dimension3d();
+            dim->set_length(2 * bbox.extent.x);
+            dim->set_width(2 * bbox.extent.y);
+            dim->set_height(2 * bbox.extent.z);
+
+            // set position:
+            Vector3d *pos = new Vector3d();
+            pos->set_x(M(0, 3));
+            pos->set_y(M(1, 3));
+            pos->set_z(M(2, 3));
+
+            // set orientation:
+            Orientation3d *ori = new Orientation3d();
+            ori->set_roll(trf.rotation.roll * DEG2RAD);
+            ori->set_pitch(trf.rotation.pitch * DEG2RAD);
+            ori->set_yaw(-trf.rotation.yaw * DEG2RAD);
+
+            Identifier *oid = new Identifier();
+            oid->set_value(actor->GetId());
+
+            if (dynamic_cast<cc::Vehicle *>(actor.get()) || dynamic_cast<cc::Walker *>(actor.get()))
+            {
+                MovingObject *mo = gt_->add_moving_object();
+                mo->set_allocated_id(oid);
+
+                // set moving base:
+                BaseMoving *base = new BaseMoving();
+                base->set_allocated_dimension(dim);
+                base->set_allocated_position(pos);
+                base->set_allocated_orientation(ori);
+
+                mo->set_allocated_base(base);
+
+                // set type:
+                if (dynamic_cast<cc::Vehicle *>(actor.get()))
+                {
+                    mo->set_type(MovingObject_Type_TYPE_VEHICLE);
+                    // classification of vehicle:
+                    MovingObject_VehicleClassification *classification = new MovingObject_VehicleClassification();
+                    // KB: this may be unreliable if the Display ID format is changed in Carla:
+                    // example of current GetDisplayId():
+                    // Actor 250 (vehicle.harley-davidson.low_rider)
+                    // |         |
+                    // 0         11
+                    string name = actor->GetDisplayId().substr(11, actor->GetDisplayId().size() - 12);
+                    classification->set_type(string2OsiVehicleType[name]);
+                    mo->set_allocated_vehicle_classification(classification);
+                    M(3, 3) = 0.0f;
+                }
+                else if (dynamic_cast<cc::Walker *>(actor.get()))
+                {
+                    mo->set_type(MovingObject_Type_TYPE_PEDESTRIAN);
+                    M(3, 3) = 1.0f;
+                }
+            }
+            if (dynamic_cast<cc::TrafficLight *>(actor.get()))
+            {
+                cc::TrafficLight *carla_tfl = dynamic_cast<cc::TrafficLight *>(actor.get());
+                switch (carla_tfl->GetState())
+                {
+                case carla::rpc::TrafficLightState::Red:
+                    M(3, 3) = 2.0f;
+                    break;
+                case carla::rpc::TrafficLightState::Yellow:
+                    M(3, 3) = 3.0f;
+                    break;
+                case carla::rpc::TrafficLightState::Green:
+                    M(3, 3) = 4.0f;
+                    break;
+                default:
+                    M(3, 3) = 2.0f;
+                    break;
+                }
+
+                TrafficLight *osi_tfl = gt_->add_traffic_light();
+                osi_tfl->set_allocated_id(oid);
+                BaseStationary * base = new BaseStationary();
+                base->set_allocated_dimension(dim);
+                base->set_allocated_position(pos);
+                base->set_allocated_orientation(ori);
+                osi_tfl->set_allocated_base(base);
+
+                TrafficLight_Classification * classification = new TrafficLight_Classification();
+                classification->set_color(carla2OsiTRLColor[carla_tfl->GetState()]);
+                osi_tfl->set_allocated_classification(classification);
+            }
+            vizActors.push_back(M);
         }
-        else if (dynamic_cast<cc::Walker*>(actor.get()))
-        {
-            mo->set_type(MovingObject_Type_TYPE_PEDESTRIAN);
-            M(3,3) = 1.0f;
-        }
-
-        vizActors.push_back(M);
-
-        // set moving base:
-        BaseMoving * base = new BaseMoving();
-        // set bounding box:
-        Dimension3d * dim = new Dimension3d();
-        dim->set_length(2*bbox.extent.x); dim->set_width(2*bbox.extent.y); dim->set_height(2*bbox.extent.z);
-        base->set_allocated_dimension(dim);
-
-        // set position:
-        Vector3d * pos =  new Vector3d();
-        pos->set_x(M(0,3)); pos->set_y(M(1,3)); pos->set_z(M(2,3));
-        base->set_allocated_position(pos);
-
-        // set orientation:
-        Orientation3d * ori = new Orientation3d();
-        ori->set_roll(trf.rotation.roll*DEG2RAD); ori->set_pitch(trf.rotation.pitch*DEG2RAD); ori->set_yaw(-trf.rotation.yaw*DEG2RAD);
-        base->set_allocated_orientation(ori);
-
-        mo->set_allocated_base(base);
     }
 }
 #endif

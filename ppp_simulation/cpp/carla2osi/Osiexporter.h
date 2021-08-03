@@ -7,6 +7,7 @@
 #ifdef USE_CARLA
 #include <carla/client/Client.h>
 #include <carla/client/ActorList.h>
+#include <carla/client/TrafficLight.h>
 #include <carla/Memory.h>
 #endif
 

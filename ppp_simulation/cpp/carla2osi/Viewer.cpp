@@ -73,18 +73,28 @@ void Viewer::draw()
         glEnd();
     }
 
-    // moving objects:
+    // moving objects / traffic lights:
     {
         lock_guard<mutex> lk(mtx_);
         for (auto a : actors_) // auto && a : actors_   causes flickering
         {
-            if (0 == a(3,3)) // car
+            switch(int(a(3,3)))
             {
-                glColor3f(0,1,0);
-            }
-            else if (1 == a(3,3)) // walker
-            {
-                glColor3f(0,0,1);
+                case 0: // car
+                    glColor3f(0,1,1);
+                    break;
+                case 1: // walker
+                    glColor3f(0,0,1);
+                    break;
+                case 2: // traffic light red
+                    glColor3f(1,0,0);
+                    break;
+                case 3: // traffic light yellow
+                    glColor3f(1,1,0);
+                    break;
+                case 4: // traffic light green
+                    glColor3f(0,1,0);
+                    break;
             }
             a(3,3) = 1.0f;
             Eigen::Vector3f bbox = a.block(3,0,1,3).transpose();
