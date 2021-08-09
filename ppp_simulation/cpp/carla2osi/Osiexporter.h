@@ -23,6 +23,8 @@ public:
 
     void addStaticObject(const std::vector<Eigen::Vector3f> & v3d, const std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, std::string type, float scale = 1.0f);
     void addRoads(const odr_1_5::OpenDRIVE &, uint64_t & id, std::vector<std::vector<Eigen::Vector3f>> & vizCenterlines, std::vector<std::vector<Eigen::Vector3f>> & vizBoundaries);
+    void extendStaticNames(const std::map<std::string, std::string> & customNames);
+
 #ifdef USE_CARLA
     void updateMovingObjects(carla::SharedPtr<carla::client::ActorList> actors, std::vector<Eigen::Matrix4f> & vizActors);
 #endif

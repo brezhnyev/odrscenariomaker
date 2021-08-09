@@ -5,8 +5,11 @@
 #include <list>
 #include <thread>
 #include <condition_variable>
+#include <unistd.h>
 
+#include <gflags/gflags.h>
 #include <qapplication.h>
+#include <yaml-cpp/yaml.h>
 
 #include "Viewer.h"
 #include "BasepolyExtractor.h"
@@ -23,6 +26,11 @@ using namespace odr_1_5;
 static condition_variable cv;
 static bool isStaticParsed = false;
 
+DEFINE_string(obj_file, "", "Path to OBJ file. If left out, the OBJ file is skipped. Optional.");
+DEFINE_string(xodr_file, "", "Path to XODR file. Required.");
+DEFINE_double(scale, 1.0, "Scale factor between OBJ and XODR. For standard Carla maps is 0.01.");
+DEFINE_string(config_file, "", "Additional settings. Optional.");
+
 
 static void printMeshvertexes(const std::vector<Vertex> & v)
 {
@@ -33,28 +41,7 @@ static void printMeshvertexes(const std::vector<Vertex> & v)
 
 int main(int argc, char *argv[])
 {
-    if (argc < 3)
-    {
-        cout << "Usage: " << argv[0] << " path/to/file.obj" << " path/to/file.xodr" << endl;
-        return 0;
-    }
-
-    string mapName = "Munich02";
-    if (argc > 3)
-        mapName = argv[3];
-
-    float scale = 1.0f;
-    if (argc > 4)
-    {
-        stringstream ss(argv[4]); // atof and stof are not reliable
-        ss >> scale;
-    }
-    bool doBuildings = true;
-    if (argc > 5)
-    {
-        stringstream ss; ss << boolalpha << argv[5];
-        ss >> doBuildings;
-    }
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     // Load the static parts:
     uint64_t id;
@@ -68,18 +55,30 @@ int main(int argc, char *argv[])
         cout << "Started parsing XODR file ..." << endl;
         // export road
         OpenDRIVEFile odr;
-        loadFile(argv[2], odr);
+        loadFile(FLAGS_xodr_file, odr);
         osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
         cout << "Finished parsing XODR file ..." << endl;
-        if (doBuildings)
+
+        if (!FLAGS_obj_file.empty() && !access(FLAGS_obj_file.c_str(), F_OK))
         {
             cout << "Started parsing OBJ file ..." << endl;
-            loader.LoadFile(argv[1]);
-            cout << "Started extracting base_poly ..." << endl;
+            loader.LoadFile(FLAGS_obj_file);
 
+            // extend the static names:
+            map<string, string> custom_static_names;
+            if (!FLAGS_config_file.empty() && !access(FLAGS_config_file.c_str(), F_OK))
+            {
+                YAML::Node config = YAML::LoadFile(FLAGS_config_file);
+                YAML::Node static_names = config["static_names"];
+                for (YAML::const_iterator it = static_names.begin(); it != static_names.end(); ++it)
+                    custom_static_names[it->first.as<std::string>()] = it->second.as<string>();
+            }
+            osiex.extendStaticNames(custom_static_names);
+
+            cout << "Started extracting base_poly ..." << endl;
             // export stationary
             mutex mtx1;
-    #pragma omp parallel for
+            #pragma omp parallel for
             //for (auto && mesh : loader.LoadedMeshes)
             for (int i = 0; i < loader.LoadedMeshes.size(); ++i)
             {
@@ -109,16 +108,20 @@ int main(int argc, char *argv[])
                         concaveBaseline = convexBaseline;
                     }
                     vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
-                    for (auto && v: concaveBaseline) v = v*scale;
+                    for (auto && v: concaveBaseline) v = v*FLAGS_scale;
                     for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
                     {
                         lock_guard<mutex> lk(mtx1);
-                        osiex.addStaticObject(v3d, concaveBaseline, id, type, scale);
+                        osiex.addStaticObject(v3d, concaveBaseline, id, type, FLAGS_scale);
                         baselines.push_back(move(concaveBaseline));
                     }
                 }
             }
             cout << "Finished extracting base_poly" << endl;
+        }
+        else if (!FLAGS_obj_file.empty() && access(FLAGS_obj_file.c_str(), F_OK))
+        {
+            cerr << "The OBJ file does not exist. Proceeding without it." << endl;
         }
         isStaticParsed = true;
         cv.notify_all();

@@ -134,6 +134,19 @@ Osiexporter::~Osiexporter()
     ofs_.close();
 }
 
+void Osiexporter::extendStaticNames(const map<string, string> & customNames)
+{
+    for (auto && n : customNames)
+    {
+        auto it = str2OsiType.find(n.second);
+        if (it != str2OsiType.end())
+        {
+            str2OsiType[n.first] = it->second;
+            cout << "Added custom static object name: " << n.first << " " << it->second << endl;
+        }
+    }
+}
+
 void Osiexporter::writeFrame()
 {
     string frame = sv_.SerializeAsString();

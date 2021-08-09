@@ -17,8 +17,8 @@ Viewer::Viewer(
 
 void Viewer::init()
 {
-    camera()->setSceneRadius(100);
-    camera()->fitSphere(qglviewer::Vec(0, 0, 0), 100);
+    camera()->setSceneRadius(200);
+    camera()->fitSphere(qglviewer::Vec(0, 0, 0), 200);
     resize(800,600);
 }
 

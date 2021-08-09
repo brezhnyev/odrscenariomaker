@@ -29,6 +29,10 @@
 
 #include <iostream>
 #include <signal.h>
+#include <unistd.h>
+
+#include <gflags/gflags.h>
+#include <yaml-cpp/yaml.h>
 #include <omp.h>
 
 namespace cc = carla::client;
@@ -48,6 +52,14 @@ static bool isStopped;
 static condition_variable cv;
 static bool isStaticParsed = false;
 static bool isQtReady = false;
+
+DEFINE_string(obj_file, "", "Path to OBJ file. If left out, the OBJ file is skipped. Optional.");
+DEFINE_string(xodr_file, "", "Path to XODR file. Required.");
+DEFINE_double(scale, 1.0, "Scale factor between OBJ and XODR. For standard Carla maps is 0.01.");
+DEFINE_string(map_name, "Town01", "Name of Carla map to be loaded.");
+DEFINE_int32(fps, 10, "FPS of the Carla playback.");
+DEFINE_string(config_file, "", "Additional settings. Optional.");
+
 
 void sighandler(int sig)
 {
@@ -75,22 +87,7 @@ static auto &RandomChoice(const RangeT &range, RNG &&generator)
 
 int main(int argc, char *argv[])
 {
-    if (argc < 3)
-    {
-        cout << "Usage: " << argv[0] << " path/to/file.obj" << " path/to/file.xodr" << endl;
-        return 0;
-    }
-
-    string mapName = "Munich02";
-    if (argc > 3)
-        mapName = argv[3];
-
-    float scale = 1.0f;
-    if (argc > 4)
-    {
-        stringstream ss(argv[4]); // atof and stof are not reliable
-        ss >> scale;
-    }
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     // Load the static parts:
     uint64_t id;
@@ -104,55 +101,73 @@ int main(int argc, char *argv[])
         cout << "Started parsing XODR file ..." << endl;
         // export road
         OpenDRIVEFile odr;
-        loadFile(argv[2], odr);
+        loadFile(FLAGS_xodr_file, odr);
         osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
         cout << "Finished parsing XODR file ..." << endl;
 
-        cout << "Started parsing OBJ file ..." << endl;
-        loader.LoadFile(argv[1]);
-        cout << "Started extracting base_poly ..." << endl;
-
-        // export stationary
-#pragma omp parallel for
-        //for (auto && mesh : loader.LoadedMeshes)
-        for (int i = 0; i < loader.LoadedMeshes.size(); ++i)
+        if (!FLAGS_obj_file.empty() && !access(FLAGS_obj_file.c_str(), F_OK))
         {
-            //cout << std::this_thread::get_id() << endl;
-            auto && mesh = loader.LoadedMeshes[i];
-            string type = osiex.toValidType(mesh.MeshName);
-            if (!type.empty())
+            cout << "Started parsing OBJ file ..." << endl;
+            loader.LoadFile(FLAGS_obj_file);
+
+            // extend the static names:
+            map<string, string> custom_static_names;
+            if (!FLAGS_config_file.empty() && !access(FLAGS_config_file.c_str(), F_OK))
             {
-                vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
-                vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
-                // degenerated geometry case:
-                if (convexBaseline.size() < 3)
+                YAML::Node config = YAML::LoadFile(FLAGS_config_file);
+                YAML::Node static_names = config["static_names"];
+                for (YAML::const_iterator it = static_names.begin(); it != static_names.end(); ++it)
+                    custom_static_names[it->first.as<std::string>()] = it->second.as<string>();
+            }
+            osiex.extendStaticNames(custom_static_names);
+
+            cout << "Started extracting base_poly ..." << endl;
+            // export stationary
+            #pragma omp parallel for
+            //for (auto && mesh : loader.LoadedMeshes)
+            for (int i = 0; i < loader.LoadedMeshes.size(); ++i)
+            {
+                //cout << std::this_thread::get_id() << endl;
+                auto && mesh = loader.LoadedMeshes[i];
+                string type = osiex.toValidType(mesh.MeshName);
+                if (!type.empty())
                 {
-                    cerr << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
-                    concaveBaseline = convexBaseline;
-                }
-                // concave cannot be smaller than convex (something went wrong in computing the concave form):
-                if (concaveBaseline.size() < convexBaseline.size())
-                {
-                    cerr << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
-                    concaveBaseline = convexBaseline;
-                }
-                // if computation of concave hull went into iternal loop and was broken by "convex.size > mesh.size" condition:
-                if (concaveBaseline.size() > mesh.Vertices.size())
-                {
-                    cerr << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
-                    concaveBaseline = convexBaseline;
-                }
-                vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
-                for (auto && v: concaveBaseline) v = v*scale;
-                for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
-                // store the stationary object into OSI:
-                {
-                    osiex.addStaticObject(v3d, concaveBaseline, id, type, scale);
-                    baselines.push_back(move(concaveBaseline));
+                    vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
+                    vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
+                    // degenerated geometry case:
+                    if (convexBaseline.size() < 3)
+                    {
+                        cerr << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
+                        concaveBaseline = convexBaseline;
+                    }
+                    // concave cannot be smaller than convex (something went wrong in computing the concave form):
+                    if (concaveBaseline.size() < convexBaseline.size())
+                    {
+                        cerr << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
+                        concaveBaseline = convexBaseline;
+                    }
+                    // if computation of concave hull went into iternal loop and was broken by "convex.size > mesh.size" condition:
+                    if (concaveBaseline.size() > mesh.Vertices.size())
+                    {
+                        cerr << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
+                        concaveBaseline = convexBaseline;
+                    }
+                    vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
+                    for (auto && v: concaveBaseline) v = v*FLAGS_scale;
+                    for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
+                    // store the stationary object into OSI:
+                    {
+                        osiex.addStaticObject(v3d, concaveBaseline, id, type, FLAGS_scale);
+                        baselines.push_back(move(concaveBaseline));
+                    }
                 }
             }
+            cout << "Finished extracting base_poly" << endl;
         }
-        cout << "Finished extracting base_poly" << endl;
+        else if (!FLAGS_obj_file.empty() && access(FLAGS_obj_file.c_str(), F_OK))
+        {
+            cerr << "The OBJ file does not exist. Proceeding without it." << endl;
+        }
         isStaticParsed = true;
         cv.notify_all();
     }
@@ -170,7 +185,7 @@ int main(int argc, char *argv[])
     cout << "Client API version : " << client.GetClientVersion() << '\n';
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    auto world = client.LoadWorld(mapName);
+    auto world = client.LoadWorld(FLAGS_map_name);
     //auto world = client.GetWorld();
 
     auto traffic_manager = client.GetInstanceTM(8000); //KB: the port
@@ -179,7 +194,7 @@ int main(int argc, char *argv[])
 
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
-    uint32_t FPS = 10;
+    uint32_t FPS = FLAGS_fps;
     crpc::EpisodeSettings wsettings(true, false, 1.0 / FPS); // (synchrone, noRender, interval)
     world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     world.SetWeather(crpc::WeatherParameters::ClearNoon);

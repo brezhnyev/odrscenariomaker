@@ -53,11 +53,11 @@ endif()
 
 if (USE_CARLA)
     add_executable(${PROJECT_NAME} carla2osi.cpp ${SOURCE})
-    target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf)
+    target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf -lgflags -lyaml-cpp)
 
     add_executable(osm2odr osm2odr.cpp)
     target_link_libraries(osm2odr -losm2odr -lxerces-c -lz)
 endif()
 
 add_executable(static2osi static2osi.cpp ${SOURCE})
-target_link_libraries(static2osi png jpeg tiff rt pthread boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf)
+target_link_libraries(static2osi png jpeg tiff rt pthread boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf -lgflags -lyaml-cpp)
