@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     uint64_t id;
     Osiexporter osiex;
     Loader loader;
-    vector<vector<Eigen::Vector2f>> centerlines, boundaries;
+    vector<vector<Eigen::Vector3f>> centerlines, boundaries;
     vector<vector<Eigen::Vector2f>> baselines;
 
     thread t1([&](){

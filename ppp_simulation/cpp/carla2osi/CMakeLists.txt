@@ -60,4 +60,4 @@ if (USE_CARLA)
 endif()
 
 add_executable(static2osi static2osi.cpp ${SOURCE})
-target_link_libraries(static2osi ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf)
+target_link_libraries(static2osi png jpeg tiff rt pthread boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf)

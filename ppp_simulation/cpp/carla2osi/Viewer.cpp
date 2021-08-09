@@ -7,8 +7,8 @@ using namespace qglviewer;
 
 Viewer::Viewer(
     vector<vector<Eigen::Vector2f>> && staticObjects,
-    vector<vector<Eigen::Vector2f>> && centerlines,
-    vector<vector<Eigen::Vector2f>> && boundaries)
+    vector<vector<Eigen::Vector3f>> && centerlines,
+    vector<vector<Eigen::Vector3f>> && boundaries)
 {
     dataStatic_ = staticObjects;
     centerlines_ = centerlines;
@@ -55,7 +55,7 @@ void Viewer::draw()
         glBegin(GL_POINTS);
         for (auto && p : v)
         {
-            glVertex2f(p.x(), p.y());
+            glVertex3f(p.x(), p.y(), p.z());
         }
         glEnd();
     }
@@ -68,7 +68,7 @@ void Viewer::draw()
         glBegin(GL_LINE_STRIP);
         for (auto && p : v)
         {
-            glVertex2f(p.x(), p.y());
+            glVertex3f(p.x(), p.y(), p.z());
         }
         glEnd();
     }

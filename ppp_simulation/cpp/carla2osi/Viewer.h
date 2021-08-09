@@ -11,8 +11,8 @@ class Viewer : public QGLViewer
 public:
     Viewer(
         std::vector<std::vector<Eigen::Vector2f>> && staticObjects, 
-        std::vector<std::vector<Eigen::Vector2f>> && centerlines,
-        std::vector<std::vector<Eigen::Vector2f>> && boundaries);
+        std::vector<std::vector<Eigen::Vector3f>> && centerlines,
+        std::vector<std::vector<Eigen::Vector3f>> && boundaries);
     void updateMovingObjects(std::vector<Eigen::Matrix4f> && v);
     
 signals:
@@ -24,8 +24,8 @@ protected :
     
 private:
     std::vector<std::vector<Eigen::Vector2f>> dataStatic_;
-    std::vector<std::vector<Eigen::Vector2f>> centerlines_;
-    std::vector<std::vector<Eigen::Vector2f>> boundaries_;
+    std::vector<std::vector<Eigen::Vector3f>> centerlines_;
+    std::vector<std::vector<Eigen::Vector3f>> boundaries_;
     std::vector<Eigen::Matrix4f> actors_;
     std::mutex mtx_;
 };

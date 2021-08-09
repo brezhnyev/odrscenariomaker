@@ -77,6 +77,7 @@ static map<string, Lane_Classification_Subtype> str2LaneSubType
     {"onRamp", Lane_Classification_Subtype_SUBTYPE_ONRAMP}
 };
 
+#ifdef USE_CARLA
 static map<carla::rpc::TrafficLightState, TrafficLight_Classification_Color> carla2OsiTRLColor
 {
   {carla::rpc::TrafficLightState::Unknown, TrafficLight_Classification_Color_COLOR_UNKNOWN},
@@ -119,6 +120,7 @@ static map<string, MovingObject_VehicleClassification_Type> string2OsiVehicleTyp
     {"vehicle.charger2020.charger2020", MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR},
     {"vehicle.carlamotors.carlacola", MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR}
 };
+#endif
 
 Osiexporter::Osiexporter()
 {
@@ -217,7 +219,7 @@ void Osiexporter::addStaticObject(const std::vector<Eigen::Vector3f> & v3d, cons
 
 }
 
-void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<Eigen::Vector2f>> & vizCenterLines, vector<vector<Eigen::Vector2f>> & vizBoundaries)
+void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<Eigen::Vector3f>> & vizCenterLines, vector<vector<Eigen::Vector3f>> & vizBoundaries)
 {
     // export center line:
     vizCenterLines.reserve(odr.sub_road.size());
@@ -229,8 +231,8 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
         // key1 = section id of the road, key2 = lane id of the section
         map<int, map<int, LaneBoundary*>> bmap;
         map<int, map<int, Lane_Classification*>> lmap;
-        map<int, map<int, vector<Eigen::Vector2f>>> vizBoundary;
-        map<int, map<int, vector<Eigen::Vector2f>>> vizCenter;
+        map<int, map<int, vector<Eigen::Vector3f>>> vizBoundary;
+        map<int, map<int, vector<Eigen::Vector3f>>> vizCenter;
 
         //if (*road._name != "Taunusstraße") continue;
         uint32_t sindex = 0; // sections index (for storing for rendering)
@@ -338,11 +340,6 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                 else
                     return;
 
-                //P = P - Eigen::Vector4d(520, 87, 0, 0);
-                // left normal:
-                normal.x() =-velocity.y();
-                normal.y() = velocity.x();
-                normal.normalize();
 
                 auto polyInter = [&](double T, auto & polis, double (*getS)(void * itt) ) -> double
                 {
@@ -352,6 +349,22 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                     double t = T - getS(&(*pit));
                     return *(pit->_a) + *(pit->_b)*t + *(pit->_c)*t*t + *(pit->_d)*t*t*t;
                 };
+
+                // Super-elevation:
+                if (odr_road.sub_lateralProfile && !odr_road.sub_lateralProfile->sub_superelevation.empty())
+                {
+                    double roll = polyInter(S, odr_road.sub_lateralProfile->sub_superelevation, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_lateralProfile->sub_superelevation[0])>(it)->_s; });
+                    M.block(0,0,3,3) = Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()).toRotationMatrix()*M.block(0,0,3,3);
+                }
+                // Elevation:
+                if (odr_road.sub_elevationProfile && !odr_road.sub_elevationProfile->sub_elevation.empty())
+                    P.z() = polyInter(S, odr_road.sub_elevationProfile->sub_elevation, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_elevationProfile->sub_elevation[0])>(it)->_s; });
+
+                //P = P - Eigen::Vector4d(520, 87, 0, 0);
+                // left normal:
+                normal.x() =-velocity.y();
+                normal.y() = velocity.x();
+                normal.normalize();
 
                 // find out if we are at the proper section of the road:
                 ++sit; ++sindex;
@@ -386,7 +399,7 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                                 lbclassification->set_color(str2OsiColor[*odr_sublane.sub_roadMark[0]._color]); // TODO: for all elements!!!
                             bmap[sindex][*odr_sublane._id]->set_allocated_classification(lbclassification);
                         }
-                        vizBoundary[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                        vizBoundary[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z());
                     }
                 auto buildLane = [&](auto & odr_sublane, int dir, double & twidth)
                 {
@@ -412,14 +425,14 @@ void Osiexporter::addRoads(const OpenDRIVE & odr, uint64_t & id, vector<vector<E
                             lbclassification->set_color(str2OsiColor[*odr_sublane.sub_roadMark[0]._color]); // TODO: for all elements!!!
                         bmap[sindex][*odr_sublane._id]->set_allocated_classification(lbclassification);
                     }
-                    vizBoundary[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                    vizBoundary[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z());
                     // Center:
                     Vector3d *center = lmap[sindex][*odr_sublane._id]->add_centerline();
                     Ptrf = M * (P + normal*(twidth - dir*width/2));
                     center->set_x(Ptrf.x());
                     center->set_y(Ptrf.y());
-                    center->set_z(0); // Z is 0 !!!
-                    vizCenter[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y());
+                    center->set_z(Ptrf.z());
+                    vizCenter[sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z());
                     if (odr_sublane._type)
                         lmap[sindex][*odr_sublane._id]->set_subtype(str2LaneSubType[*odr_sublane._type]);
                 };

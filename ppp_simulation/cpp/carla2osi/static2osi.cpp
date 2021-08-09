@@ -49,12 +49,18 @@ int main(int argc, char *argv[])
         stringstream ss(argv[4]); // atof and stof are not reliable
         ss >> scale;
     }
+    bool doBuildings = true;
+    if (argc > 5)
+    {
+        stringstream ss; ss << boolalpha << argv[5];
+        ss >> doBuildings;
+    }
 
     // Load the static parts:
     uint64_t id;
     Osiexporter osiex;
     Loader loader;
-    vector<vector<Eigen::Vector2f>> centerlines, boundaries;
+    vector<vector<Eigen::Vector3f>> centerlines, boundaries;
     vector<vector<Eigen::Vector2f>> baselines;
 
     thread t1([&](){
@@ -65,53 +71,55 @@ int main(int argc, char *argv[])
         loadFile(argv[2], odr);
         osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
         cout << "Finished parsing XODR file ..." << endl;
-
-        cout << "Started parsing OBJ file ..." << endl;
-        loader.LoadFile(argv[1]);
-        cout << "Started extracting base_poly ..." << endl;
-
-        // export stationary
-        mutex mtx1;
-#pragma omp parallel for
-        //for (auto && mesh : loader.LoadedMeshes)
-        for (int i = 0; i < loader.LoadedMeshes.size(); ++i)
+        if (doBuildings)
         {
-            //cout << std::this_thread::get_id() << endl;
-            auto && mesh = loader.LoadedMeshes[i];
-            string type = osiex.toValidType(mesh.MeshName);
-            if (!type.empty())
+            cout << "Started parsing OBJ file ..." << endl;
+            loader.LoadFile(argv[1]);
+            cout << "Started extracting base_poly ..." << endl;
+
+            // export stationary
+            mutex mtx1;
+    #pragma omp parallel for
+            //for (auto && mesh : loader.LoadedMeshes)
+            for (int i = 0; i < loader.LoadedMeshes.size(); ++i)
             {
-                vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
-                vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
-                // degenerated geometry case:
-                if (convexBaseline.size() < 3)
+                //cout << std::this_thread::get_id() << endl;
+                auto && mesh = loader.LoadedMeshes[i];
+                string type = osiex.toValidType(mesh.MeshName);
+                if (!type.empty())
                 {
-                    cerr << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
-                    concaveBaseline = convexBaseline;
-                }
-                // concave cannot be smaller than convex (something went wrong in computing the concave form):
-                if (concaveBaseline.size() < convexBaseline.size())
-                {
-                    cerr << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
-                    concaveBaseline = convexBaseline;
-                }
-                // if computation of concave hull went into iternal loop and was broken by "convex.size > mesh.size" condition:
-                if (concaveBaseline.size() > mesh.Vertices.size())
-                {
-                    cerr << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
-                    concaveBaseline = convexBaseline;
-                }
-                vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
-                for (auto && v: concaveBaseline) v = v*scale;
-                for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
-                {
-                    lock_guard<mutex> lk(mtx1);
-                    osiex.addStaticObject(v3d, concaveBaseline, id, type, scale);
-                    baselines.push_back(move(concaveBaseline));
+                    vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
+                    vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
+                    // degenerated geometry case:
+                    if (convexBaseline.size() < 3)
+                    {
+                        cerr << mesh.MeshName << "   convex hull size less than 3! The shape is skipped!" << endl;
+                        concaveBaseline = convexBaseline;
+                    }
+                    // concave cannot be smaller than convex (something went wrong in computing the concave form):
+                    if (concaveBaseline.size() < convexBaseline.size())
+                    {
+                        cerr << mesh.MeshName << "  concave hull is smaller than convex hull. Convex hull will be used." << endl;
+                        concaveBaseline = convexBaseline;
+                    }
+                    // if computation of concave hull went into iternal loop and was broken by "convex.size > mesh.size" condition:
+                    if (concaveBaseline.size() > mesh.Vertices.size())
+                    {
+                        cerr << mesh.MeshName << "  concave hull is larger than original point cloud. Convex hull will be used." << endl;
+                        concaveBaseline = convexBaseline;
+                    }
+                    vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
+                    for (auto && v: concaveBaseline) v = v*scale;
+                    for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
+                    {
+                        lock_guard<mutex> lk(mtx1);
+                        osiex.addStaticObject(v3d, concaveBaseline, id, type, scale);
+                        baselines.push_back(move(concaveBaseline));
+                    }
                 }
             }
+            cout << "Finished extracting base_poly" << endl;
         }
-        cout << "Finished extracting base_poly" << endl;
         isStaticParsed = true;
         cv.notify_all();
     }
