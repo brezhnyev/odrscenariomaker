@@ -31,6 +31,8 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <boost/next_prior.hpp> // need to avoid boost::next not found error
+
 #include <gflags/gflags.h>
 #include <yaml-cpp/yaml.h>
 #include <omp.h>

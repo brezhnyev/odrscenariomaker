@@ -7,6 +7,8 @@
 #include <condition_variable>
 #include <unistd.h>
 
+#include <boost/next_prior.hpp>
+
 #include <gflags/gflags.h>
 #include <qapplication.h>
 #include <yaml-cpp/yaml.h>
