@@ -40,6 +40,20 @@ static void printMeshvertexes(const std::vector<Vertex> & v)
         std::cout << e.Position.X << " " << e.Position.Y << " " << e.Position.Z << std::endl;
 }
 
+template<typename T>
+static void printMeshvertexes2D(const std::vector<T> & v)
+{
+    for (auto && e : v)
+        std::cout << e[0] << " " << e[1] << std::endl;
+}
+
+template<typename T>
+static void printMeshvertexes3D(const std::vector<T> & v)
+{
+    for (auto && e : v)
+        std::cout << e[0]<< " " << e[1] << " " << e[2] << std::endl;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -51,6 +65,7 @@ int main(int argc, char *argv[])
     Loader loader;
     vector<vector<Eigen::Vector3f>> centerlines, boundaries;
     vector<vector<Eigen::Vector2f>> baselines;
+    vector<Eigen::Vector2f> baselinesZ; // Z min and Z max to extrude baselines for rendering
 
     thread t1([&](){
 
@@ -79,7 +94,6 @@ int main(int argc, char *argv[])
 
             cout << "Started extracting base_poly ..." << endl;
             // export stationary
-            mutex mtx1;
             #pragma omp parallel for
             //for (auto && mesh : loader.LoadedMeshes)
             for (int i = 0; i < loader.LoadedMeshes.size(); ++i)
@@ -90,7 +104,12 @@ int main(int argc, char *argv[])
                 if (!type.empty())
                 {
                     vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
-                    vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
+                    // vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
+                    // KB: we skip computing the concaveBaseline at the moment, since the improperly designed meshes
+                    // (ex. with redundansies) will cause degreated/corrupted base lines
+                    // This can be solved by removing the redundancies (extending this algo)
+                    // however since the Lime is not capable of processing the baselines at all, we leave the convex only. 
+                    vector<Eigen::Vector2f> concaveBaseline = convexBaseline;
                     // degenerated geometry case:
                     if (convexBaseline.size() < 3)
                     {
@@ -111,12 +130,16 @@ int main(int argc, char *argv[])
                     }
                     vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
                     for (auto && v: concaveBaseline) v = v*FLAGS_scale;
-                    for (auto && v : mesh.Vertices) v3d.push_back(v.Position);
+                    baselinesZ.emplace_back(); baselinesZ.back()[0] = __FLT_MAX__; baselinesZ.back()[1] = -__FLT_MAX__;
+                    for (auto && v : mesh.Vertices)
                     {
-                        lock_guard<mutex> lk(mtx1);
-                        osiex.addStaticObject(v3d, concaveBaseline, id, type, FLAGS_scale);
-                        baselines.push_back(move(concaveBaseline));
+                        if (v.Position.Y < baselinesZ.back()[0]) baselinesZ.back()[0] = v.Position.Y;
+                        if (v.Position.Y > baselinesZ.back()[1]) baselinesZ.back()[1] = v.Position.Y;
+                        v3d.push_back(v.Position);
                     }
+                    baselinesZ.back() *= FLAGS_scale;
+                    osiex.addStaticObject(v3d, concaveBaseline, id, type, FLAGS_scale);
+                    baselines.push_back(move(concaveBaseline));
                 }
             }
             cout << "Finished extracting base_poly" << endl;
@@ -143,7 +166,7 @@ int main(int argc, char *argv[])
 
     QApplication application(argc, argv);
 
-    viewer = new Viewer(move(baselines), move(centerlines), move(boundaries));
+    viewer = new Viewer(move(baselines), move(baselinesZ), move(centerlines), move(boundaries));
     viewer->setWindowTitle("Osi visualizer");
     viewer->show();
 

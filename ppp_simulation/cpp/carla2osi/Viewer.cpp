@@ -4,13 +4,16 @@
 
 using namespace std;
 using namespace qglviewer;
+using namespace Eigen;
 
 Viewer::Viewer(
-    vector<vector<Eigen::Vector2f>> && staticObjects,
-    vector<vector<Eigen::Vector3f>> && centerlines,
-    vector<vector<Eigen::Vector3f>> && boundaries)
+    vector<vector<Vector2f>> && baseLines,
+    vector<Vector2f> && baseLinesZ,
+    vector<vector<Vector3f>> && centerlines,
+    vector<vector<Vector3f>> && boundaries)
 {
-    dataStatic_ = staticObjects;
+    baseLines_ = baseLines;
+    baseLinesZ_ = baseLinesZ;
     centerlines_ = centerlines;
     boundaries_ = boundaries;
 }
@@ -22,7 +25,7 @@ void Viewer::init()
     resize(800,600);
 }
 
-void Viewer::updateMovingObjects(std::vector<Eigen::Matrix4f> && v)
+void Viewer::updateMovingObjects(std::vector<Matrix4f> && v)
 {
     {
         lock_guard<mutex> lk(mtx_);
@@ -35,16 +38,32 @@ void Viewer::draw()
 {
     // static objects:
     glDisable(GL_LIGHTING);
-    glColor3f(0.75,0.75,0.75);
+    glColor3f(0.5,0.5,0.5);
     glLineWidth(3);
-    for (auto && v : dataStatic_)
+
+    // for simple flat shading:
+    Vector3f prevV(0,0,0);
+    Vector3f lightDir(1,0,0);
+
+    for (size_t i = 0; i < baseLines_.size(); ++i)
     {
-        glBegin(GL_LINE_STRIP);
+        auto && v = baseLines_[i];
+        auto && z = baseLinesZ_[i];
+        glBegin(GL_TRIANGLE_STRIP);
         for (auto && p : v)
         {
-            glVertex2f(p.x(), p.y());
+            if (!prevV.isZero())
+            {
+                Vector3f tangent = (Vector3f(p.x(), p.y(), z[0]) - prevV).normalized();
+                float f = lightDir.dot(tangent)*0.25;
+                glColor3f(0.5-f, 0.5-f, 0.5-f);
+            }
+            prevV = Vector3f(p.x(), p.y(), z[0]);
+            glVertex3f(p.x(), p.y(), z[0]);
+            glVertex3f(p.x(), p.y(), z[1]);
         }
-        glVertex2f(v[0].x(), v[0].y());
+        glVertex3f(v[0].x(), v[0].y(), z[0]);
+        glVertex3f(v[0].x(), v[0].y(), z[1]);
         glEnd();
     }
     // road centerlines:
@@ -97,7 +116,7 @@ void Viewer::draw()
                     break;
             }
             a(3,3) = 1.0f;
-            Eigen::Vector3f bbox = a.block(3,0,1,3).transpose();
+            Vector3f bbox = a.block(3,0,1,3).transpose();
             a.block(3,0,1,3).setZero();
 
             glPushMatrix();
