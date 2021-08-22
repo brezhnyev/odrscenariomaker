@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
         loadFile(FLAGS_xodr_file, odr);
         osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
         cout << "Finished parsing XODR file ..." << endl;
+        mutex mtx;
 
         if (!FLAGS_obj_file.empty() && !access(FLAGS_obj_file.c_str(), F_OK))
         {
@@ -162,16 +163,19 @@ int main(int argc, char *argv[])
                     }
                     vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
                     for (auto && v: concaveBaseline) v = v*FLAGS_scale;
-                    baselinesZ.emplace_back(); baselinesZ.back()[0] = __FLT_MAX__; baselinesZ.back()[1] = -__FLT_MAX__;
-                    for (auto && v : mesh.Vertices)
                     {
-                        if (v.Position.Y < baselinesZ.back()[0]) baselinesZ.back()[0] = v.Position.Y;
-                        if (v.Position.Y > baselinesZ.back()[1]) baselinesZ.back()[1] = v.Position.Y;
-                        v3d.push_back(v.Position);
+                        lock_guard<mutex> lk(mtx);
+                        baselinesZ.emplace_back(); baselinesZ.back()[0] = __FLT_MAX__; baselinesZ.back()[1] = -__FLT_MAX__;
+                        for (auto && v : mesh.Vertices)
+                        {
+                            if (v.Position.Y < baselinesZ.back()[0]) baselinesZ.back()[0] = v.Position.Y;
+                            if (v.Position.Y > baselinesZ.back()[1]) baselinesZ.back()[1] = v.Position.Y;
+                            v3d.push_back(v.Position);
+                        }
+                        baselinesZ.back() *= FLAGS_scale;
+                        osiex.addStaticObject(v3d, concaveBaseline, id, type, FLAGS_scale);
+                        baselines.push_back(move(concaveBaseline));
                     }
-                    baselinesZ.back() *= FLAGS_scale;
-                    osiex.addStaticObject(v3d, concaveBaseline, id, type, FLAGS_scale);
-                    baselines.push_back(move(concaveBaseline));
                 }
             }
             cout << "Finished extracting base_poly" << endl;
