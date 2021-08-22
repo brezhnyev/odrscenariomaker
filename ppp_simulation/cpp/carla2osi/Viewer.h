@@ -22,6 +22,12 @@ signals:
 protected :
     virtual void draw();
     virtual void init();
+    void keyPressEvent(QKeyEvent *) override;
+
+private:
+    void drawSolidBox(const Eigen::Vector3f &, int id);
+    void drawWireBox(const Eigen::Vector3f &, int id);
+    void drawInfo();
     
 private:
     std::vector<std::vector<Eigen::Vector2f>> baseLines_;
@@ -30,4 +36,6 @@ private:
     std::vector<std::vector<Eigen::Vector3f>> boundaries_;
     std::vector<Eigen::Matrix4f> actors_;
     std::mutex mtx_;
+    std::vector<Eigen::Vector3f> colors_;
+    bool enableLegend_;
 };

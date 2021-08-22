@@ -83,13 +83,13 @@ int main(int argc, char *argv[])
             loader.LoadFile(FLAGS_obj_file);
 
             // extend the static names:
-            map<string, string> custom_static_names;
+            map<string, int> custom_static_names;
             if (!FLAGS_config_file.empty() && !access(FLAGS_config_file.c_str(), F_OK))
             {
                 YAML::Node config = YAML::LoadFile(FLAGS_config_file);
                 YAML::Node static_names = config["static_names"];
                 for (YAML::const_iterator it = static_names.begin(); it != static_names.end(); ++it)
-                    custom_static_names[it->first.as<std::string>()] = it->second.as<string>();
+                    custom_static_names[it->first.as<std::string>()] = it->second.as<int>();
             }
             osiex.extendStaticNames(custom_static_names);
 

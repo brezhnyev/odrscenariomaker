@@ -50,6 +50,8 @@ using namespace odr_1_5;
 
 typedef carla::SharedPtr<carla::client::Actor> ShrdPtrActor;
 
+extern bool doRecording;
+
 static bool isStopped;
 static condition_variable cv;
 static bool isStaticParsed = false;
@@ -71,11 +73,12 @@ void sighandler(int sig)
         cout << "\n***Handling Ctrl+C signal...***" << endl;
         cout.flush();
         isStopped = true;
+        cout << "exiting..." << endl;
+        usleep(1000000);
         break;
     }
     cout << sig << endl;
 }
-
 
 /// Pick a random element from @a range.
 template <typename RangeT, typename RNG>
@@ -90,6 +93,10 @@ static auto &RandomChoice(const RangeT &range, RNG &&generator)
 int main(int argc, char *argv[])
 {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
+
+    // Carla set up:
+    isStopped = false;
+    signal(SIGINT, sighandler);
 
     // Load the static parts:
     uint64_t id;
@@ -112,16 +119,16 @@ int main(int argc, char *argv[])
         if (!FLAGS_obj_file.empty() && !access(FLAGS_obj_file.c_str(), F_OK))
         {
             cout << "Started parsing OBJ file ..." << endl;
-            loader.LoadFile(FLAGS_obj_file);
+            if (!loader.LoadFile(FLAGS_obj_file)) return;
 
             // extend the static names:
-            map<string, string> custom_static_names;
+            map<string, int> custom_static_names;
             if (!FLAGS_config_file.empty() && !access(FLAGS_config_file.c_str(), F_OK))
             {
                 YAML::Node config = YAML::LoadFile(FLAGS_config_file);
                 YAML::Node static_names = config["static_names"];
                 for (YAML::const_iterator it = static_names.begin(); it != static_names.end(); ++it)
-                    custom_static_names[it->first.as<std::string>()] = it->second.as<string>();
+                    custom_static_names[it->first.as<std::string>()] = it->second.as<int>();
             }
             osiex.extendStaticNames(custom_static_names);
 
@@ -188,10 +195,6 @@ int main(int argc, char *argv[])
         cv.notify_all();
     }
     );
-
-    // Carla set up:
-    isStopped = false;
-    signal(SIGINT, sighandler);
 
     mt19937_64 rng((random_device())());
 
@@ -332,9 +335,9 @@ int main(int argc, char *argv[])
 
             // add to osi:
             vector<Eigen::Matrix4f> vizActors;
-            // KB: assum that GetActors() should be called every time new for dynamic objects
+            // KB: assume that GetActors() should be called every time new for dynamic objects
             osiex.updateMovingObjects(world.GetActors(), vizActors);
-            osiex.writeFrame();
+            if (doRecording) osiex.writeFrame();
             // visuaization:
             viewer->updateMovingObjects(move(vizActors));
         }
@@ -343,8 +346,7 @@ int main(int argc, char *argv[])
 
     //world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     auto actors = world.GetActors();
-    for (auto v : vehicles) v->Destroy();
-    for (auto w : walkers)  w->Destroy();
+    for (auto && a : *actors) a->Destroy();
 
     t1.join();
     t2.join();

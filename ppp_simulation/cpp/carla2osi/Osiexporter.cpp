@@ -19,27 +19,28 @@ namespace csd = carla::sensor::data;
 namespace crpc = carla::rpc;
 #endif
 
+// will be filled out by customer (config.yaml)
 static map<string, StationaryObject_Classification_Type> str2OsiType
 {
-    {"unknown", StationaryObject_Classification::TYPE_UNKNOWN },
-    {"other", StationaryObject_Classification::TYPE_OTHER },
-    {"bridge", StationaryObject_Classification::TYPE_BRIDGE },
-    {"building", StationaryObject_Classification::TYPE_BUILDING },
-    {"house", StationaryObject_Classification::TYPE_BUILDING },
-    {"pole", StationaryObject_Classification::TYPE_POLE },
-    {"pylon", StationaryObject_Classification::TYPE_PYLON },
-    {"delineator", StationaryObject_Classification::TYPE_DELINEATOR },
-    {"tree", StationaryObject_Classification::TYPE_TREE },
-    {"barrier", StationaryObject_Classification::TYPE_BARRIER },
-    {"vegetation", StationaryObject_Classification::TYPE_VEGETATION },
-    {"curbstone", StationaryObject_Classification::TYPE_CURBSTONE },
-    {"wall", StationaryObject_Classification::TYPE_WALL },
-    {"vertical_structure", StationaryObject_Classification::TYPE_VERTICAL_STRUCTURE },
-    {"rectangular_structure", StationaryObject_Classification::TYPE_RECTANGULAR_STRUCTURE },
-    {"overhead_structure", StationaryObject_Classification::TYPE_OVERHEAD_STRUCTURE },
-    {"reflective_structure", StationaryObject_Classification::TYPE_REFLECTIVE_STRUCTURE },
-    {"construction_site_element", StationaryObject_Classification::TYPE_CONSTRUCTION_SITE_ELEMENT },
-    //{"speed_bump", StationaryObject_Classification::TYPE_SPEED_BUMP },
+    // {"unknown", StationaryObject_Classification::TYPE_UNKNOWN },
+    // {"other", StationaryObject_Classification::TYPE_OTHER },
+    // {"bridge", StationaryObject_Classification::TYPE_BRIDGE },
+    // {"building", StationaryObject_Classification::TYPE_BUILDING },
+    // {"house", StationaryObject_Classification::TYPE_BUILDING },
+    // {"pole", StationaryObject_Classification::TYPE_POLE },
+    // {"pylon", StationaryObject_Classification::TYPE_PYLON },
+    // {"delineator", StationaryObject_Classification::TYPE_DELINEATOR },
+    // {"tree", StationaryObject_Classification::TYPE_TREE },
+    // {"barrier", StationaryObject_Classification::TYPE_BARRIER },
+    // {"vegetation", StationaryObject_Classification::TYPE_VEGETATION },
+    // {"curbstone", StationaryObject_Classification::TYPE_CURBSTONE },
+    // {"wall", StationaryObject_Classification::TYPE_WALL },
+    // {"vertical_structure", StationaryObject_Classification::TYPE_VERTICAL_STRUCTURE },
+    // {"rectangular_structure", StationaryObject_Classification::TYPE_RECTANGULAR_STRUCTURE },
+    // {"overhead_structure", StationaryObject_Classification::TYPE_OVERHEAD_STRUCTURE },
+    // {"reflective_structure", StationaryObject_Classification::TYPE_REFLECTIVE_STRUCTURE },
+    // {"construction_site_element", StationaryObject_Classification::TYPE_CONSTRUCTION_SITE_ELEMENT },
+    // {"speed_bump", StationaryObject_Classification::TYPE_SPEED_BUMP },
 };
 
 static map<string, LaneBoundary_Classification_Color> str2OsiColor
@@ -122,6 +123,15 @@ static map<string, MovingObject_VehicleClassification_Type> string2OsiVehicleTyp
 };
 #endif
 
+// https://opensimulationinterface.github.io/osi-documentation/open-simulation-interface/structosi3_1_1TrafficSign.html#exhale-struct-structosi3-1-1trafficsign
+static map<string, TrafficSign_MainSign_Classification_Type> string2OsiMainTS
+{
+    {"unknown", TrafficSign_MainSign_Classification_Type_TYPE_UNKNOWN},
+    {"traffic.speed_limit", TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN},
+    {"traffic.yield", TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY},
+    {"traffic.stop", TrafficSign_MainSign_Classification_Type_TYPE_STOP}
+};
+
 Osiexporter::Osiexporter()
 {
     gt_ = new GroundTruth();
@@ -134,16 +144,12 @@ Osiexporter::~Osiexporter()
     ofs_.close();
 }
 
-void Osiexporter::extendStaticNames(const map<string, string> & customNames)
+void Osiexporter::extendStaticNames(const map<string, int> & customNames)
 {
     for (auto && n : customNames)
     {
-        auto it = str2OsiType.find(n.second);
-        if (it != str2OsiType.end())
-        {
-            str2OsiType[n.first] = it->second;
-            cout << "Added custom static object name: " << n.first << " " << it->second << endl;
-        }
+        str2OsiType[n.first] = (StationaryObject_Classification_Type)n.second;
+        cout << "Added custom static object name: " << n.first << " " << n.second << endl;
     }
 }
 
@@ -162,7 +168,8 @@ void Osiexporter::setFrameTime(uint32_t seconds, uint32_t nanos)
     ts->set_seconds(seconds); ts->set_nanos(nanos);
     gt_->set_allocated_timestamp(ts);
     gt_->clear_moving_object();
-    gt_->clear_traffic_light();
+    gt_->clear_traffic_light(); // eventually only state update is needed (not delete)
+    gt_->clear_traffic_sign();  // eventually the delete is not needed at all
 }
 
 string Osiexporter::toValidType(string type)
@@ -491,10 +498,13 @@ void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, st
         if (
             dynamic_cast<cc::Vehicle *>(actor.get()) ||
             dynamic_cast<cc::Walker *>(actor.get()) ||
-            dynamic_cast<cc::TrafficLight *>(actor.get()))
+            dynamic_cast<cc::TrafficSign *>(actor.get()))
         {
             cg::Transform trf = actor->GetTransform();
             cg::BoundingBox bbox = actor->GetBoundingBox();
+            // some bykes and cycles have dimension y == 0, set to 1 meter width (extent.y = 0.5):
+            if (!bbox.extent.y)
+                bbox.extent.y = 0.5;
             // We will use the 4x4 matrix to fill out vizActors as follows:
             // M.block(0,0,3,3) - rotation
             // M.block(0,3,3,1) - translation
@@ -572,7 +582,7 @@ void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, st
                     M(3, 3) = 1.0f;
                 }
             }
-            if (dynamic_cast<cc::TrafficLight *>(actor.get()))
+            else if (dynamic_cast<cc::TrafficLight *>(actor.get()))
             {
                 cc::TrafficLight *carla_tfl = dynamic_cast<cc::TrafficLight *>(actor.get());
                 switch (carla_tfl->GetState())
@@ -602,6 +612,45 @@ void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, st
                 TrafficLight_Classification * classification = new TrafficLight_Classification();
                 classification->set_color(carla2OsiTRLColor[carla_tfl->GetState()]);
                 osi_tfl->set_allocated_classification(classification);
+            }
+            else if (dynamic_cast<cc::TrafficSign *>(actor.get()))
+            {
+                TrafficSign_MainSign_Classification_Type signType;
+                if (actor->GetDisplayId().find("speed") != string::npos)
+                {
+                    signType = TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN;
+                    M(3,3) = 5.0f;
+                }
+                if (actor->GetDisplayId().find("yield") != string::npos)
+                {
+                    signType = TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY;
+                    M(3,3) = 6.0f;
+                }
+                if (actor->GetDisplayId().find("stop") != string::npos)
+                {
+                    signType = TrafficSign_MainSign_Classification_Type_TYPE_STOP;
+                    M(3,3) = 7.0f;
+                }
+                if (actor->GetDisplayId().find("unknown") != string::npos)
+                {
+                    signType = TrafficSign_MainSign_Classification_Type_TYPE_UNKNOWN;
+                    M(3,3) = 8.0f;
+                }
+
+                cc::TrafficSign *carla_tfs = dynamic_cast<cc::TrafficSign *>(actor.get());
+
+                TrafficSign *osi_tfs = gt_->add_traffic_sign();
+                osi_tfs->set_allocated_id(oid);
+                BaseStationary * base = new BaseStationary();
+                base->set_allocated_dimension(dim);
+                base->set_allocated_position(pos);
+                base->set_allocated_orientation(ori);
+                TrafficSign_MainSign * main_sign = new TrafficSign_MainSign();
+                main_sign->set_allocated_base(base);
+                TrafficSign_MainSign_Classification * msg_classification = new TrafficSign_MainSign_Classification();
+                msg_classification->set_type(signType);
+                main_sign->set_allocated_classification(msg_classification);
+                osi_tfs->set_allocated_main_sign(main_sign);
             }
             vizActors.push_back(M);
         }

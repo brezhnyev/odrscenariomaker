@@ -1,9 +1,19 @@
 static_names:
-  residence: "building"
-  mansion: "building"
-  kiosk: "building"
-  kino: "building"
-  hospital: "building"
-  viaduct: "bridge"
-  aqueduct: "bridge"
-  grass: "vegetation"
+    "unknown": 0
+    "other": 1
+    "bridge": 2
+    "building": 3
+    "house": 3
+    "pole": 4
+    "pylon": 5
+    "delineator": 6
+    "tree": 7
+    "barrier": 8
+    "vegetation": 9
+    "curbstone": 10
+    "wall": 11
+    "vertical_structure": 12
+    "rectangular_structure": 13
+    "overhead_structure": 14
+    "reflective_structure": 15
+    "construction_site_element": 16
