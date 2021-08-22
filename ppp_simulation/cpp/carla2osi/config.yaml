@@ -1,0 +1,9 @@
+static_names:
+  residence: "building"
+  mansion: "building"
+  kiosk: "building"
+  kino: "building"
+  hospital: "building"
+  viaduct: "bridge"
+  aqueduct: "bridge"
+  grass: "vegetation"
