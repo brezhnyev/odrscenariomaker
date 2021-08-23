@@ -61,8 +61,9 @@ DEFINE_string(obj_file, "", "Path to OBJ file. If left out, the OBJ file is skip
 DEFINE_string(xodr_file, "", "Path to XODR file. Required.");
 DEFINE_double(scale, 1.0, "Scale factor between OBJ and XODR. For standard Carla maps is 0.01.");
 DEFINE_string(map_name, "Town01", "Name of Carla map to be loaded.");
-DEFINE_int32(fps, 10, "FPS of the Carla playback.");
+DEFINE_int32(fps, 10, "FPS of the Carla simulation. Depending on CPU/GPU the playback (rendering) may be faster or slower than the realtime.");
 DEFINE_string(config_file, "", "Additional settings. Optional.");
+DEFINE_bool(realtime_playback, false, "if set true, the Carla playback will be slowed down to render frames with 1/FPS rate. See FPS flag.");
 
 
 void sighandler(int sig)
@@ -74,7 +75,6 @@ void sighandler(int sig)
         cout.flush();
         isStopped = true;
         cout << "exiting..." << endl;
-        usleep(1000000);
         break;
     }
     cout << sig << endl;
@@ -122,15 +122,17 @@ int main(int argc, char *argv[])
             if (!loader.LoadFile(FLAGS_obj_file)) return;
 
             // extend the static names:
-            map<string, int> custom_static_names;
+            map<string, int> custom_static_types;
+            std::vector<string> exclude_names;
             if (!FLAGS_config_file.empty() && !access(FLAGS_config_file.c_str(), F_OK))
             {
                 YAML::Node config = YAML::LoadFile(FLAGS_config_file);
-                YAML::Node static_names = config["static_names"];
-                for (YAML::const_iterator it = static_names.begin(); it != static_names.end(); ++it)
-                    custom_static_names[it->first.as<std::string>()] = it->second.as<int>();
+                YAML::Node static_types = config["static_types"];
+                for (YAML::const_iterator it = static_types.begin(); it != static_types.end(); ++it)
+                    custom_static_types[it->first.as<std::string>()] = it->second.as<int>();
+                exclude_names = config["exclude_names"].as<std::vector<string>>();
             }
-            osiex.extendStaticNames(custom_static_names);
+            osiex.extendStaticNames(custom_static_types);
 
             cout << "Started extracting base_poly ..." << endl;
             // export stationary
@@ -141,7 +143,7 @@ int main(int argc, char *argv[])
                 //cout << std::this_thread::get_id() << endl;
                 auto && mesh = loader.LoadedMeshes[i];
                 string type = osiex.toValidType(mesh.MeshName);
-                if (!type.empty())
+                if (!type.empty() && (find_if(exclude_names.begin(), exclude_names.end(), [&](const string & name){ return mesh.MeshName.find(name) != string::npos; }) == exclude_names.end()))
                 {
                     vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
                     // vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);
@@ -312,6 +314,7 @@ int main(int argc, char *argv[])
         application.exec();
 
         isStopped = true;
+        cout << "exiting..." << endl;
     });
     cv.wait(lk, [&]{return isQtReady;});
 
@@ -324,6 +327,8 @@ int main(int argc, char *argv[])
     {
         try
         {
+            std::chrono::time_point<std::chrono::system_clock> timenow = std::chrono::system_clock::now();
+
             nanos += 1000000000.0/FPS;
             if (nanos > 1000000000)
             {
@@ -340,13 +345,17 @@ int main(int argc, char *argv[])
             if (doRecording) osiex.writeFrame();
             // visuaization:
             viewer->updateMovingObjects(move(vizActors));
+
+            auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
+            if (FLAGS_realtime_playback)
+                usleep(std::max(0.0, (1.0 * 1e6 / FPS - diff)));
         }
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
 
-    //world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
-    auto actors = world.GetActors();
-    for (auto && a : *actors) a->Destroy();
+    world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
+    for (auto v : vehicles) v->Destroy();
+    for (auto w : walkers)  w->Destroy();
 
     t1.join();
     t2.join();

@@ -514,11 +514,11 @@ void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, st
             M.setIdentity();
 
             M.block(0, 0, 3, 3) = (Eigen::AngleAxisf(trf.rotation.yaw * DEG2RAD, Eigen::Vector3f::UnitZ()) *
-                                   Eigen::AngleAxisf(trf.rotation.pitch * DEG2RAD, Eigen::Vector3f::UnitY()) *
+                                   Eigen::AngleAxisf(-trf.rotation.pitch * DEG2RAD, Eigen::Vector3f::UnitY()) *
                                    Eigen::AngleAxisf(trf.rotation.roll * DEG2RAD, Eigen::Vector3f::UnitX()))
                                       .toRotationMatrix();
 
-            M.block(0, 3, 3, 1) = Eigen::Vector3f(trf.location.x, trf.location.y, trf.location.z);
+            M.block(0, 3, 3, 1) = Eigen::Vector3f(trf.location.x, trf.location.y, trf.location.z + bbox.extent.z/2);
             M.block(3, 0, 1, 3) = Eigen::Vector3f(bbox.extent.x, bbox.extent.y, bbox.extent.z).transpose();
             // transform from Left-hand to Right-hand system:
             Eigen::Matrix4f mirror;

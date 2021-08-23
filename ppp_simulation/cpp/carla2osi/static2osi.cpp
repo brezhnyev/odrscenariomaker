@@ -83,15 +83,17 @@ int main(int argc, char *argv[])
             loader.LoadFile(FLAGS_obj_file);
 
             // extend the static names:
-            map<string, int> custom_static_names;
+            map<string, int> custom_static_types;
+            std::vector<string> exclude_names;
             if (!FLAGS_config_file.empty() && !access(FLAGS_config_file.c_str(), F_OK))
             {
                 YAML::Node config = YAML::LoadFile(FLAGS_config_file);
-                YAML::Node static_names = config["static_names"];
-                for (YAML::const_iterator it = static_names.begin(); it != static_names.end(); ++it)
-                    custom_static_names[it->first.as<std::string>()] = it->second.as<int>();
+                YAML::Node static_types = config["static_types"];
+                for (YAML::const_iterator it = static_types.begin(); it != static_types.end(); ++it)
+                    custom_static_types[it->first.as<std::string>()] = it->second.as<int>();
+                exclude_names = config["exclude_names"].as<std::vector<string>>();
             }
-            osiex.extendStaticNames(custom_static_names);
+            osiex.extendStaticNames(custom_static_types);
 
             cout << "Started extracting base_poly ..." << endl;
             // export stationary
@@ -102,7 +104,8 @@ int main(int argc, char *argv[])
                 //cout << std::this_thread::get_id() << endl;
                 auto && mesh = loader.LoadedMeshes[i];
                 string type = osiex.toValidType(mesh.MeshName);
-                if (!type.empty())
+
+                if (!type.empty() && (find_if(exclude_names.begin(), exclude_names.end(), [&](const string & name){ return mesh.MeshName.find(name) != string::npos; }) == exclude_names.end()))
                 {
                     vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
                     // vector<Eigen::Vector2f> concaveBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, true);

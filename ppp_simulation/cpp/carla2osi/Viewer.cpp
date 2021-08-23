@@ -110,24 +110,25 @@ void Viewer::drawSolidBox(const Eigen::Vector3f & bbox, int id)
 
 void Viewer::drawInfo()
 {
+    int yoffset = 60;
     glDisable(GL_DEPTH_TEST);
     if (enableLegend_)
     {
-        glColor3f(1,1,1); drawText(10, 20, "Enable/Disable legend: L, start/stop recording: R");
-        glColor3f(colors_[0][0], colors_[0][1], colors_[0][2]); drawText(10,40, "■"); glColor3f(1,1,1); drawText(30, 40, "Vehicles");
-        glColor3f(colors_[1][0], colors_[1][1], colors_[1][2]); drawText(10,60, "■"); glColor3f(1,1,1); drawText(30, 60, "Walker");
-        glColor3f(colors_[2][0], colors_[2][1], colors_[2][2]); drawText(10,80, "■");
-        glColor3f(colors_[3][0], colors_[3][1], colors_[3][2]); drawText(30,80, "■");
-        glColor3f(colors_[4][0], colors_[4][1], colors_[4][2]); drawText(50,80, "■");
-        glColor3f(1,1,1); drawText(70,80, "Traffic lights");
-        glColor3f(colors_[5][0], colors_[5][1], colors_[5][2]); drawText(10,100, "□"); glColor3f(1,1,1); drawText(30, 100, "Speed limit");
-        glColor3f(colors_[6][0], colors_[6][1], colors_[6][2]); drawText(10,120, "□"); glColor3f(1,1,1); drawText(30, 120, "Give way");
-        glColor3f(colors_[7][0], colors_[7][1], colors_[7][2]); drawText(10,140, "□"); glColor3f(1,1,1); drawText(30, 140, "Stop");
-        glColor3f(colors_[8][0], colors_[8][1], colors_[8][2]); drawText(10,160, "□"); glColor3f(1,1,1); drawText(30, 160, "Unknown traffic sign");
+        glColor3f(1,1,1); drawText(10, -20+yoffset, "Enable/Disable legend: L, start/stop recording: R, Help: H");
+        glColor3f(colors_[0][0], colors_[0][1], colors_[0][2]); drawText(10,0  + yoffset, "■"); glColor3f(1,1,1); drawText(30, 0  + yoffset, "Vehicles");
+        glColor3f(colors_[1][0], colors_[1][1], colors_[1][2]); drawText(10,20 + yoffset, "■"); glColor3f(1,1,1); drawText(30, 20 + yoffset, "Walker");
+        glColor3f(colors_[2][0], colors_[2][1], colors_[2][2]); drawText(10,40 + yoffset, "■");
+        glColor3f(colors_[3][0], colors_[3][1], colors_[3][2]); drawText(30,40 + yoffset, "■");
+        glColor3f(colors_[4][0], colors_[4][1], colors_[4][2]); drawText(50,40 + yoffset, "■");
+        glColor3f(1,1,1); drawText(70,40 + yoffset, "Traffic lights");
+        glColor3f(colors_[5][0], colors_[5][1], colors_[5][2]); drawText(10,60 + yoffset, "□"); glColor3f(1,1,1); drawText(30, 60 + yoffset, "Speed limit");
+        glColor3f(colors_[6][0], colors_[6][1], colors_[6][2]); drawText(10,80 + yoffset, "□"); glColor3f(1,1,1); drawText(30, 80 + yoffset, "Give way");
+        glColor3f(colors_[7][0], colors_[7][1], colors_[7][2]); drawText(10,100 + yoffset, "□"); glColor3f(1,1,1); drawText(30, 100 + yoffset, "Stop");
+        glColor3f(colors_[8][0], colors_[8][1], colors_[8][2]); drawText(10,120 + yoffset, "□"); glColor3f(1,1,1); drawText(30, 120 + yoffset, "Unknown traffic sign");
     }
     if (doRecording)
     {
-        glColor3f(1,0,0); drawText(500, 40, "RECORDING");
+        glColor3f(1,0,0); drawText(500, 0 + yoffset, "RECORDING");
     }
 }
 
