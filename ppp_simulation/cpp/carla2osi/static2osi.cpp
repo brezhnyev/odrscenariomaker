@@ -59,6 +59,18 @@ int main(int argc, char *argv[])
 {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
+    if (FLAGS_config_file.empty() || access(FLAGS_config_file.c_str(), F_OK))
+    {
+        cout << "check the path to the configuration file!!!" << endl;
+        return 0;
+    }
+
+    YAML::Node config = YAML::LoadFile(FLAGS_config_file);
+    string obj_file = config["obj_file"].as<string>();
+    string xodr_file = config["xodr_file"].as<string>();
+    uint32_t FPS = config["fps"].as<uint32_t>();
+    float scale = config["scale"].as<float>();
+
     // Load the static parts:
     uint64_t id;
     Osiexporter osiex;
@@ -72,27 +84,23 @@ int main(int argc, char *argv[])
         cout << "Started parsing XODR file ..." << endl;
         // export road
         OpenDRIVEFile odr;
-        loadFile(FLAGS_xodr_file, odr);
+        loadFile(xodr_file, odr);
         osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
         cout << "Finished parsing XODR file ..." << endl;
         mutex mtx;
 
-        if (!FLAGS_obj_file.empty() && !access(FLAGS_obj_file.c_str(), F_OK))
+        if (!obj_file.empty() && !access(obj_file.c_str(), F_OK))
         {
             cout << "Started parsing OBJ file ..." << endl;
-            loader.LoadFile(FLAGS_obj_file);
+            if (!loader.LoadFile(obj_file)) return;
 
             // extend the static names:
             map<string, int> custom_static_types;
             std::vector<string> exclude_names;
-            if (!FLAGS_config_file.empty() && !access(FLAGS_config_file.c_str(), F_OK))
-            {
-                YAML::Node config = YAML::LoadFile(FLAGS_config_file);
-                YAML::Node static_types = config["static_types"];
-                for (YAML::const_iterator it = static_types.begin(); it != static_types.end(); ++it)
-                    custom_static_types[it->first.as<std::string>()] = it->second.as<int>();
-                exclude_names = config["exclude_names"].as<std::vector<string>>();
-            }
+            YAML::Node static_types = config["static_types"];
+            for (YAML::const_iterator it = static_types.begin(); it != static_types.end(); ++it)
+                custom_static_types[it->first.as<std::string>()] = it->second.as<int>();
+            exclude_names = config["exclude_names"].as<std::vector<string>>();
             osiex.extendStaticNames(custom_static_types);
 
             cout << "Started extracting base_poly ..." << endl;
@@ -104,7 +112,6 @@ int main(int argc, char *argv[])
                 //cout << std::this_thread::get_id() << endl;
                 auto && mesh = loader.LoadedMeshes[i];
                 string type = osiex.toValidType(mesh.MeshName);
-
                 if (!type.empty() && (find_if(exclude_names.begin(), exclude_names.end(), [&](const string & name){ return mesh.MeshName.find(name) != string::npos; }) == exclude_names.end()))
                 {
                     vector<Eigen::Vector2f> convexBaseline = BasepolyExtractor::Obj2basepoly(mesh, loader, false);
@@ -133,7 +140,7 @@ int main(int argc, char *argv[])
                         concaveBaseline = convexBaseline;
                     }
                     vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
-                    for (auto && v: concaveBaseline) v = v*FLAGS_scale;
+                    for (auto && v: concaveBaseline) v = v*scale;
                     {
                         lock_guard<mutex> lk(mtx);
                         baselinesZ.emplace_back(); baselinesZ.back()[0] = __FLT_MAX__; baselinesZ.back()[1] = -__FLT_MAX__;
@@ -143,15 +150,15 @@ int main(int argc, char *argv[])
                             if (v.Position.Y > baselinesZ.back()[1]) baselinesZ.back()[1] = v.Position.Y;
                             v3d.push_back(v.Position);
                         }
-                        baselinesZ.back() *= FLAGS_scale;
-                        osiex.addStaticObject(v3d, concaveBaseline, id, type, FLAGS_scale);
+                        baselinesZ.back() *= scale;
+                        osiex.addStaticObject(v3d, concaveBaseline, id, type, scale);
                         baselines.push_back(move(concaveBaseline));
                     }
                 }
             }
             cout << "Finished extracting base_poly" << endl;
         }
-        else if (!FLAGS_obj_file.empty() && access(FLAGS_obj_file.c_str(), F_OK))
+        else if (!obj_file.empty() && access(obj_file.c_str(), F_OK))
         {
             cerr << "The OBJ file does not exist. Proceeding without it." << endl;
         }

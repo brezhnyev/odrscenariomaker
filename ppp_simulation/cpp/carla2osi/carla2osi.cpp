@@ -57,14 +57,7 @@ static condition_variable cv;
 static bool isStaticParsed = false;
 static bool isQtReady = false;
 
-DEFINE_string(obj_file, "", "Path to OBJ file. If left out, the OBJ file is skipped. Optional.");
-DEFINE_string(xodr_file, "", "Path to XODR file. Required.");
-DEFINE_double(scale, 1.0, "Scale factor between OBJ and XODR. For standard Carla maps is 0.01.");
-DEFINE_string(map_name, "Town01", "Name of Carla map to be loaded.");
-DEFINE_int32(fps, 10, "FPS of the Carla simulation. Depending on CPU/GPU the playback (rendering) may be faster or slower than the realtime.");
-DEFINE_string(config_file, "", "Additional settings. Optional.");
-DEFINE_bool(realtime_playback, false, "if set true, the Carla playback will be slowed down to render frames with 1/FPS rate. See FPS flag.");
-
+DEFINE_string(config_file, "", "Application settings. Required.");
 
 void sighandler(int sig)
 {
@@ -94,6 +87,20 @@ int main(int argc, char *argv[])
 {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
+    if (FLAGS_config_file.empty() || access(FLAGS_config_file.c_str(), F_OK))
+    {
+        cout << "check the path to the configuration file!!!" << endl;
+        return 0;
+    }
+
+    YAML::Node config = YAML::LoadFile(FLAGS_config_file);
+    string obj_file = config["obj_file"].as<string>();
+    string xodr_file = config["xodr_file"].as<string>();
+    string map_name = config["map_name"].as<string>();
+    uint32_t FPS = config["fps"].as<uint32_t>();
+    float scale = config["scale"].as<float>();
+    bool realtime_playback = config["realtime_playback"].as<bool>();
+
     // Carla set up:
     isStopped = false;
     signal(SIGINT, sighandler);
@@ -111,27 +118,23 @@ int main(int argc, char *argv[])
         cout << "Started parsing XODR file ..." << endl;
         // export road
         OpenDRIVEFile odr;
-        loadFile(FLAGS_xodr_file, odr);
+        loadFile(xodr_file, odr);
         osiex.addRoads(*odr.OpenDRIVE1_5, id, centerlines, boundaries);
         cout << "Finished parsing XODR file ..." << endl;
         mutex mtx;
 
-        if (!FLAGS_obj_file.empty() && !access(FLAGS_obj_file.c_str(), F_OK))
+        if (!obj_file.empty() && !access(obj_file.c_str(), F_OK))
         {
             cout << "Started parsing OBJ file ..." << endl;
-            if (!loader.LoadFile(FLAGS_obj_file)) return;
+            if (!loader.LoadFile(obj_file)) return;
 
             // extend the static names:
             map<string, int> custom_static_types;
             std::vector<string> exclude_names;
-            if (!FLAGS_config_file.empty() && !access(FLAGS_config_file.c_str(), F_OK))
-            {
-                YAML::Node config = YAML::LoadFile(FLAGS_config_file);
-                YAML::Node static_types = config["static_types"];
-                for (YAML::const_iterator it = static_types.begin(); it != static_types.end(); ++it)
-                    custom_static_types[it->first.as<std::string>()] = it->second.as<int>();
-                exclude_names = config["exclude_names"].as<std::vector<string>>();
-            }
+            YAML::Node static_types = config["static_types"];
+            for (YAML::const_iterator it = static_types.begin(); it != static_types.end(); ++it)
+                custom_static_types[it->first.as<std::string>()] = it->second.as<int>();
+            exclude_names = config["exclude_names"].as<std::vector<string>>();
             osiex.extendStaticNames(custom_static_types);
 
             cout << "Started extracting base_poly ..." << endl;
@@ -171,7 +174,7 @@ int main(int argc, char *argv[])
                         concaveBaseline = convexBaseline;
                     }
                     vector<Eigen::Vector3f> v3d; v3d.reserve(mesh.Vertices.size());
-                    for (auto && v: concaveBaseline) v = v*FLAGS_scale;
+                    for (auto && v: concaveBaseline) v = v*scale;
                     {
                         lock_guard<mutex> lk(mtx);
                         baselinesZ.emplace_back(); baselinesZ.back()[0] = __FLT_MAX__; baselinesZ.back()[1] = -__FLT_MAX__;
@@ -181,15 +184,15 @@ int main(int argc, char *argv[])
                             if (v.Position.Y > baselinesZ.back()[1]) baselinesZ.back()[1] = v.Position.Y;
                             v3d.push_back(v.Position);
                         }
-                        baselinesZ.back() *= FLAGS_scale;
-                        osiex.addStaticObject(v3d, concaveBaseline, id, type, FLAGS_scale);
+                        baselinesZ.back() *= scale;
+                        osiex.addStaticObject(v3d, concaveBaseline, id, type, scale);
                         baselines.push_back(move(concaveBaseline));
                     }
                 }
             }
             cout << "Finished extracting base_poly" << endl;
         }
-        else if (!FLAGS_obj_file.empty() && access(FLAGS_obj_file.c_str(), F_OK))
+        else if (!obj_file.empty() && access(obj_file.c_str(), F_OK))
         {
             cerr << "The OBJ file does not exist. Proceeding without it." << endl;
         }
@@ -206,7 +209,7 @@ int main(int argc, char *argv[])
     cout << "Client API version : " << client.GetClientVersion() << '\n';
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    auto world = client.LoadWorld(FLAGS_map_name);
+    auto world = client.LoadWorld(map_name);
     //auto world = client.GetWorld();
 
     auto traffic_manager = client.GetInstanceTM(8000); //KB: the port
@@ -215,13 +218,12 @@ int main(int argc, char *argv[])
 
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
-    uint32_t FPS = FLAGS_fps;
     crpc::EpisodeSettings wsettings(true, false, 1.0 / FPS); // (synchrone, noRender, interval)
     world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     world.SetWeather(crpc::WeatherParameters::ClearNoon);
 
     // Spawn Vehicles:
-    const int number_of_vehicles = 50;
+    const uint32_t number_of_vehicles = config["number_vehicles"].as<uint32_t>();
     auto blueprints = world.GetBlueprintLibrary()->Filter("vehicle.*");
     auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
     vector<ShrdPtrActor> vehicles; vehicles.reserve(number_of_vehicles);
@@ -254,7 +256,7 @@ int main(int argc, char *argv[])
     }
 
     // Spawn walkers:
-    const int number_of_walkers = 50;
+    const uint32_t number_of_walkers = config["number_walkers"].as<uint32_t>();
     vector<ShrdPtrActor> walkers; walkers.reserve(number_of_walkers);
     vector<ShrdPtrActor> wControllers; wControllers.reserve(number_of_walkers);
 
@@ -347,7 +349,7 @@ int main(int argc, char *argv[])
             viewer->updateMovingObjects(move(vizActors));
 
             auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
-            if (FLAGS_realtime_playback)
+            if (realtime_playback)
                 usleep(std::max(0.0, (1.0 * 1e6 / FPS - diff)));
         }
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }

@@ -11,7 +11,7 @@ static_types:
     "delineator": 6
     "tree": 7
     "pine" : 7
-    "sassafras" : 7
+    #"sassafras" : 7
     "patanus" : 7
     "barrier": 8
     "vegetation": 9
@@ -25,4 +25,12 @@ static_types:
     "overhead_structure": 14
     "reflective_structure": 15
     "construction_site_element": 16
-exclude_names: ["SM_T03_Wall"]
+exclude_names: ["SM_T03_Wall", "name2", "name3"]
+obj_file: "/home/kbrezhnyev/DATA/carla-export/Town02/Town02.obj" # Path to OBJ file. If left out, the OBJ file is skipped. Optional.
+xodr_file: "/home/kbrezhnyev/DATA/carla-export/Town02/Town02.xodr" # Path to XODR file. Required.
+map_name: "Town02" # Name of Carla map to be loaded.
+fps: 10 # FPS of the Carla simulation. Depending on CPU/GPU the playback (rendering) may be faster or slower than the realtime.
+realtime_playback: true # if set true, the Carla playback will be slowed down to render frames with 1/FPS rate. See FPS flag.
+scale: 0.01 # Scale factor between OBJ and XODR. For standard Carla maps is 0.01.
+number_vehicles: 50
+number_walkers: 50
