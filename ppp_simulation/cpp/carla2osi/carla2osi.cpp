@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 
     // Load the static parts:
     uint64_t id;
-    Osiexporter osiex;
+    Osiexporter osiex(config["write_output"].as<string>());
     Loader loader;
     vector<vector<Eigen::Vector3f>> centerlines, boundaries;
     vector<vector<Eigen::Vector2f>> baselines;
@@ -344,7 +344,8 @@ int main(int argc, char *argv[])
             vector<Eigen::Matrix4f> vizActors;
             // KB: assume that GetActors() should be called every time new for dynamic objects
             osiex.updateMovingObjects(world.GetActors(), vizActors);
-            if (doRecording) osiex.writeFrame();
+            // very simple implementation of recording toggling without using function/signals
+            if (osiex.writeFrame(doRecording)) seconds = nanos = 0;
             // visuaization:
             viewer->updateMovingObjects(move(vizActors));
 

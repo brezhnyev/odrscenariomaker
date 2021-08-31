@@ -132,11 +132,10 @@ static map<string, TrafficSign_MainSign_Classification_Type> string2OsiMainTS
     {"traffic.stop", TrafficSign_MainSign_Classification_Type_TYPE_STOP}
 };
 
-Osiexporter::Osiexporter()
+Osiexporter::Osiexporter(string output) : output_(output)
 {
     gt_ = new GroundTruth();
     sv_.set_allocated_global_ground_truth(gt_);
-    ofs_.open("output.osi", ios::binary);
 }
 
 Osiexporter::~Osiexporter()
@@ -153,13 +152,25 @@ void Osiexporter::extendStaticNames(const map<string, int> & customNames)
     }
 }
 
-void Osiexporter::writeFrame()
+bool Osiexporter::writeFrame(bool doRec)
 {
-    string frame = sv_.SerializeAsString();
-    
-    uint32_t size = frame.size();
-    ofs_.write((char*)(&size), sizeof(uint32_t));
-    ofs_.write(frame.c_str(), frame.size());
+    bool startedRec = false;
+    if (doRec)
+    {
+        if (!ofs_.is_open()) // starting rec
+        {
+            startedRec = true;
+            ofs_.open(output_, ios::binary);
+        }
+        // start/proceed rec:
+        string frame = sv_.SerializeAsString();
+        uint32_t size = frame.size();
+        ofs_.write((char*)(&size), sizeof(uint32_t));
+        ofs_.write(frame.c_str(), frame.size());
+    }
+    else if (ofs_.is_open()) ofs_.close(); // otherwise stop rec
+
+    return startedRec;
 }
 
 void Osiexporter::setFrameTime(uint32_t seconds, uint32_t nanos)
@@ -502,9 +513,9 @@ void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, st
         {
             cg::Transform trf = actor->GetTransform();
             cg::BoundingBox bbox = actor->GetBoundingBox();
-            // some bykes and cycles have dimension y == 0, set to 1 meter width (extent.y = 0.5):
+            // some bikes and cycles have dimension y == 0, set non-zero width:
             if (!bbox.extent.y)
-                bbox.extent.y = 0.5;
+                bbox.extent.y = 0.35;
             // We will use the 4x4 matrix to fill out vizActors as follows:
             // M.block(0,0,3,3) - rotation
             // M.block(0,3,3,1) - translation
@@ -575,6 +586,12 @@ void Osiexporter::updateMovingObjects(carla::SharedPtr<cc::ActorList> actors, st
                     classification->set_type(string2OsiVehicleType[name]);
                     mo->set_allocated_vehicle_classification(classification);
                     M(3, 3) = 0.0f;
+                    if (!gt_->has_host_vehicle_id())
+                    {
+                        Identifier * host_vehicle_id = new Identifier();
+                        host_vehicle_id->set_value(actor->GetId());
+                        gt_->set_allocated_host_vehicle_id(host_vehicle_id);
+                    }
                 }
                 else if (dynamic_cast<cc::Walker *>(actor.get()))
                 {

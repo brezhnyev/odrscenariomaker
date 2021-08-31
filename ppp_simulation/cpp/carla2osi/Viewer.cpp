@@ -115,7 +115,7 @@ void Viewer::drawInfo()
     if (enableLegend_)
     {
         glColor3f(1,1,1); drawText(10, -20+yoffset, "Enable/Disable legend: L, start/stop recording: R, Help: H");
-        glColor3f(colors_[0][0], colors_[0][1], colors_[0][2]); drawText(10,0  + yoffset, "■"); glColor3f(1,1,1); drawText(30, 0  + yoffset, "Vehicles");
+        glColor3f(colors_[0][0], colors_[0][1], colors_[0][2]); drawText(10,0  + yoffset, "■"); glColor3f(1,1,1); drawText(30, 0  + yoffset, "Vehicles (ego vehicle blinking)");
         glColor3f(colors_[1][0], colors_[1][1], colors_[1][2]); drawText(10,20 + yoffset, "■"); glColor3f(1,1,1); drawText(30, 20 + yoffset, "Walker");
         glColor3f(colors_[2][0], colors_[2][1], colors_[2][2]); drawText(10,40 + yoffset, "■");
         glColor3f(colors_[3][0], colors_[3][1], colors_[3][2]); drawText(30,40 + yoffset, "■");
@@ -195,11 +195,23 @@ void Viewer::draw()
 
     // moving objects / traffic lights:
     {
+        // simple algo for blinker of the host (ego) vehicle
+        static bool blinkHost = false; int hostID = -1;
+
         lock_guard<mutex> lk(mtx_);
-        for (auto a : actors_) // auto && a : actors_   causes flickering
+        for (size_t i = 0; i < actors_.size(); ++i) // auto && a : actors_   causes flickering
         {
+            auto a = actors_[i];
             bool drawSolid = true;
             int cid = int(a(3,3));
+            // blink host:
+            if (0==cid && -1 == hostID)
+            {
+                blinkHost = !blinkHost;
+                hostID = i;
+                if (blinkHost) continue;
+            }
+
             glColor3f(colors_[cid][0], colors_[cid][1], colors_[cid][2]);
             if (cid >= 5) drawSolid = false;
             a(3,3) = 1.0f;

@@ -18,7 +18,7 @@
 class Osiexporter
 {
 public:
-    Osiexporter();
+    Osiexporter(std::string output = "output.osi");
     ~Osiexporter();
 
     void addStaticObject(const std::vector<Eigen::Vector3f> & v3d, const std::vector<Eigen::Vector2f> & base_polygon, uint64_t & id, std::string type, float scale = 1.0f);
@@ -30,10 +30,11 @@ public:
 #endif
     void setFrameTime(uint32_t seconds, uint32_t nanos);
     std::string toValidType(std::string);
-    void writeFrame();
+    bool writeFrame(bool);
 
     osi3::GroundTruth * gt_;
     osi3::SensorView sv_;
 
     std::ofstream ofs_;
+    std::string output_;
 };

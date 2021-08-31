@@ -34,3 +34,4 @@ realtime_playback: true # if set true, the Carla playback will be slowed down to
 scale: 0.01 # Scale factor between OBJ and XODR. For standard Carla maps is 0.01.
 number_vehicles: 50
 number_walkers: 50
+write_output: /home/kbrezhnyev/DATA/output.osi
