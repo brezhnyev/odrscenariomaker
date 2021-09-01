@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS FALSE)
 
-#set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Wl,--warn-unresolved-symbols")
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/boost)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/carla/)

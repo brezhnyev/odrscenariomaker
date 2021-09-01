@@ -56,7 +56,7 @@ if (USE_CARLA)
     add_executable(${PROJECT_NAME} carla2osi.cpp ${SOURCE})
     target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf -lgflags -lyaml-cpp)
 
-    add_executable(osm2odr osm2odr.cpp)
+    #add_executable(osm2odr osm2odr.cpp)
     target_link_libraries(osm2odr -losm2odr -lxerces-c -lz)
 endif()
 
@@ -66,3 +66,6 @@ if (USE_CARLA)
 else()
     target_link_libraries(static2osi png jpeg tiff rt pthread boost_filesystem ${QGLVIEWER_LIBRARY} ${Qt5Core_LIBRARIES} ${OPENGL_LIBRARIES} ${Qt5OpenGL_LIBRARIES} -lopen_simulation_interface -lprotobuf -lgflags -lyaml-cpp)
 endif()
+
+add_executable(osi2txt utils/osi2txt.cpp)
+add_executable(txt2osi utils/txt2osi.cpp)

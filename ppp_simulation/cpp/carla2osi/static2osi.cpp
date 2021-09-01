@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     QApplication application(argc, argv);
 
     viewer = new Viewer(move(baselines), move(baselinesZ), move(centerlines), move(boundaries));
-    viewer->setWindowTitle("Osi visualizer");
+    viewer->setWindowTitle("Osi previewer");
     viewer->show();
 
     t1.join();
