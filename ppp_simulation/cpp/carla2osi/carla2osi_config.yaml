@@ -25,7 +25,7 @@ static_types:
     "overhead_structure": 14
     "reflective_structure": 15
     "construction_site_element": 16
-exclude_names: ["SM_T03_Wall", "name2", "name3"] # Exclude specific objects from OBJ file
+exclude_names: ["SM_T03_Wall", "name2", "name3"] # Exclude specific OBJ objects from exporting into output OSI file
 obj_file: "/home/kbrezhnyev/DATA/carla-export/Town02/Town02.obj" # Path to OBJ file. If commented, the OBJ file is skipped. Optional.
 xodr_file: "/home/kbrezhnyev/DATA/carla-export/Town02/Town02.xodr" # Path to XODR file. Required.
 map_name: "Town02" # Name of Carla map to be loaded.
