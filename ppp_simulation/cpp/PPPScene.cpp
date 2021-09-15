@@ -21,6 +21,7 @@
 #include <tuple>
 #include <string>
 #include <chrono>
+#include <fstream>
 
 namespace cc = carla::client;
 namespace cg = carla::geom;
@@ -47,7 +48,6 @@ static auto &RandomChoice(const RangeT &range, RNG &&generator)
     return range[dist(std::forward<RNG>(generator))]; // KB: this can fail for map
 }
 
-/// Save a semantic segmentation image to disk converting to CityScapes palette.
 void PPPScene::SaveImageToDisk(const csd::Image &image, int index, string type)
 {
     using namespace carla::image;
@@ -67,6 +67,30 @@ void PPPScene::SaveImageToDisk(const csd::Image &image, int index, string type)
     ImageIO::WriteView(filename, ImageView::MakeView(image));
 }
 
+void PPPScene::SaveLidarToDisk(const csd::LidarMeasurement &meas, int index, string type)
+{
+    using namespace carla::sensor::data;
+    char buffer[9u];
+    std::snprintf(buffer, sizeof(buffer), "%08zu", meas.GetFrame());
+    auto filename = type + "/" + to_string(index) + "/" + buffer + ".ply";
+    ofstream ofs(filename);
+
+    ofs << "ply" << endl;
+    ofs << "format ascii 1.0" << endl;
+    ofs << "element vertex " << meas.size() << endl;
+    ofs << "property float x" << endl;
+    ofs << "property float y" << endl;
+    ofs << "property float z" << endl;
+    ofs << "property float I" << endl;
+    ofs << "end_header" << endl;
+
+    for (auto && p : meas)
+    {
+        p.WriteDetection(ofs);
+        ofs << endl;
+    }
+    ofs.close();
+}
 
 PPPScene::PPPScene(string confname) : m_doRun(false), m_isInitialized(false), m_confname(confname)
 {
@@ -186,6 +210,7 @@ void PPPScene::setRGBCams(std::vector<ShrdPtrActor> & cams, string blueprintName
 
 void PPPScene::setDepthCams(std::vector<ShrdPtrActor> & cams, string blueprintName, string outname)
 {
+    // CODE SHOULD BE REVISED, SINCE CHANGED THE YAML
     auto blueprint_library = m_world->GetBlueprintLibrary();
     // Find a camera blueprint.
     auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find(blueprintName));
@@ -214,6 +239,37 @@ void PPPScene::setDepthCams(std::vector<ShrdPtrActor> & cams, string blueprintNa
             auto image = boost::static_pointer_cast<csd::Image>(data);
             EXPECT_TRUE(image != nullptr);
             SaveImageToDisk(*image, i, outname);
+        });
+    }
+}
+
+void PPPScene::setLidars(std::vector<ShrdPtrActor> & lidars, string blueprintName, string outname)
+{
+    auto blueprint_library = m_world->GetBlueprintLibrary();
+    // Find a camera blueprint.
+    auto lidar_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find(blueprintName));
+    EXPECT_TRUE(lidar_bp != nullptr);
+
+    YAML::Node config = YAML::LoadFile(m_confname.c_str());
+    auto yamllidars = config["sensors"]["lidars"];
+    for (auto && lidar : yamllidars)
+    {
+        auto lidar_transform = cg::Transform{
+            cg::Location{lidar["x"].as<float>(), lidar["y"].as<float>(), lidar["z"].as<float>()},  // x, y, z.
+            cg::Rotation{}}; // pitch, yaw, roll.
+
+        lidar_bp->SetAttribute("range", to_string(lidar["range"].as<float>()));
+        lidars.push_back(m_world->SpawnActor(*lidar_bp, lidar_transform, m_actor.get()));
+    }
+
+    for (int i = 0; i < lidars.size(); ++i)
+    {
+        auto lidar = static_cast<cc::Sensor*>(lidars[i].get());
+        // Register a callback to save images to disk.
+        lidar->Listen([this, i, outname](auto data) {
+            auto meas = boost::static_pointer_cast<csd::LidarMeasurement>(data);
+            EXPECT_TRUE(meas != nullptr);
+            SaveLidarToDisk(*meas, i, outname);
         });
     }
 }
@@ -379,7 +435,6 @@ void PPPScene::spawnWalkers()
     m_walkers.reserve(number_of_walkers);
     string filter = config["spawner"]["walkers"]["filter"].as<string>();
     auto w_bp = m_world->GetBlueprintLibrary()->Filter(filter); // "Filter" returns BluePrintLibrary (i.e. wrapper about container of ActorBlueprints)
-    auto wc_bp = m_world->GetBlueprintLibrary()->Find("controller.ai.walker"); // "Find" returns pointer to the ActorBlueprint
 
     std::mt19937_64 rng((std::random_device())());
 
@@ -407,6 +462,7 @@ void PPPScene::spawnWalkers()
         auto walker = m_world->TrySpawnActor(walker_bp, location.value());
         if (walker)
         {
+            auto wc_bp = m_world->GetBlueprintLibrary()->Find("controller.ai.walker"); // "Find" returns pointer to the ActorBlueprint
             auto controller = m_world->TrySpawnActor(*wc_bp, cg::Transform(), walker.get());
             if (!controller)
             {
@@ -451,10 +507,11 @@ void PPPScene::doRecording(bool record)
     if (record)
     {
         // Set sensors:
-        setRGBCams  (m_RGBCams,         "sensor.camera.rgb", "rgb");
-        setRGBCams  (m_RGBCamsSS,       "sensor.camera.semantic_segmentation", "rgb_ss");
-        setDepthCams(m_DepthCams,       "sensor.camera.depth", "depth");
-        setDepthCams(m_DepthCamsSS,     "sensor.camera.semantic_segmentation", "depth_ss");
+        // setRGBCams  (m_RGBCams,         "sensor.camera.rgb", "rgb");
+        // setRGBCams  (m_RGBCamsSS,       "sensor.camera.semantic_segmentation", "rgb_ss");
+        // setDepthCams(m_DepthCams,       "sensor.camera.depth", "depth");
+        // setDepthCams(m_DepthCamsSS,     "sensor.camera.semantic_segmentation", "depth_ss");
+        setLidars(m_Lidars, "sensor.lidar.ray_cast", "lidar");
     }
     else
     {
@@ -464,10 +521,12 @@ void PPPScene::doRecording(bool record)
         for (auto s : m_RGBCamsSS)      static_cast<cc::Sensor*>(s.get())->Stop();
         for (auto s : m_DepthCams)      static_cast<cc::Sensor*>(s.get())->Stop();
         for (auto s : m_DepthCamsSS)    static_cast<cc::Sensor*>(s.get())->Stop();
+        for (auto s : m_Lidars)         static_cast<cc::Sensor*>(s.get())->Stop();
 
         for (auto && c : m_RGBCams)     destroyIfAlive(c); m_RGBCams.clear();
         for (auto && c : m_RGBCamsSS)   destroyIfAlive(c); m_RGBCamsSS.clear();
         for (auto && c : m_DepthCams)   destroyIfAlive(c); m_DepthCams.clear();
         for (auto && c : m_DepthCamsSS) destroyIfAlive(c); m_DepthCamsSS.clear();
+        for (auto && c : m_Lidars)      destroyIfAlive(c); m_Lidars.clear();
     }
 }

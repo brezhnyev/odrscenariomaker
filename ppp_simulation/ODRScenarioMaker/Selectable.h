@@ -23,7 +23,7 @@ public:
     { 
         return (m_activeChild == -1 || m_children.empty()) ? nullptr: !depth ? m_children[m_activeChild] : m_children[m_activeChild]->getActiveChild(depth - 1);
     }
-    std::map<int, Selectable*> children() { return m_children; }
+    std::map<int, Selectable*> & children() { return m_children; }
     
 protected:
     static int          s_ID;

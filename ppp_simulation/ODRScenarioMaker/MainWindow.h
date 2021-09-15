@@ -15,6 +15,10 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 public:
     MainWindow(QWidget * parent = nullptr);
+    void update()
+    {
+        m_viewer->update();
+    }
 
 private:
     Viewer         *m_viewer;
@@ -24,5 +28,4 @@ private:
     WaypathProps   *m_pathProps;
     VehicleProps   *m_vehicleProps;
     ScenarioProps  *m_scenarioProps;
-    IPC             m_IPC;
 };

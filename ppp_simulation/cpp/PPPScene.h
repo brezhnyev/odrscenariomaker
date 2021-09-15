@@ -5,6 +5,8 @@
 #include <carla/image/ImageIO.h>
 #include <carla/image/ImageView.h>
 #include <carla/sensor/data/Image.h>
+#include <carla/sensor/data/LidarData.h>
+#include <carla/sensor/data/LidarMeasurement.h>
 
 #include <string>
 #include <thread>
@@ -24,10 +26,12 @@ public:
 private:
     void setRGBCams(std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
     void setDepthCams(std::vector<ShrdPtrActor> & cams, std::string blueprintName, std::string outname);
+    void setLidars(std::vector<ShrdPtrActor> & lidars, std::string blueprintName, std::string outname);
     void setWeather();
     void spawnVehicles();
     void spawnWalkers();
     void SaveImageToDisk(const carla::sensor::data::Image &image, int index, std::string type);
+    void SaveLidarToDisk(const carla::sensor::data::LidarMeasurement &meas, int index, std::string type);
     void destroyIfAlive(ShrdPtrActor actor)
     {
         if (actor.get()->IsAlive()) actor.get()->Destroy();
@@ -39,6 +43,8 @@ private:
     std::vector<ShrdPtrActor>               m_RGBCamsSS; // semantic segmentation
     std::vector<ShrdPtrActor>               m_DepthCams;
     std::vector<ShrdPtrActor>               m_DepthCamsSS; // semantic segmentation
+    std::vector<ShrdPtrActor>               m_Lidars;
+    std::vector<ShrdPtrActor>               m_LidarsSS; // semantic segmentation
     carla::SharedPtr<carla::client::World>  m_world;
     carla::rpc::EpisodeSettings             m_defaultSettings;
     int                                     m_timeout;

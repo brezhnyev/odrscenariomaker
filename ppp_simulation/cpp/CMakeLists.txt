@@ -37,10 +37,10 @@ endif()
 
 set(USE_CARLA ON CACHE BOOL "TRUE")
 
-# set(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/ppp_sim_start.cpp ${CMAKE_CURRENT_SOURCE_DIR}/PPPScene.cpp)
-# add_executable(${PROJECT_NAME} ${SOURCE})
-# message("CARLA_LIB: ${CARLA_LIB}")
-# target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
+set(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/ppp_sim_start.cpp ${CMAKE_CURRENT_SOURCE_DIR}/PPPScene.cpp)
+add_executable(${PROJECT_NAME} ${SOURCE})
+message("CARLA_LIB: ${CARLA_LIB}")
+target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem yaml-cpp)
 
 # add_executable(originalExample ./originalExample.cpp)
 # target_link_libraries(originalExample ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)

@@ -5,15 +5,18 @@
 #include <QtWidgets/QPushButton>
 
 #include <iostream>
+#include <thread>
 
 using namespace std;
+
+extern int play(Scenario & scenario);
+extern bool doStop;
 
 MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
 , m_pointProps(nullptr)
 , m_pathProps(nullptr)
 , m_vehicleProps(nullptr)
 , m_scenarioProps(nullptr)
-, m_IPC(m_scenario)
 {
     m_viewer = new Viewer(m_scenario);
     setCentralWidget(m_viewer);
@@ -99,13 +102,19 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
 
     QPushButton *playButton = new QPushButton(playDock);
     playButton->setText("Play");
-    connect(playButton, SIGNAL(pressed()), &m_IPC, SLOT(slot_play()));
+    connect(playButton, &QPushButton::pressed, [&]()
+    {
+        std::thread t([&]()
+        {
+            play(m_scenario);
+        });
+        t.detach();
+    });
 
     QPushButton *stopButton = new QPushButton(playDock);
     stopButton->setText("Stop");
-    connect(stopButton, SIGNAL(pressed()), &m_IPC, SLOT(slot_stop()));
-
-    connect(&m_IPC, &IPC::signal_update, [this](){m_viewer->update();} );
+    connect(stopButton, &QPushButton::pressed, [&](){ doStop = true; });
+    //connect(&m_scenario, &Scenario::signal_update, [this](){m_viewer->update();} );
 
     playLayout->addWidget(playButton);
     playLayout->addWidget(stopButton);
