@@ -28,7 +28,7 @@ endif()
 include_directories(${Qt5Xml_INCLUDE_DIRS})
 include_directories(${Qt5OpenGL_INCLUDE_DIRS})
 
-add_executable(${PROJECT_NAME} main.cpp 
+add_executable(${PROJECT_NAME} main.cpp carlaClient.cpp
 MainWindow.cpp Viewer.cpp Canvas.cpp Waypath.cpp Waypoint.cpp treeitem.cpp treemodel.cpp treeview.cpp 
 scenario.cpp WaypointProps.cpp Vehicle.cpp Selectable.cpp WaypathProps.cpp Actor.cpp ActorProps.cpp IPC.cpp Serializer.cpp ScenarioProps.cpp)
 
