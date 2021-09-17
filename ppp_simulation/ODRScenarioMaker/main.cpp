@@ -4,6 +4,7 @@
 #include "MainWindow.h"
 
 MainWindow * mw;
+extern bool doStop;
 
 int main(int argc, char ** argv)
 {
@@ -13,5 +14,11 @@ int main(int argc, char ** argv)
 
     mw->show();
 
-    return (app.exec());
+    app.exec();
+
+    doStop = true;
+
+    usleep(1000000);
+
+    return 0;
 }

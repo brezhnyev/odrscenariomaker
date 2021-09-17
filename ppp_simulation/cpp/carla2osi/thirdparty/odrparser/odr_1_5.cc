@@ -101,7 +101,7 @@ namespace odr_1_5 {
     bool __parse__t_road(const tinyxml2::XMLElement *elem, t_road &obj) {
 
         if (elem->Attribute("id") != nullptr)
-            obj._id = std::string(elem->Attribute("id"));
+            obj._id = elem->IntAttribute("id", 0);
 
         if (elem->Attribute("junction") != nullptr)
             obj._junction = std::string(elem->Attribute("junction"));

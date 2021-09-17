@@ -11,6 +11,10 @@ set(CMAKE_AUTOMOC ON)
 find_package(yaml-cpp)
 find_package(Qt5 COMPONENTS Core Gui Widgets Xml OpenGL REQUIRED)
 
+include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser/include)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/tinyxml2/)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/yaml-cpp/)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -29,6 +33,7 @@ include_directories(${Qt5Xml_INCLUDE_DIRS})
 include_directories(${Qt5OpenGL_INCLUDE_DIRS})
 
 add_executable(${PROJECT_NAME} main.cpp carlaClient.cpp
+thirdparty/odrparser/odr_1_5.cc thirdparty/odrparser/loadFile.cc thirdparty/tinyxml2/tinyxml2.cpp CanvasXODR.cpp
 MainWindow.cpp Viewer.cpp Canvas.cpp Waypath.cpp Waypoint.cpp treeitem.cpp treemodel.cpp treeview.cpp 
 scenario.cpp WaypointProps.cpp Vehicle.cpp Selectable.cpp WaypathProps.cpp Actor.cpp ActorProps.cpp IPC.cpp Serializer.cpp ScenarioProps.cpp)
 

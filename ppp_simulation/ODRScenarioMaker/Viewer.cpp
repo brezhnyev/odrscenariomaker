@@ -23,8 +23,10 @@ using namespace std;
 using namespace qglviewer;
 using namespace Eigen;
 
+extern Matrix4f camTrf;
 
-Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_canvas("../data/Town02.jpg", QRect{-27, 92, 239, 237})
+
+Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_canvas("/home/kbrezhnyev/DATA/carla-export/Town04/Town04.xodr")
 {
     using namespace net;
 
@@ -38,6 +40,8 @@ Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_canvas("../data/To
 
 void Viewer::init()
 {
+    glDisable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
     m_canvas.init();
 }
 
@@ -45,6 +49,7 @@ void Viewer::draw()
 {
     m_canvas.draw();
     m_scenario.draw();
+    camera()->getModelViewMatrix(camTrf.data());
 }
 
 void Viewer::drawWithNames()

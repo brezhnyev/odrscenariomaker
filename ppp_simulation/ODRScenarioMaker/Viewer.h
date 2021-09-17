@@ -3,7 +3,7 @@
 #include "Waypath.h"
 #include "scenario.h"
 #include "Vehicle.h"
-#include "Canvas.h"
+#include "CanvasXODR.h"
 
 #include <QGLViewer/qglviewer.h>
 
@@ -36,5 +36,5 @@ public slots:
 
 private:
     Scenario &      m_scenario;
-    Canvas          m_canvas;
+    CanvasXODR      m_canvas;
 };

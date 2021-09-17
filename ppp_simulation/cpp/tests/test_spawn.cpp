@@ -70,22 +70,27 @@ int main(int argc, const char *argv[])
     cout << "Client API version : " << client.GetClientVersion() << '\n';
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    auto m_world = client.LoadWorld("Town02");
+    auto world = client.LoadWorld("Town05");
 
     auto traffic_manager = client.GetInstanceTM(8000); //KB: the port
     traffic_manager.SetGlobalDistanceToLeadingVehicle(2.0);
     traffic_manager.SetSynchronousMode(true);
 
     // Synchronous mode:
-    auto defaultSettings = m_world.GetSettings();
-    crpc::EpisodeSettings wsettings(true, false, 1.0 / 30); // (synchrone, noRender, interval)
-    m_world.ApplySettings(wsettings, carla::time_duration::seconds(10));
-    m_world.SetWeather(crpc::WeatherParameters::ClearNoon);
+    auto defaultSettings = world.GetSettings();
+    crpc::EpisodeSettings wsettings(true, false, 1.0 / 10); // (synchrone, noRender, interval)
+    world.ApplySettings(wsettings, carla::time_duration::seconds(10));
+    world.SetWeather(crpc::WeatherParameters::ClearNoon);
 
     // Spawn Vehicles:
     const int number_of_vehicles = 50;
-    auto blueprints = m_world.GetBlueprintLibrary()->Filter("vehicle.*");
-    auto spawn_points = m_world.GetMap()->GetRecommendedSpawnPoints();
+    auto blueprints = world.GetBlueprintLibrary()->Filter("vehicle.*");
+    auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
+    for (auto && p : spawn_points)
+    {
+        cout << p.location.x << " " << p.location.y << " " << p.location.z << endl;
+        break;
+    }
     vector<ShrdPtrActor> vehicles; vehicles.reserve(number_of_vehicles);
 
     for (int i = 0; i < number_of_vehicles; ++i)
@@ -106,7 +111,7 @@ int main(int argc, const char *argv[])
             blueprint.SetAttribute("role_name", "autopilot");
 
         // Spawn the vehicle.
-        auto actor = m_world.TrySpawnActor(blueprint, transform);
+        auto actor = world.TrySpawnActor(blueprint, transform);
         if (!actor) continue;
         // Finish and store the vehicle
         traffic_manager.SetPercentageIgnoreWalkers(actor, 0.0f);
@@ -120,21 +125,21 @@ int main(int argc, const char *argv[])
     vector<ShrdPtrActor> walkers; walkers.reserve(number_of_walkers);
     vector<ShrdPtrActor> wControllers; wControllers.reserve(number_of_walkers);
 
-    auto w_bp = m_world.GetBlueprintLibrary()->Filter("walker.pedestrian.*"); // "Filter" returns BluePrintLibrary (i.e. wrapper about container of ActorBlueprints)
+    auto w_bp = world.GetBlueprintLibrary()->Filter("walker.pedestrian.*"); // "Filter" returns BluePrintLibrary (i.e. wrapper about container of ActorBlueprints)
 
     vector<float> speeds; speeds.reserve(number_of_walkers);
 
     for (int i = 0; i < number_of_walkers; ++i)
     {
-        auto location = m_world.GetRandomLocationFromNavigation();
+        auto location = world.GetRandomLocationFromNavigation();
         if (!location.has_value()) continue;
         auto walker_bp = RandomChoice(*w_bp, rng);
         if (walker_bp.ContainsAttribute("is_invincible")) walker_bp.SetAttribute("is_invincible", "false");
-        auto walker = m_world.TrySpawnActor(walker_bp, location.value());
+        auto walker = world.TrySpawnActor(walker_bp, location.value());
         if (!walker) continue;
 
-        auto wc_bp = m_world.GetBlueprintLibrary()->Find("controller.ai.walker"); // "Find" returns pointer to the ActorBlueprint
-        auto controller = m_world.TrySpawnActor(*wc_bp, cg::Transform(), walker.get());
+        auto wc_bp = world.GetBlueprintLibrary()->Find("controller.ai.walker"); // "Find" returns pointer to the ActorBlueprint
+        auto controller = world.TrySpawnActor(*wc_bp, cg::Transform(), walker.get());
         if (!controller) continue;
 
         // Store the walker and its controller
@@ -144,7 +149,7 @@ int main(int argc, const char *argv[])
         cout << "Spawned " << walkers.back()->GetDisplayId() << '\n';
     }
 
-    m_world.Tick(carla::time_duration(chrono::seconds(10)));
+    world.Tick(carla::time_duration(chrono::seconds(10)));
 
     for (int i = 0; i < wControllers.size(); ++i)
     {
@@ -153,18 +158,18 @@ int main(int argc, const char *argv[])
         static_cast<cc::WalkerAIController*>(wControllers[i].get())->SetMaxSpeed(speeds[i]);
     }
 
-    m_world.SetPedestriansCrossFactor(0.0f);
+    world.SetPedestriansCrossFactor(0.0f);
 
     while (!isStopped)
     {
         try
         {
-            m_world.Tick(carla::time_duration(1s));
+            world.Tick(carla::time_duration(1s));
         }
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
 
-    m_world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
+    world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     for (auto v : vehicles) v->Destroy();
     for (auto w : walkers)  w->Destroy();
 

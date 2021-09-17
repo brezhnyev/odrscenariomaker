@@ -248,7 +248,7 @@ namespace odr_1_5 {
         xsd::Attribute<t_road_signals> sub_signals;
         xsd::Attribute<t_road_surface> sub_surface;
         xsd::Vector<t_road_type> sub_type{};
-        xsd::d_string _id;
+        xsd::d_int _id;
         xsd::d_string _junction;
         t_grEqZero _length;
         xsd::d_string _name;

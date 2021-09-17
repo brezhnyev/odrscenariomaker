@@ -44,6 +44,7 @@
 #include "MainWindow.h"
 
 #define DEG2RAD M_PI/180
+#define RAD2DEG 180/M_PI
 
 
 namespace cc = carla::client;
@@ -62,6 +63,17 @@ extern MainWindow * mw;
 static string delim_ = ",";
 ofstream hlpout;
 static int FPS = 10;
+Matrix4f camTrf;
+static int initLaneID = 1000;
+
+static map <string, cg::Location> town2InitLocation
+{
+    {"Town01", cg::Location(225.252, -364.109, 0.281942)},
+    {"Town02", cg::Location(-7.53, 142.19, 0.5)},
+    {"Town03", cg::Location(-6.44617, -79.055, 0.275307)},
+    {"Town04", cg::Location(225.252, -364.109, 0.281942)},
+    {"Town05", cg::Location(-162.532, -95.1386, 0.3)},
+};
 
 static map<string, string> carla2ppp
 {
@@ -142,6 +154,10 @@ string getHLPHeader()
 
 void printObject(uint64_t timestamp, ShrdPtrActor obstacle, ShrdPtrActor ego)
 {
+    auto trf = ego->GetTransform();
+    int egoLaneID = CanvasXODR::getLaneID(Vector3d(trf.location.x, -trf.location.y, trf.location.z));
+    if (initLaneID == 1000) initLaneID = egoLaneID;
+
     hlpout << timestamp << delim_;
     if (obstacle)
     {
@@ -172,16 +188,21 @@ void printObject(uint64_t timestamp, ShrdPtrActor obstacle, ShrdPtrActor ego)
         hlpout << 2*obstacle->GetBoundingBox().extent.x << delim_ << 2*obstacle->GetBoundingBox().extent.y << delim_ << 2*obstacle->GetBoundingBox().extent.z << delim_;
         // roll pitch yaw:
         hlpout << roll << delim_ << pitch << delim_ << yaw << delim_;
-        hlpout << delim_ << delim_ << delim_; // time-to-collision, relative-lane, absolute-lane
+        hlpout << 0 << delim_; // time-to-collision // TODO
+        int laneID = CanvasXODR::getLaneID(Vector3d(otrf.location.x, -otrf.location.y, otrf.location.z));
+        hlpout << (laneID - egoLaneID) << delim_;  // relative-lane
+        hlpout << (laneID - initLaneID) << delim_; // absolute-lane
     }
     else for (int i = 0; i < 18; ++i) hlpout << delim_;
-    auto trf = ego->GetTransform();
+    
     hlpout << trf.location.x << delim_ << -trf.location.y << delim_ << trf.location.z << delim_;
     auto vel = ego->GetVelocity();
     hlpout << vel.x << delim_ << -vel.y << delim_ << vel.z << delim_;
     hlpout << vel.Length() << delim_; // speed
     hlpout << trf.rotation.roll*DEG2RAD << delim_ << trf.rotation.pitch*DEG2RAD << delim_ << -trf.rotation.yaw*DEG2RAD << delim_;
-    for (int i = 0; i < 8; ++i) hlpout << delim_;
+    hlpout << 0 << delim_; // yaw rate
+    hlpout << (egoLaneID - initLaneID) << delim_;
+    for (int i = 0; i < 6; ++i) hlpout << delim_; // GPS and Accelerometer
     hlpout << endl;
 
 }
@@ -191,6 +212,8 @@ int play(Scenario & scenario)
     doStop = false;
     hlpout.open("hlp.csv");
     hlpout << getHLPHeader();
+    camTrf.setIdentity();
+    initLaneID = 1000;
 
     auto client = cc::Client("127.0.0.1", 2000);
     client.SetTimeout(10s);
@@ -198,7 +221,9 @@ int play(Scenario & scenario)
     cout << "Client API version : " << client.GetClientVersion() << '\n';
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    auto world = client.LoadWorld("Town02");
+    string town("Town04");
+
+    auto world = client.LoadWorld(town);
 
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
@@ -209,7 +234,8 @@ int play(Scenario & scenario)
     // Spawn Vehicles:
     auto scenario_vehicles = scenario.children();
     const int number_of_vehicles = scenario_vehicles.size();
-    auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
+    // Crashes for some towns. Eventually still has to do something with Qt.
+    //auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
     vector<ShrdPtrActor> vehicles; vehicles.reserve(number_of_vehicles);
 
     cc::Vehicle::Control control;
@@ -225,7 +251,7 @@ int play(Scenario & scenario)
             blueprint.SetAttribute("color", scenario_vehicle.colorToString());
         }
         // Spawn the vehicle.
-        auto actor = world.TrySpawnActor(blueprint, spawn_points[i%number_of_vehicles]);
+        auto actor = world.TrySpawnActor(blueprint, cg::Transform(town2InitLocation[town], cg::Rotation()));
         if (!actor)
         {
             cout << "Failed to spawn actor ------" << endl;
@@ -249,15 +275,6 @@ int play(Scenario & scenario)
         vehicles.push_back(actor);
     }
     world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
-
-    // Set spectator trf by the first waypoint of the first vehicle:
-    auto spectator = world.GetSpectator();
-    //transform.location -= 10.0f * transform.GetForwardVector();
-    cg::Transform transform = vehicles[0]->GetTransform();
-    transform.location.z += 30.0f;
-    //transform.rotation.yaw += 180.0f;
-    transform.rotation.pitch = -80.0f;
-    spectator->SetTransform(transform);
 
 
     float SPEED = 10.0f;
@@ -287,47 +304,66 @@ int play(Scenario & scenario)
     };
 
     uint64_t frameID = 0;
+    bool isAnimationFinished = false;
     while (!doStop)
     {
+        // set the camera:
+        auto spectator = world.GetSpectator();
+        cg::Transform transform;
+        //for (int i = 0; i < 16; ++i) cout << modelviewmatrix[i] << " "; cout << endl;
+        Matrix4f rotM1; rotM1.setIdentity(); rotM1.block(0,0,3,3) = AngleAxisf( M_PI_2, Vector3f::UnitY()).toRotationMatrix();
+        Matrix4f rotM2; rotM2.setIdentity(); rotM2.block(0,0,3,3) = AngleAxisf(-M_PI_2, Vector3f::UnitZ()).toRotationMatrix();
+        Matrix4f mirror; mirror.setIdentity(); mirror(1,1) = -1;
+        Matrix4f CAM = mirror*camTrf.inverse()*rotM2*rotM1;
+        transform.location = cg::Location(CAM(0,3), CAM(1,3), CAM(2,3));
+        float pitch = asin(CAM(2,0));
+        float yaw = atan2(CAM(1,0), CAM(0,0));
+        Matrix3f rotM = AngleAxisf(-pitch, Vector3f::UnitY())*AngleAxisf(-yaw, Vector3f::UnitZ())*CAM.block(0,0,3,3);
+        float roll = -asin(rotM(2,1));
+        transform.rotation = cg::Rotation(pitch*RAD2DEG, yaw*RAD2DEG, roll*RAD2DEG);
+        spectator->SetTransform(transform);
         try
         {
-            auto * actor = &vehicles[0];
-            for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++actor)
+            if (!isAnimationFinished)
             {
-                auto vehicle = static_cast<cc::Vehicle*>((*actor).get());
-
-                auto trf = vehicle->GetTransform();
-                auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
-                auto speed =  vehicle->GetVelocity().Length();
-
-                Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(it->second);
-                Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
-
-                // Get the next waypoints in some distance away:
-                Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
-                if (!waypath.getNext(peigen))
+                auto * actor = &vehicles[0];
+                for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++actor)
                 {
-                    doStop = true;
-                    break;
+                    auto vehicle = static_cast<cc::Vehicle*>((*actor).get());
+
+                    auto trf = vehicle->GetTransform();
+                    auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
+                    auto speed =  vehicle->GetVelocity().Length();
+
+                    Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(it->second);
+                    Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
+
+                    // Get the next waypoints in some distance away:
+                    Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
+                    if (!waypath.getNext(peigen))
+                    {
+                        isAnimationFinished = true;
+                        break;
+                    }
+                    cg::Transform p(cg::Location(peigen.x(), -peigen.y(), peigen.z()));
+                    auto dir = (p.location - trf.location).MakeUnitVector();
+                    auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
+                    auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
+
+                    control.steer = sign * arc.Length();
+                    vehicle->ApplyControl(control);
+                    // The stronger is the curvature the lower speed:
+                    float R = abs(3 * tan(M_PI_2 - control.steer)); // 3 is the ~length between axes
+                    float acc = speed*speed/R; // get centrifusual acceleration
+                    brake(0.01f*acc, vehicle);
+                    Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
+                    if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, -trf.rotation.yaw);
+
+                    if (vehicles.size() == 1) // only ego vehicle
+                        printObject((double)frameID/FPS*1000000000ull, nullptr, vehicles[0]);
+                    else if (actor != &vehicles[0])
+                        printObject((double)frameID/FPS*1000000000ull, *actor, vehicles[0]);
                 }
-                cg::Transform p(cg::Location(peigen.x(), -peigen.y(), peigen.z()));
-                auto dir = (p.location - trf.location).MakeUnitVector();
-                auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
-                auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
-
-                control.steer = sign * arc.Length();
-                vehicle->ApplyControl(control);
-                // The stronger is the curvature the lower speed:
-                float R = abs(3 * tan(M_PI_2 - control.steer)); // 3 is the ~length between axes
-                float acc = speed*speed/R; // get centrifusual acceleration
-                brake(0.01f*acc, vehicle);
-                Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
-                if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, -trf.rotation.yaw);
-
-                if (vehicles.size() == 1) // only ego vehicle
-                    printObject((double)frameID/FPS*1000000000ull, nullptr, vehicles[0]);
-                else if (actor != &vehicles[0])
-                    printObject((double)frameID/FPS*1000000000ull, *actor, vehicles[0]);
             }
             mw->update();
             world.Tick(carla::time_duration(1s));
