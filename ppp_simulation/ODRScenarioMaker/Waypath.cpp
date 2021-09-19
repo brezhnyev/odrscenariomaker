@@ -1,6 +1,7 @@
 #include "Waypath.h"
 
 #include <sstream>
+#include <iostream>
 
 using namespace Eigen;
 using namespace std;
@@ -17,14 +18,16 @@ int Waypath::delChild(int id) // id is dummy parameter for Waypath
     return id;
 }
 
-bool Waypath::getNext(Vector3f & pos)
+bool Waypath::getNext(Vector3f & pos, float & targetSpeed)
 {
-    const int R = 5;
     // find the nearest next point:
     float dist = 100000;
     int index = 0;
     vector<Waypoint*> wpoints;
     for (auto && child : m_children) wpoints.push_back(dynamic_cast<Waypoint*>(child.second));
+
+    if ((pos - wpoints.back()->getPosition()).norm() < 1)
+        return false;
 
     for (int i = 0; i < wpoints.size(); ++i)
     {
@@ -37,28 +40,20 @@ bool Waypath::getNext(Vector3f & pos)
     }
     if (index != wpoints.size() - 1)
     {
-        auto v1 = (wpoints[index+1]->getPosition() - wpoints[index]->getPosition()).normalized();
-        auto v2 = (wpoints[index]->getPosition() - pos).normalized();
+        Vector3f v1 = (wpoints[index+1]->getPosition() - wpoints[index]->getPosition()).normalized(); // motion direction
+        Vector3f v2 = (wpoints[index]->getPosition() - pos).normalized(); // direction to the next
         if (v1.dot(v2) < 0) ++index;
+        // otherwise next is the nearest
     }
+    if (0 == index) ++index;
+    // now index is guaranteed the NEXT waypoint
+    Vector3f v1 = wpoints[index]->getPosition() - pos; // distance to next
+    Vector3f v2 = pos - wpoints[index-1]->getPosition(); // distance from previous
+    float f = v2.norm()/(v1.norm() + v2.norm());
+    targetSpeed = (1 - f)*wpoints[index-1]->getSpeed() + f*wpoints[index]->getSpeed();
 
-    dist = 0;
-    for (int i=index; i < wpoints.size(); ++i)
-    {
-        Vector3f v = wpoints[i]->getPosition() - pos;
-        float N = v.norm();
-        if (dist + N > R)
-        {
-            pos = pos + v*((R - dist)/N);
-            return true;
-        }
-        else
-        {
-            pos = pos + v;
-            dist += v.norm();
-        }
-    }
-    return false;
+    pos = wpoints[index]->getPosition();
+    return true;
 }
 
 string Waypath::serialize() const

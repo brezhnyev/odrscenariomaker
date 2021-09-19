@@ -16,7 +16,7 @@ void Waypoint::draw()
 
     glColor3f(1.0f-cc[0], 1.0f-cc[1], 1.0f-cc[2]);
 
-    float w = 0.4f;
+    float w = 1.0f;
     if (m_selected)
     {
         glBegin(GL_QUADS);
@@ -27,7 +27,7 @@ void Waypoint::draw()
         glEnd();
     }
 
-    w = 0.20f;
+    w = 0.5f;
     glColor3f(cc[0], cc[1], cc[2]);
     glBegin(GL_QUADS);
     glVertex3f(m_pos.x() - w, m_pos.y() - w, m_pos.z()+0.1);

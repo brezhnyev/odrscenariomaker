@@ -65,6 +65,7 @@ ofstream hlpout;
 static int FPS = 10;
 Matrix4f camTrf;
 static int initLaneID = 1000;
+static bool realtime_playback = true;
 
 static map <string, cg::Location> town2InitLocation
 {
@@ -276,19 +277,16 @@ int play(Scenario & scenario)
     }
     world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
 
-
-    float SPEED = 10.0f;
-
-    auto brake = [&](float strength, cc::Vehicle* vehicle)
+    auto brake = [&](float strength, cc::Vehicle* vehicle, float targetSpeed)
     {
         auto ls = vehicle->GetLightState();
         auto speed =  vehicle->GetVelocity().Length();
         const float threshold = 0.05f;
 
-        if (strength < threshold && speed < SPEED)
+        if (strength < threshold && speed < targetSpeed)
         {
             control.brake = 0.0f;
-            control.throttle = exp(-speed/SPEED);
+            control.throttle = exp(-speed/targetSpeed);
             ls = crpc::VehicleLightState::LightState::None;
         }
         else
@@ -324,6 +322,7 @@ int play(Scenario & scenario)
         spectator->SetTransform(transform);
         try
         {
+            std::chrono::time_point<std::chrono::system_clock> timenow = std::chrono::system_clock::now();
             if (!isAnimationFinished)
             {
                 auto * actor = &vehicles[0];
@@ -340,7 +339,8 @@ int play(Scenario & scenario)
 
                     // Get the next waypoints in some distance away:
                     Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
-                    if (!waypath.getNext(peigen))
+                    float targetSpeed;
+                    if (!waypath.getNext(peigen, targetSpeed))
                     {
                         isAnimationFinished = true;
                         break;
@@ -355,7 +355,7 @@ int play(Scenario & scenario)
                     // The stronger is the curvature the lower speed:
                     float R = abs(3 * tan(M_PI_2 - control.steer)); // 3 is the ~length between axes
                     float acc = speed*speed/R; // get centrifusual acceleration
-                    brake(0.01f*acc, vehicle);
+                    brake(0.01f*acc, vehicle, targetSpeed);
                     Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
                     if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, -trf.rotation.yaw);
 
@@ -368,6 +368,10 @@ int play(Scenario & scenario)
             mw->update();
             world.Tick(carla::time_duration(1s));
             ++frameID;
+
+            auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
+            if (realtime_playback)
+                usleep(std::max(0.0, (1.0 * 1e6 / FPS - diff)));
         }
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
     }
