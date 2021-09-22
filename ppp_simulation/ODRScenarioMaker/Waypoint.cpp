@@ -6,7 +6,7 @@ using namespace std;
 
 Waypoint::Waypoint(Eigen::Vector3f pos, float speed) : Selectable(), m_pos(pos), m_speed(speed) {}
 
-void Waypoint::draw()
+void Waypoint::drawGeometry()
 {
     glDisable(GL_TEXTURE_2D);
 
@@ -37,9 +37,14 @@ void Waypoint::draw()
     glEnd();
 }
 
+void Waypoint::draw()
+{
+    drawGeometry();
+}
+
 void Waypoint::drawWithNames()
 {
     glPushName(m_id);
-    draw();
+    drawGeometry();
     glPopName();
 }

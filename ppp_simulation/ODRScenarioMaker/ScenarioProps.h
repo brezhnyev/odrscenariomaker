@@ -13,6 +13,7 @@ public:
 signals:
     void signal_addVehicle(int);
     void signal_delVehicle(int);
+    void signal_updateOnScenarioLoad();
 
 protected:
     Scenario & m_scenario;

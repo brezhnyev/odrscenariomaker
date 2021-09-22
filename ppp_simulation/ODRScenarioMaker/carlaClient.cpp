@@ -14,6 +14,7 @@
 #include <carla/image/ImageIO.h>
 #include <carla/image/ImageView.h>
 #include <carla/sensor/data/Image.h>
+#include <carla/sensor/data/IMUMeasurement.h>
 
 #include "../scenario.h"
 #include "../Serializer.h"
@@ -56,7 +57,7 @@ using namespace std::chrono_literals;
 using namespace std;
 using namespace Eigen;
 
-typedef carla::SharedPtr<carla::client::Actor> ShrdPtrActor;
+typedef carla::SharedPtr<cc::Actor> ShrdPtrActor;
 
 bool doStop;
 extern MainWindow * mw;
@@ -66,6 +67,11 @@ static int FPS = 10;
 Matrix4f camTrf;
 static int initLaneID = 1000;
 static bool realtime_playback = true;
+ShrdPtrActor imu;
+carla::SharedPtr<csd::IMUMeasurement> imuMeas;
+constexpr float GRAVITY = 9.81f;
+
+constexpr double EARTHR = 6371000.0;
 
 static map <string, cg::Location> town2InitLocation
 {
@@ -163,7 +169,7 @@ void printObject(uint64_t timestamp, ShrdPtrActor obstacle, ShrdPtrActor ego)
     if (obstacle)
     {
         hlpout << obstacle->GetId() << delim_;
-        hlpout << carla2ppp[obstacle->GetDisplayId()] << delim_;
+        hlpout << carla2ppp[obstacle->GetDisplayId().substr(11,obstacle->GetDisplayId().size()-12)] << delim_;
         Matrix4d om, em; // obstacle and ego matrix
         om.setIdentity();
         em.setIdentity();
@@ -188,7 +194,7 @@ void printObject(uint64_t timestamp, ShrdPtrActor obstacle, ShrdPtrActor ego)
         hlpout << rvel.norm() << delim_; // speed
         hlpout << 2*obstacle->GetBoundingBox().extent.x << delim_ << 2*obstacle->GetBoundingBox().extent.y << delim_ << 2*obstacle->GetBoundingBox().extent.z << delim_;
         // roll pitch yaw:
-        hlpout << roll << delim_ << pitch << delim_ << yaw << delim_;
+        hlpout << roll*RAD2DEG << delim_ << pitch*RAD2DEG << delim_ << yaw*RAD2DEG << delim_;
         hlpout << 0 << delim_; // time-to-collision // TODO
         int laneID = CanvasXODR::getLaneID(Vector3d(otrf.location.x, -otrf.location.y, otrf.location.z));
         hlpout << (laneID - egoLaneID) << delim_;  // relative-lane
@@ -200,12 +206,25 @@ void printObject(uint64_t timestamp, ShrdPtrActor obstacle, ShrdPtrActor ego)
     auto vel = ego->GetVelocity();
     hlpout << vel.x << delim_ << -vel.y << delim_ << vel.z << delim_;
     hlpout << vel.Length() << delim_; // speed
-    hlpout << trf.rotation.roll*DEG2RAD << delim_ << trf.rotation.pitch*DEG2RAD << delim_ << -trf.rotation.yaw*DEG2RAD << delim_;
-    hlpout << 0 << delim_; // yaw rate
-    hlpout << (egoLaneID - initLaneID) << delim_;
-    for (int i = 0; i < 6; ++i) hlpout << delim_; // GPS and Accelerometer
+    hlpout << trf.rotation.roll << delim_ << trf.rotation.pitch << delim_ << -trf.rotation.yaw << delim_;
+    hlpout << imuMeas->GetGyroscope().z*RAD2DEG << delim_;
+    hlpout << (egoLaneID - initLaneID) << delim_; // absolute late id
+    // GPS:
+    hlpout << asin((double)trf.location.x/EARTHR)*RAD2DEG << delim_ << asin((double)trf.location.y/EARTHR)*RAD2DEG << delim_ << asin((double)trf.location.z/EARTHR)*RAD2DEG << delim_;
+    // ACC:
+    hlpout << (imuMeas->GetAccelerometer().x/GRAVITY) << delim_ << (-imuMeas->GetAccelerometer().y/GRAVITY) << delim_ << (imuMeas->GetAccelerometer().z/GRAVITY);
     hlpout << endl;
+}
 
+void setupIMU(cc::World & world, ShrdPtrActor ego)
+{
+    auto blueprint_library = world.GetBlueprintLibrary();
+    // Find a camera blueprint.
+    auto imu_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.other.imu"));
+    imu = world.SpawnActor(*imu_bp, cg::Transform(), ego.get());
+    static_cast<cc::Sensor*>(imu.get())->Listen([&](auto data) {
+        imuMeas = boost::static_pointer_cast<csd::IMUMeasurement>(data);
+    });
 }
 
 int play(Scenario & scenario)
@@ -261,19 +280,22 @@ int play(Scenario & scenario)
         cout << "Spawned " << actor->GetDisplayId() << '\n';
         // Set the scenario start position:
         Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
-        auto wit = waypath.children().begin();
-        auto const wp1 = dynamic_cast<Waypoint*>(wit->second);
-        ++wit;
-        auto const wp2 = dynamic_cast<Waypoint*>(wit->second);
-        Eigen::Vector3f dir = wp2->getPosition() - wp1->getPosition(); dir.y() *= -1; // Since Carla is LEFT handed - flip Y
-        auto yaw = (atan2(dir.y(), dir.x()))*90/M_PI_2;
-        cg::Transform transform(cg::Location(wp1->getPosition().x(), -wp1->getPosition().y(), wp1->getPosition().z()), cg::Rotation(0,yaw,0));
+        waypath.updateSmoothPath();
+        Eigen::Vector3f dir = waypath.getInitialDirection();
+        Eigen::Vector3f pos = waypath.getInitialPosition();
+        auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
+        cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
         actor->SetTransform(transform);
         auto vehicle = static_cast<cc::Vehicle*>(actor.get());
         control.throttle = 1.0f;
         vehicle->ApplyControl(control);
         vehicle->SetSimulatePhysics();
         vehicles.push_back(actor);
+
+        if (0 == i) // ego vehicle set IMU:
+        {
+            setupIMU(world, actor);
+        }
     }
     world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
 
@@ -340,17 +362,17 @@ int play(Scenario & scenario)
                     // Get the next waypoints in some distance away:
                     Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
                     float targetSpeed;
-                    if (!waypath.getNext(peigen, targetSpeed))
+                    Eigen::Vector3f targetDir;
+                    if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
                     {
                         isAnimationFinished = true;
                         break;
                     }
-                    cg::Transform p(cg::Location(peigen.x(), -peigen.y(), peigen.z()));
-                    auto dir = (p.location - trf.location).MakeUnitVector();
+                    cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
                     auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
                     auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
 
-                    control.steer = sign * arc.Length();
+                    control.steer = sign * arc.Length()*0.5f;
                     vehicle->ApplyControl(control);
                     // The stronger is the curvature the lower speed:
                     float R = abs(3 * tan(M_PI_2 - control.steer)); // 3 is the ~length between axes
@@ -378,6 +400,9 @@ int play(Scenario & scenario)
 
     world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     for (auto v : vehicles) v->Destroy();
+    static_cast<cc::Sensor*>(imu.get())->Stop();
+    imu->Destroy();
+
     usleep(1e6);
 
     hlpout.close();

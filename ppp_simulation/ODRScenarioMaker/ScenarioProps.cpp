@@ -1,5 +1,6 @@
 #include "ScenarioProps.h"
 #include "Vehicle.h"
+#include "Serializer.h"
 
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QVBoxLayout>
@@ -8,6 +9,13 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QLabel>
+#include <QtWidgets/QFileDialog>
+
+#include <fstream>
+#include <string>
+#include <sstream>
+
+using namespace std;
 
 #define MINMAXPOS 1000000
 
@@ -60,5 +68,29 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         emit signal_delVehicle(id);
         delCombo->clear();
         for (auto && child : m_scenario.children()) delCombo->addItem(QString::number(child.second->getID()));
+    });
+
+    QPushButton * loadScenario = new QPushButton();
+    loadScenario->setText("Load Scenario");
+    mainLayout->addWidget(loadScenario);
+    connect(loadScenario, &QPushButton::pressed, [this](){
+        QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
+        ifstream ifs(name.toStdString());
+        m_scenario.clear();
+        stringstream ss; ss << ifs.rdbuf();
+        m_scenario = Serializer::deserialize_yaml(ss.str());
+        emit signal_updateOnScenarioLoad();
+        ifs.close();
+    });
+
+    QPushButton * saveScenario = new QPushButton();
+    saveScenario->setText("Save Scenario");
+    mainLayout->addWidget(saveScenario);
+    connect(saveScenario, &QPushButton::pressed, [this](){
+        string contents = Serializer::serialize_yaml(&m_scenario);
+        QString name = QFileDialog::getSaveFileName(this, tr("Save Scenario"), "/home/scenario.yaml", tr("Scenarios (*.yaml)"));
+        ofstream ofs(name.toStdString());
+        ofs << contents << endl;
+        ofs.close();
     });
 }

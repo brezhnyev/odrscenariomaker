@@ -36,6 +36,7 @@ Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_canvas("/home/kbre
     camera()->setSceneRadius(200);
     camera()->fitSphere(Vec(0, 0, 0), 200);
     camera()->setZNearCoefficient(0.01);
+    camera()->setFieldOfView(M_PI_2/2);
 }
 
 void Viewer::init()

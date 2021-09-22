@@ -22,12 +22,7 @@ public:
     void listenForResponse();
 
 signals:
-    void signal_addVehicle(int);
-    void signal_addWalker(int);
-    void signal_addWaypath(int);
     void signal_addWaypoint(int);
-    void signal_delWaypath(int);
-    void signal_delWaypoint(int);
     void signal_select(int);
     void signal_setVehicle(Eigen::Vector3f, float yaw);
 

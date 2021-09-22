@@ -71,3 +71,13 @@ Selectable * Selectable::findSelectable(int id)
     }
     return selection;
 }
+
+void Selectable::clearRecursively(Selectable * s)
+{
+    for (auto && c : s->children())
+    {
+        if (c.second->children().empty()) delete c.second;
+        else clearRecursively(c.second);
+    }
+    s->children().clear();
+}

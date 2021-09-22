@@ -8,10 +8,10 @@
 class Serializer
 {
 public:
-    std::string serialize_yaml(Selectable * object);
-    Scenario deserialize_yaml(const std::string & data);
+    static std::string serialize_yaml(Selectable * object);
+    static Scenario deserialize_yaml(const std::string & data);
 
 private:
-    void serialize_yaml(YAML::Node & node, Selectable * object);
-    void deserialize_yaml(YAML::Node node, Selectable & object);
+    static void serialize_yaml(YAML::Node & node, Selectable * object);
+    static void deserialize_yaml(YAML::Node node, Selectable & object);
 };

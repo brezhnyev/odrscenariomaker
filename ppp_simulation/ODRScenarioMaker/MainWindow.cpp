@@ -26,8 +26,6 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
     addDockWidget(Qt::LeftDockWidgetArea, treeDock);
     treeDock->setWidget(m_treeView);
 
-    connect(m_viewer,   SIGNAL(signal_addVehicle(int)),     m_treeView,     SLOT(slot_addVehicle(int)));
-    connect(m_viewer,   SIGNAL(signal_addWaypath(int)),     m_treeView,     SLOT(slot_addWaypath(int)));
     connect(m_viewer,   SIGNAL(signal_addWaypoint(int)),    m_treeView,     SLOT(slot_addWaypoint(int)));
     connect(m_viewer,   SIGNAL(signal_select(int)),         m_treeView,     SLOT(slot_select(int)));
     connect(m_treeView, SIGNAL(signal_select(int)),         m_viewer,       SLOT(slot_select(int)));
@@ -60,8 +58,8 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
             }
             m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item));
             propsDock->setWidget(m_pathProps);
-            connect(m_pathProps, &WaypathProps::signal_delWaypoint, [this](int id){m_viewer->update(); });
-            connect(m_pathProps, &WaypathProps::signal_delWaypoint, [this](int id){m_treeView->slot_delItem(id); });
+            connect(m_pathProps, &WaypathProps::signal_delWaypoint, [this](int id){ m_treeView->slot_delItem(id); m_viewer->update(); });
+            connect(m_pathProps, &WaypathProps::signal_updateSmoothPath, [this](){ m_viewer->update(); });
         }
         else if (item->getType() == "Vehicle")
         {
@@ -72,10 +70,8 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
             }
             m_vehicleProps = new VehicleProps(*dynamic_cast<Vehicle*>(item));
             propsDock->setWidget(m_vehicleProps);
-            connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){m_viewer->update(); });
-            connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){m_treeView->slot_addWaypath(id); });
-            connect(m_vehicleProps, &VehicleProps::signal_delWaypath, [this](int id){m_viewer->update(); });
-            connect(m_vehicleProps, &VehicleProps::signal_delWaypath, [this](int id){m_treeView->slot_delItem(id); });
+            connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){m_viewer->update(); m_treeView->slot_addWaypath(id); });
+            connect(m_vehicleProps, &VehicleProps::signal_delWaypath, [this](int id){m_viewer->update(); m_treeView->slot_delItem(id); });
             connect(m_vehicleProps, &VehicleProps::signal_update, [this](){m_viewer->update(); }); // color update
         }
         else if (item->getType() == "Scenario")
@@ -87,10 +83,8 @@ MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
             }
             m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
             propsDock->setWidget(m_scenarioProps);
-            connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){m_viewer->update(); });
-            connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){m_treeView->slot_addVehicle(id); });
-            connect(m_scenarioProps, &ScenarioProps::signal_delVehicle, [this](int id){m_viewer->update(); });
-            connect(m_scenarioProps, &ScenarioProps::signal_delVehicle, [this](int id){m_treeView->slot_delItem(id); });
+            connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){m_viewer->update(); m_treeView->slot_addVehicle(id);});
+            connect(m_scenarioProps, &ScenarioProps::signal_delVehicle, [this](int id){m_viewer->update(); m_treeView->slot_delItem(id);});
         }
         propsDock->setMaximumWidth(200);
         propsDock->setMinimumWidth(200);

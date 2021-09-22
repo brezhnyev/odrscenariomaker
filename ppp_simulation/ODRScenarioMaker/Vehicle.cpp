@@ -9,7 +9,8 @@
 using namespace std;
 using namespace Eigen;
 
-void Vehicle::draw()
+
+void Vehicle::drawGeometry()
 {
     glDisable(GL_TEXTURE_2D);
 
@@ -29,7 +30,11 @@ void Vehicle::draw()
 
     glPopMatrix();
     glPopMatrix();
+}
 
+void Vehicle::draw()
+{
+    drawGeometry();
     for (auto && child : m_children) child.second->draw();
 }
 
@@ -41,4 +46,12 @@ std::string Vehicle::colorToString()
 Eigen::Vector3i Vehicle::stringToColor()
 {
 
+}
+
+void Vehicle::drawWithNames()
+{
+    glPushName(m_id);
+    drawGeometry();
+    glPopName();
+    for (auto && child : m_children) child.second->drawWithNames();
 }

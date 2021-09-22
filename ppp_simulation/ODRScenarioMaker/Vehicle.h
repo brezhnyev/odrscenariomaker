@@ -23,6 +23,8 @@ public:
         m_yaw = yaw;
     }
     void draw() override;
+    void drawWithNames() override;
+    void drawGeometry();
     std::string getType() const override { return "Vehicle"; }
     std::string getName() const override { return m_name; }
     std::string colorToString();

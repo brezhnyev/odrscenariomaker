@@ -13,6 +13,7 @@ public:
     Waypoint(Eigen::Vector3f pos, float speed);
     void draw() override;
     void drawWithNames() override;
+    void drawGeometry() override;
     std::string getType() const override { return "Waypoint"; }
 
     Eigen::Vector3f getPosition() { return m_pos; }

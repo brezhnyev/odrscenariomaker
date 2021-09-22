@@ -13,6 +13,7 @@ public:
 
 signals:
     void signal_delWaypoint(int);
+    void signal_updateSmoothPath();
 
 private:
     Waypath & m_waypath;

@@ -18,7 +18,6 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
 
     lh->addWidget(idInfo);
     lh->addWidget(delLastPoint);
-    lh->addStretch(1);
 
     setLayout(lh);
     // delChild(0) with dummy 0 parameter. The overriden delChild will pop the last waypoint from waypath
@@ -31,4 +30,15 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
         }
         emit signal_delWaypoint(id);
     });
+
+    QPushButton * updateWaypath = new QPushButton(this);
+    updateWaypath->setText("Update Waypath");
+
+    lh->addWidget(updateWaypath);
+    connect(updateWaypath, &QPushButton::pressed, [this]()
+    {
+        m_waypath.updateSmoothPath();
+        emit signal_updateSmoothPath();
+    });
+    lh->addStretch(1);
 }
