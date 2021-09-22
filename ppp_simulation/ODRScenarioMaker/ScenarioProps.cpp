@@ -75,6 +75,8 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     mainLayout->addWidget(loadScenario);
     connect(loadScenario, &QPushButton::pressed, [this](){
         QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
+        if (name.isEmpty()) return;
+        
         ifstream ifs(name.toStdString());
         m_scenario.clear();
         stringstream ss; ss << ifs.rdbuf();
