@@ -37,6 +37,7 @@ endif()
 
 set(USE_CARLA ON CACHE BOOL "TRUE")
 
+if (USE_CARLA)
 set(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/ppp_sim_start.cpp ${CMAKE_CURRENT_SOURCE_DIR}/PPPScene.cpp)
 add_executable(${PROJECT_NAME} ${SOURCE})
 message("CARLA_LIB: ${CARLA_LIB}")
@@ -45,10 +46,8 @@ target_link_libraries(${PROJECT_NAME} ${CARLA_LIB} png jpeg tiff rt pthread rpc 
 # add_executable(originalExample ./originalExample.cpp)
 # target_link_libraries(originalExample ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
 
-if (USE_CARLA)
 add_executable(test_spawn ./tests//test_spawn.cpp)
 target_link_libraries(test_spawn ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
-endif()
 
 # add_executable(test_custom_map ./tests/test_custom_map.cpp)
 # target_link_libraries(test_custom_map ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
@@ -67,5 +66,6 @@ endif()
 
 # add_executable(carla2osi ./carla2osi/carla2osi.cpp)
 # target_link_libraries(carla2osi ${CARLA_LIB} png jpeg tiff rt pthread rpc Detour DetourCrowd boost_filesystem)
+endif()
 
 add_subdirectory(carla2osi)
