@@ -89,7 +89,7 @@ public:
     void init(); // init OpenGL related stuff
     void computePolys(Eigen::Vector3d p, Eigen::Vector2f dir = Eigen::Vector2f(0.0f, 0.0f));
     std::vector<PolyFactors> getPolys() { return mPolys; }
-
+    double getSceneRadius();
     typedef std::map<int, std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector4d>>>>> LanesContainer;
 
 private:
@@ -107,4 +107,5 @@ private:
     std::vector<LaneElementBBox<Eigen::Vector3d>> mLocallLaneBoxes;
     Eigen::Vector4d mEgoTrf {0,0,0,0};
     std::vector<PolyFactors> mPolys;
+    LaneElementBBox<Eigen::Vector3d> mSceneBB;
 };

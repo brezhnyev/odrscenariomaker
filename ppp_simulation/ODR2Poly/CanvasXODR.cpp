@@ -66,6 +66,8 @@ void CanvasXODR::parseXodr(const string & xodrfile)
             Eigen::Matrix4d M; M.setIdentity();
             M.block(0,0,3,3) = Eigen::AngleAxisd(*odr_subroad._hdg, Eigen::Vector3d::UnitZ()).toRotationMatrix();
             M.block(0,3,3,1) = Eigen::Vector3d(*odr_subroad._x, *odr_subroad._y, 0.0);
+            Eigen::Matrix3d RM; // remember the rotational part, cause will be changed by superelevation:
+            RM = M.block(0,0,3,3);
             Eigen::Vector4d velocity; velocity.setZero();
             Eigen::Vector4d normal; normal.setZero();
 
@@ -78,7 +80,7 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                     double R = 1.0/(*odr_subroad.sub_arc->_curvature);
                     double radians = s / R;
                     M.block(0,0,3,3) = Eigen::AngleAxisd(*odr_subroad._hdg - M_PI_2, Eigen::Vector3d::UnitZ()).toRotationMatrix();
-
+                    RM = M.block(0,0,3,3);
                     P = Eigen::Vector4d(R*cos(radians) - R, R*sin(radians), 0.0, 1.0); // found from trial and error
                     // velocity as first derivative of position:
                     velocity.x() =-R*sin(radians);
@@ -139,7 +141,7 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                 if (odr_road.sub_lateralProfile && !odr_road.sub_lateralProfile->sub_superelevation.empty())
                 {
                     double roll = polyInter(S, odr_road.sub_lateralProfile->sub_superelevation, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_lateralProfile->sub_superelevation[0])>(it)->_s; });
-                    M.block(0,0,3,3) = Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()).toRotationMatrix()*M.block(0,0,3,3);
+                    M.block(0,0,3,3) = RM*Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()).toRotationMatrix();
                 }
                 // Elevation:
                 if (odr_road.sub_elevationProfile && !odr_road.sub_elevationProfile->sub_elevation.empty())
@@ -242,6 +244,18 @@ void CanvasXODR::init()
             }
         }
     }
+    // get the BBox of the whole scene:
+    for (auto && lanebb : mLaneBoxes)
+    {
+        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.minY,lanebb.minZ));
+        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.minY,lanebb.maxZ));
+        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.maxY,lanebb.minZ));
+        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.maxY,lanebb.maxZ));
+        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.minY,lanebb.minZ));
+        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.minY,lanebb.maxZ));
+        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.maxY,lanebb.minZ));
+        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.maxY,lanebb.maxZ));
+    }
     // roads:
     listRoad = glGenLists(1);
     glNewList(listRoad, GL_COMPILE);
@@ -320,6 +334,11 @@ void CanvasXODR::init()
     glPopMatrix();
 
     glEndList();
+}
+
+double CanvasXODR::getSceneRadius()
+{
+    return 0.5*(Eigen::Vector3d(mSceneBB.minX, mSceneBB.minY, mSceneBB.minZ) - Eigen::Vector3d(mSceneBB.maxX, mSceneBB.maxY, mSceneBB.maxZ)).norm();
 }
 
 void CanvasXODR::drawSelectable()

@@ -31,8 +31,6 @@ Viewer::Viewer(string xodrfile, float radius, float xodrResolution) : m_canvas(x
     // cout << "Version: " << glGetString(GL_VERSION) << endl; // KB: causes cout stop!
     // cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
     // cout.flush();
-    camera()->setSceneRadius(200);
-    camera()->fitSphere(Vec(0, 0, 0), 200);
     camera()->setZNearCoefficient(0.01);
     camera()->setFieldOfView(M_PI_2/2);
 }
@@ -44,6 +42,9 @@ void Viewer::init()
     glDisable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     m_canvas.init();
+    double R = m_canvas.getSceneRadius();
+    camera()->setSceneRadius(R);
+    camera()->fitSphere(Vec(0, 0, 0), R);
 }
 
 void Viewer::draw()
