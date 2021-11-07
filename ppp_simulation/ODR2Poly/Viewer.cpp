@@ -81,6 +81,7 @@ void Viewer::postSelection(const QPoint &point)
         gettimeofday(&tv1, nullptr);
         cout << "Selected Point: " << sp.x << " " << sp.y << " " << sp.z << endl;
         cout << "OpenGL select time: " << 0.000001*((tv1.tv_sec*1000000+tv1.tv_usec) - (mMClTime.tv_sec*1000000+mMClTime.tv_usec)) << " s" << endl;
+        //m_canvas.computePolys(Vector3d(sp.x, sp.y, sp.z), Vector2f(1.0f, 0.0f)); // for more proper time measurement
         m_canvas.computePolys(Vector3d(sp.x, sp.y, sp.z));
         timeval tv2;
         gettimeofday(&tv2, nullptr);

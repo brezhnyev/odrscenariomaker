@@ -385,7 +385,8 @@ void CanvasXODR::drawUnSelectable()
         glTranslated(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2] + 0.3);
         glRotatef(mEgoTrf[3]*180/M_PI, 0, 0, 1);
         glBegin(GL_LINE_STRIP);
-        for (double t = 0; t <= 1; t += 0.001)
+        for (double t = 0.0; t <= poly.length; t += 0.1) // step in meters if used non-unitless solution in poly fitting
+        //for (double t = 0.0; t <= 1; t += 0.01) // unitless (percents) step if used unitless solution in poly fitting
         {
             auto x = poly.xF[0]*t*t*t + poly.xF[1]*t*t + poly.xF[2]*t + poly.xF[3];
             auto y = poly.yF[0]*t*t*t + poly.yF[1]*t*t + poly.yF[2]*t + poly.yF[3];
@@ -413,9 +414,16 @@ void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     MatrixXd A(S, 4); // ex. A(S,2) for a line, A(S,3) for parabol and A(S,4) for cubic approximation
     MatrixXd b(S, 3); // one column for X, one column for Y, and one for Z axis
 
+    double t = 0; // parameter changing in [0,1]
+    double closingSegmentLength = (points[S-2].block(0,0,3,1) - points[S-1].block(0,0,3,1)).norm(); // generally not equal mXodrResolution!
+    double L = (S-2)*mXodrResolution + closingSegmentLength; // |.....|.....|.....|..|  // ex. 5 points: closingSegment is usually shorter!
+    double s = 0;
     for (size_t i = 0; i < S; ++i)
     {
-        double t = (double)i/(S-1);
+        s = (i == S -1) ? s + closingSegmentLength : i*mXodrResolution;
+        //t = s/L; // unitless solution
+        //t = (double)i/(S-1); // a simpler unitless solution (no need s and L)
+        t = s; // meters, we apply this method, cause its more deterministic than unitless when the Poly factors are used by client.
         A(i, 0) = t*t*t;
         A(i, 1) = t*t;
         A(i, 2) = t;
@@ -426,11 +434,11 @@ void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
         b(i, 1) = p[1];
         b(i, 2) = p[2];
     }
-    auto AA = (A.transpose()*A).inverse()*A.transpose();
-    // solutions: // for some reason breaking into components works much faster than auto x = AA*b; (Eigen bug)
-    pf.xF = AA*b.block(0,0,S,1);
-    pf.yF = AA*b.block(0,1,S,1);
-    pf.zF = AA*b.block(0,2,S,1);
+    Matrix<double,4,3> x = (A.transpose()*A).inverse()*A.transpose()*b;
+    pf.xF = x.block(0,0,4,1);
+    pf.yF = x.block(0,1,4,1);
+    pf.zF = x.block(0,2,4,1);
+    pf.length = L;
 }
 
 void CanvasXODR::draw()
@@ -486,7 +494,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
         }
     }
     // otherwise set from provided dir:
-    else mEgoTrf(0,3) = atan2(dir.y(), dir.x());
+    else mEgoTrf(3,0) = atan2(dir.y(), dir.x());
 
     // fit polys:
     mPolys.clear();
@@ -508,6 +516,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
                 // tarnsform the points into Ego CS:
                 fitPoly(bps.second, pf, &egoTrfInv);
                 pf.roadID = b.roadID;
+                pf.shapeID = b.shapeID;
                 pf.sectionID = b.sectID;
                 pf.laneID = bps.first;
                 mPolys.push_back(pf);

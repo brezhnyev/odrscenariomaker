@@ -71,11 +71,13 @@ public:
     typedef struct 
     {
         int roadID{0};
+        int shapeID{0};
         int sectionID{0};
         int laneID{0};
         Eigen::Vector4d xF{0,0,0,0};
         Eigen::Vector4d yF{0,0,0,0};
         Eigen::Vector4d zF{0,0,0,0};
+        float length{0.0f};
     } PolyFactors;
 
     CanvasXODR(const std::string & xodrfile, float radius, float xodrResolution);
@@ -92,7 +94,7 @@ public:
 
 private:
     void parseXodr(const std::string & xodrfile);
-    void fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d * trf = nullptr);
+    inline void fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d * trf = nullptr);
 
 private:
     const float mRadius{20};
@@ -104,5 +106,5 @@ private:
     std::vector<LaneElementBBox<Eigen::Vector3d>> mLaneBoxes;
     std::vector<LaneElementBBox<Eigen::Vector3d>> mLocallLaneBoxes;
     Eigen::Vector4d mEgoTrf {0,0,0,0};
-    std::vector<PolyFactors> mPolys; 
+    std::vector<PolyFactors> mPolys;
 };
