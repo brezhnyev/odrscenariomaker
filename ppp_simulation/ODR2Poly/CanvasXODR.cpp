@@ -138,11 +138,11 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                 };
 
                 // Super-elevation:
-                if (odr_road.sub_lateralProfile && !odr_road.sub_lateralProfile->sub_superelevation.empty())
-                {
-                    double roll = polyInter(S, odr_road.sub_lateralProfile->sub_superelevation, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_lateralProfile->sub_superelevation[0])>(it)->_s; });
-                    M.block(0,0,3,3) = RM*Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()).toRotationMatrix();
-                }
+                // if (odr_road.sub_lateralProfile && !odr_road.sub_lateralProfile->sub_superelevation.empty())
+                // {
+                //     double roll = polyInter(S, odr_road.sub_lateralProfile->sub_superelevation, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_lateralProfile->sub_superelevation[0])>(it)->_s; });
+                //     M.block(0,0,3,3) = RM*Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()).toRotationMatrix();
+                // }
                 // Elevation:
                 if (odr_road.sub_elevationProfile && !odr_road.sub_elevationProfile->sub_elevation.empty())
                     P.z() = polyInter(S, odr_road.sub_elevationProfile->sub_elevation, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_elevationProfile->sub_elevation[0])>(it)->_s; });

@@ -26,7 +26,7 @@ using namespace Eigen;
 extern Matrix4f camTrf;
 
 
-Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_canvas("/home/kbrezhnyev/DATA/carla-export/Town04/Town04.xodr")
+Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_canvas("/home/kbrezhnyev/DATA/carla-export/Town03/Town03.xodr")
 {
     using namespace net;
 
@@ -50,7 +50,7 @@ void Viewer::draw()
 {
     m_canvas.draw();
     m_scenario.draw();
-    camera()->getModelViewMatrix(camTrf.data());
+    //camera()->getModelViewMatrix(camTrf.data());
 }
 
 void Viewer::drawWithNames()
