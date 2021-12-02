@@ -404,6 +404,7 @@ void CanvasXODR::drawUnSelectable()
         glTranslated(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2] + 0.3);
         glRotatef(mEgoTrf[3]*180/M_PI, 0, 0, 1);
         glBegin(GL_LINE_STRIP);
+#if 1
         for (double t = 0.0; t <= poly.length; t += 0.1) // step in meters if used non-unitless solution in poly fitting
         //for (double t = 0.0; t <= 1; t += 0.01) // unitless (percents) step if used unitless solution in poly fitting
         {
@@ -413,6 +414,15 @@ void CanvasXODR::drawUnSelectable()
             if ((Vector3d(x, y, z)).squaredNorm() < radius2) // since we are no in Ego CS, dont need to subtract Ego trl
                 glVertex3f(x, y, z + 0.3);
         }
+#else // AVL AD stack Polyline representation:
+        float xlen = poly.xmax - poly.xmin;
+        for (float t = poly.xmin; t < poly.xmax; t += 0.1)
+        {
+            auto y = poly.xy[0]*t*t*t + poly.xy[1]*t*t + poly.xy[2]*t + poly.xy[3];
+            if ((Vector2d(t, y)).squaredNorm() < radius2)
+                glVertex3f(t,y,0.3);
+        }
+#endif
         glEnd();
         glPopMatrix();
     }
@@ -458,6 +468,27 @@ void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     pf.yF = x.block(0,1,4,1);
     pf.zF = x.block(0,2,4,1);
     pf.length = L;
+
+    // specifically for AVL AD stack also fit into XY poly:
+    auto tfpoints = points;
+    for (auto && tfp : tfpoints) tfp = (*trf)*Vector4d(tfp[0], tfp[1], tfp[2], 1);
+    double xincr = (tfpoints[S-1].x() - tfpoints[0].x())/(S-1);
+    t = tfpoints[0].x();
+    for (size_t i = 0; i < S; ++i)
+    {
+        A(i, 0) = t*t*t;
+        A(i, 1) = t*t;
+        A(i, 2) = t;
+        A(i, 3) = 1.0;
+        b(i, 0) = tfpoints[i][0]; // not using this
+        b(i, 1) = tfpoints[i][1]; // << using for dependency y = f(x)
+        b(i, 2) = tfpoints[i][2]; // not using this
+        t += xincr;
+    }
+    x = (A.transpose()*A).inverse()*A.transpose()*b;
+    for (size_t i = 0; i < 4; ++i) { pf.xy[i] = x(i,1); }
+    pf.xmin = tfpoints[0].x() < tfpoints[S-1].x() ? tfpoints[0].x() : tfpoints[S-1].x();
+    pf.xmax = tfpoints[0].x() > tfpoints[S-1].x() ? tfpoints[0].x() : tfpoints[S-1].x();
 }
 
 void CanvasXODR::draw()

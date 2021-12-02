@@ -78,6 +78,9 @@ public:
         Eigen::Vector4d yF{0,0,0,0};
         Eigen::Vector4d zF{0,0,0,0};
         float length{0.0f};
+        double xy [4]; ///< c0,c1,c2,c3 of y = f(x) polynomial
+        float xmin;   ///< minimal x
+        float xmax;   ///< maximal x
     } PolyFactors;
 
     CanvasXODR(const std::string & xodrfile, float radius, float xodrResolution);
