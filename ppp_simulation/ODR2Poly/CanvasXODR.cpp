@@ -24,7 +24,7 @@ CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResoluti
 //                     sub-road
 // |-------------------------------------------------------------|
 //
-//   geometry shape 1 (odr_subroad.sub_line)     geometry shape 2 (odr_subroad.sub_line)
+//                   geometry 1                      geometry 2          sub_planView.sub_geometry
 // | --------------------------------------------|---------------|
 
 
@@ -97,7 +97,9 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                 else if (odr_subroad.sub_paramPoly3 && odr_subroad._length)
                 {
                     auto poly3 = odr_subroad.sub_paramPoly3;
-                    double t = s / (*odr_subroad._length);
+                    double t = s;
+                    if (*odr_subroad.sub_paramPoly3->_pRange == "normalized") t /= (*odr_subroad._length);
+                    // else "arcLength" and t = s
                     P = Eigen::Vector4d(
                         *poly3->_aU + *poly3->_bU * t + *poly3->_cU * t * t + *poly3->_dU * t * t * t,
                         *poly3->_aV + *poly3->_bV * t + *poly3->_cV * t * t + *poly3->_dV * t * t * t,
