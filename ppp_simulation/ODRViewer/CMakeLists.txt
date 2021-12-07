@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 3.10)
+
+project(ODRViewer LANGUAGES C CXX)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/modules)
+
+set(CMAKE_CXX_STANDARD 14)
+add_compile_options(-fPIC -fopenmp)
+
+set(CMAKE_AUTOMOC ON)
+
+find_package(Qt5 COMPONENTS Core Gui Widgets Xml OpenGL REQUIRED)
+find_package(QGLViewer REQUIRED)
+
+include_directories(${CMAKE_CURRENT_LIST_DIR})
+include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser/include)
+
+include_directories(${Qt5Core_INCLUDE_DIRS})
+include_directories(${Qt5Widgets_INCLUDE_DIRS})
+include_directories(${Qt5Xml_INCLUDE_DIRS})
+include_directories(${Qt5OpenGL_INCLUDE_DIRS})
+
+add_executable(${PROJECT_NAME} main.cpp Viewer.cpp CanvasXODR.cpp
+thirdparty/odrparser/loadFile.cc
+thirdparty/odrparser/odr_1_5.cc
+thirdparty/tinyxml2/tinyxml2.cpp
+)
+
+target_link_libraries(${PROJECT_NAME} -lOpenGL ${Qt5Core_LIB} Qt5::Core Qt5::Gui Qt5::Widgets ${QGLVIEWER_LIBRARY} -fopenmp)
