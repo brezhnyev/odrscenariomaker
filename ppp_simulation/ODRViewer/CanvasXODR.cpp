@@ -51,6 +51,7 @@ CanvasXODR::CanvasXODR(const string & xodrfile, float xodrResolution) : mXodrRes
 
 bool CanvasXODR::parseXodr(const string & xodrfile)
 {
+    mXodrFile = xodrfile;
     OpenDRIVEFile ODR;
     if (!loadFile(xodrfile, ODR))
         return false;
@@ -247,42 +248,6 @@ CanvasXODR::~CanvasXODR()
 
 void CanvasXODR::init()
 {
-    for (auto &&r : vizBoundary) // road
-    {
-        for (auto && geom : r.second)
-        {
-            for (auto && s : geom.second) // lane section
-            {
-                for (auto it = s.second.begin(); it != s.second.end(); ++it) // lanes
-                {
-                    LaneElementBBox<Vector3d> bbox;
-                    bbox.roadID = r.first;
-                    bbox.geoID= geom.first;
-                    bbox.sectID = s.first;
-                    bbox.laneID = it->first >= 0 ? it->first + 1 : it->first;
-                    for (size_t i = 0; i < it->second.size(); ++i) // lanes points
-                    {
-                        bbox.addPoint(it->second[i].block(0,0,3,1));
-                    }
-                    bbox.minZ -= 0.1;
-                    bbox.maxZ += 0.1;
-                    mLaneBoxes.push_back(bbox);
-                }
-            }
-        }
-    }
-    // get the BBox of the whole scene:
-    for (auto && lanebb : mLaneBoxes)
-    {
-        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.minY,lanebb.minZ));
-        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.minY,lanebb.maxZ));
-        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.maxY,lanebb.minZ));
-        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.maxY,lanebb.maxZ));
-        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.minY,lanebb.minZ));
-        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.minY,lanebb.maxZ));
-        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.maxY,lanebb.minZ));
-        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.maxY,lanebb.maxZ));
-    }
     // roads:
     for (auto && r : vizBoundary)
     {
@@ -296,6 +261,7 @@ void CanvasXODR::init()
                     advance(it2, 1);
                     if (it2 == s.second.end()) break;
 
+                    LaneElementBBox<Vector3d> bbox;
                     uint listid = glGenLists(1);
                     glNewList(listid, GL_COMPILE);
                     glBegin(GL_TRIANGLE_STRIP);
@@ -303,18 +269,35 @@ void CanvasXODR::init()
                     {
                         glVertex3f(it1->second[i].x(), it1->second[i].y(), it1->second[i].z());
                         glVertex3f(it2->second[i].x(), it2->second[i].y(), it2->second[i].z());
+                        bbox.addPoint(it1->second[i].block(0,0,3,1));
+                        bbox.addPoint(it2->second[i].block(0,0,3,1));
                     }
                     glEnd();
                     glEndList();
-                    GlobalLaneID glid;
-                    glid.roadID = r.first;
-                    glid.geoID= geom.first;
-                    glid.sectID = s.first;
-                    glid.laneID = it1->first >= 0 ? it1->first + 1 : it1->first;
-                    mListID2LaneMap[listid] = glid;
+                    bbox.glaneid.roadID = r.first;
+                    bbox.glaneid.geoID= geom.first;
+                    bbox.glaneid.sectID = s.first;
+                    bbox.glaneid.laneID = it1->first >= 0 ? it1->first + 1 : it1->first;
+                    bbox.minZ -= 0.1;
+                    bbox.maxZ += 0.1;
+                    mListID2LaneMap[listid] = bbox;
                 }
             }
         }
+    }
+
+    // get the BBox of the whole scene:
+    for (auto && it : mListID2LaneMap)
+    {
+        auto lanebb = it.second;
+        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.minY,lanebb.minZ));
+        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.minY,lanebb.maxZ));
+        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.maxY,lanebb.minZ));
+        mSceneBB.addPoint(Vector3d(lanebb.minX,lanebb.maxY,lanebb.maxZ));
+        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.minY,lanebb.minZ));
+        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.minY,lanebb.maxZ));
+        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.maxY,lanebb.minZ));
+        mSceneBB.addPoint(Vector3d(lanebb.maxX,lanebb.maxY,lanebb.maxZ));
     }
 
     // draw boundaries:
@@ -390,6 +373,10 @@ void CanvasXODR::drawUnSelectable()
     // draw the highlighted lane:
     glColor3f(1.0f, 0.0f, 0.0f);
     glCallList(mSelectedLane);
+    // draw selected lanes:
+    glColor3f(1.0f,1.0f,0.0f);
+    for (auto && indx : mSelectedBoxes)
+        glCallList(indx);
 }
 
 void CanvasXODR::draw()
@@ -413,8 +400,21 @@ void CanvasXODR::drawWithNames()
     }
 }
 
-CanvasXODR::GlobalLaneID CanvasXODR::printLaneInfo(int id, Vector3d p)
+glaneid_t CanvasXODR::printLaneInfo(int id, Vector3d p)
 {
     mSelectedLane = id;
-    return mListID2LaneMap[id];
+    return mListID2LaneMap[id].glaneid;
+}
+
+void CanvasXODR::highlightSelection(const Vector3d & start, const Vector3d & end)
+{
+    using namespace tinyxml2;
+
+    BBox<Vector3d> selBox(start.x(), end.x(), start.y(), end.y(), -100, 100);
+    mSelectedBoxes.clear();
+    for (auto && it : mListID2LaneMap)
+    {
+        if (it.second.isCrossingOther(selBox))
+            mSelectedBoxes.push_back(it.first);
+    }
 }

@@ -28,7 +28,7 @@ extern Matrix4f camTrf;
 using namespace std;
 
 
-Viewer::Viewer(string xodrfiles, float xodrResolution) : mFr(xodrfiles), mXodrRes(xodrResolution)
+Viewer::Viewer(string xodrfiles, float xodrResolution) : mFr(xodrfiles), mXodrRes(xodrResolution), mRibbonStart(0,0,0)
 {
     using namespace net;
 
@@ -139,12 +139,28 @@ void Viewer::postSelection(const QPoint &point)
     if (selectedName() == -1)
     {
         mInfo.clear();
+        float f = orig.z/dir.z;
+        if (mRibbonStart.squaredNorm()) // some value as flag of initialization
+        {
+             mRibbonEnd = orig - dir*f;
+             if (mRibbonStart.x > mRibbonEnd.x) swap(mRibbonStart.x, mRibbonEnd.x);
+             if (mRibbonStart.y > mRibbonEnd.y) swap(mRibbonStart.y, mRibbonEnd.y);
+             m_canvas->highlightSelection(
+                 Eigen::Vector3d(mRibbonStart.x, mRibbonStart.y, mRibbonStart.z),
+                 Eigen::Vector3d(mRibbonEnd.x, mRibbonEnd.y, mRibbonEnd.z));
+            mRibbonStart = qglviewer::Vec(0,0,0);
+            mRibbonEnd = qglviewer::Vec(0,0,0);
+        }
+        else
+        {
+            mRibbonStart = orig - dir*f;
+        }
         return;
     }
 
     mSelPoint = camera()->pointUnderPixel(point, found);
     int id = selectedName();
-    CanvasXODR::GlobalLaneID laneID = m_canvas->printLaneInfo(id, Vector3d(mSelPoint.x, mSelPoint.y, mSelPoint.z));
+    glaneid_t laneID = m_canvas->printLaneInfo(id, Vector3d(mSelPoint.x, mSelPoint.y, mSelPoint.z));
     // display the lane info:
     stringstream ss;
     ss << laneID;

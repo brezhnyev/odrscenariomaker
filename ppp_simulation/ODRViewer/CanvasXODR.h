@@ -14,15 +14,29 @@
 #include <iostream>
 
 template <typename T>
-struct LaneElementBBox
+struct BBox
 {
     typedef typename T::Scalar basetype;
     basetype minX, maxX, minY, maxY, minZ, maxZ;
-    int sectID;
-    int geoID;
-    int roadID;
-    int laneID;
-    bool isPointInside(T p)
+
+    BBox() :
+        minX( std::numeric_limits<basetype>::max()),
+        maxX(-std::numeric_limits<basetype>::max()),
+        minY( std::numeric_limits<basetype>::max()),
+        maxY(-std::numeric_limits<basetype>::max()),
+        minZ( std::numeric_limits<basetype>::max()),
+        maxZ(-std::numeric_limits<basetype>::max())
+        {}
+
+    BBox(basetype minX_, basetype maxX_, basetype minY_, basetype maxY_, basetype minZ_, basetype maxZ_) :
+        minX(minX_),
+        maxX(maxX_),
+        minY(minY_),
+        maxY(maxY_),
+        minZ(minZ_),
+        maxZ(maxZ_) {}
+
+    bool isPointInside(T p) const
     {
         return p[0] >= minX && p[0] <= maxX && p[1] >= minY && p[1] <= maxY && p[2] >= minZ && p[2] <= maxZ;
     }
@@ -38,6 +52,38 @@ struct LaneElementBBox
             (T(maxX,minY,maxZ)-p).norm() < distance ||
             (T(maxX,maxY,minZ)-p).norm() < distance ||
             (T(maxX,maxY,maxZ)-p).norm() < distance;
+    }
+    bool isInsideOther(const BBox & other)
+    {
+        // if all of the BBox points are inside the other
+        if (
+            other.isPointInside(T(minX, minY, minZ)) &&
+            other.isPointInside(T(minX, minY, maxZ)) &&
+            other.isPointInside(T(minX, maxY, minZ)) &&
+            other.isPointInside(T(minX, maxY, maxZ)) &&
+            other.isPointInside(T(maxX, minY, minZ)) &&
+            other.isPointInside(T(maxX, minY, maxZ)) &&
+            other.isPointInside(T(maxX, maxY, minZ)) &&
+            other.isPointInside(T(maxX, maxY, maxZ)))
+                return true;
+
+        return false;
+    }
+    bool isCrossingOther(const BBox & other)
+    {
+        // if any of the BBox points are inside the other
+        if (
+            other.isPointInside(T(minX, minY, minZ)) ||
+            other.isPointInside(T(minX, minY, maxZ)) ||
+            other.isPointInside(T(minX, maxY, minZ)) ||
+            other.isPointInside(T(minX, maxY, maxZ)) ||
+            other.isPointInside(T(maxX, minY, minZ)) ||
+            other.isPointInside(T(maxX, minY, maxZ)) ||
+            other.isPointInside(T(maxX, maxY, minZ)) ||
+            other.isPointInside(T(maxX, maxY, maxZ)))
+                return true;
+
+        return false;
     }
     void draw()
     {
@@ -57,32 +103,31 @@ struct LaneElementBBox
         if (p[2] < minZ) minZ = p[2];
         if (p[2] > maxZ) maxZ = p[2];
     }
-    LaneElementBBox() : 
-    minX( std::numeric_limits<basetype>::max()),
-    maxX(-std::numeric_limits<basetype>::max()),
-    minY( std::numeric_limits<basetype>::max()),
-    maxY(-std::numeric_limits<basetype>::max()),
-    minZ( std::numeric_limits<basetype>::max()),
-    maxZ(-std::numeric_limits<basetype>::max())
-    {}
 };
+
+typedef struct
+{
+    int roadID{0};
+    int geoID{0};
+    int sectID{0};
+    int laneID{0};
+} glaneid_t;
+
+template <typename T>
+struct LaneElementBBox : BBox<T>
+{
+    glaneid_t glaneid;
+};
+
+inline std::ostream & operator << (std::ostream & os, const glaneid_t & glid)
+{
+    os << "roadID=" << glid.roadID << "  geoID=" << glid.geoID << "  sectID=" << glid.sectID << "  laneID=" << glid.laneID << std::endl;
+    return os;
+}
 
 class CanvasXODR
 {
 public:
-    typedef struct 
-    {
-        int roadID{0};
-        int geoID{0};
-        int sectID{0};
-        int laneID{0};
-    } GlobalLaneID;
-
-    friend std::ostream & operator << (std::ostream & os, const CanvasXODR::GlobalLaneID & glid)
-    {
-        os << "roadID=" << glid.roadID << "  geoID=" << glid.geoID << "  sectID=" << glid.sectID << "  laneID=" << glid.laneID << std::endl;
-        return os;
-    }
 
     CanvasXODR(const std::string & xodrfile, float xodrResolution);
     ~CanvasXODR();
@@ -90,7 +135,8 @@ public:
     void drawSelectable(uint);
     void drawUnSelectable();
     void drawWithNames();
-    GlobalLaneID printLaneInfo(int id, Eigen::Vector3d);
+    glaneid_t printLaneInfo(int id, Eigen::Vector3d);
+    void highlightSelection(const Eigen::Vector3d & , const Eigen::Vector3d &);
     void init(); // init OpenGL related stuff
     double getSceneRadius();
     typedef std::map<int, std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector4d>>>>> LanesContainer;
@@ -104,10 +150,10 @@ private:
     LanesContainer vizBoundary;
     LanesContainer vizCenter;
     uint listBounadries, listCenterlines;
-    std::vector<LaneElementBBox<Eigen::Vector3d>> mLaneBoxes;
-    std::vector<LaneElementBBox<Eigen::Vector3d>> mLocallLaneBoxes;
     Eigen::Vector4d mEgoTrf {0,0,0,0};
     LaneElementBBox<Eigen::Vector3d> mSceneBB;
     uint mSelectedLane{0};
-    std::map<uint, GlobalLaneID> mListID2LaneMap;
+    std::map<uint, LaneElementBBox<Eigen::Vector3d>> mListID2LaneMap;
+    std::vector<uint> mSelectedBoxes;
+    std::string mXodrFile;
 };

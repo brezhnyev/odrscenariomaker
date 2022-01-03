@@ -29,4 +29,5 @@ private:
     std::string     mInfo;
     qglviewer::Vec  mSelPoint;
     std::string     mCurrentFile;
+    qglviewer::Vec  mRibbonStart, mRibbonEnd;
 };
