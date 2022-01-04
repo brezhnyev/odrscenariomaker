@@ -1,6 +1,7 @@
 #include <Viewer.h>
 #include <QtWidgets/QMessageBox>
 #include <QKeyEvent>
+#include <QMouseEvent>
 
 #include <iostream>
 #include <sstream>
@@ -88,6 +89,16 @@ void Viewer::draw()
         glVertex3f(mSelPoint.x, mSelPoint.y, mSelPoint.z + 0.1f);
         glEnd();
     }
+    glColor3f(1.0f, 1.0f, 1.0f);
+    if (mRibbonStart.squaredNorm()) // use as flag that selection has started
+    {
+        glBegin(GL_LINE_LOOP);
+        glVertex3f(mRibbonStart.x, mRibbonStart.y, mRibbonStart.z);
+        glVertex3f(mRibbonCurr.x, mRibbonStart.y, mRibbonStart.z);
+        glVertex3f(mRibbonCurr.x, mRibbonCurr.y, mRibbonStart.z);
+        glVertex3f(mRibbonStart.x, mRibbonCurr.y, mRibbonStart.z);
+        glEnd();
+    }
 }
 
 void Viewer::drawWithNames()
@@ -99,6 +110,22 @@ void Viewer::mousePressEvent(QMouseEvent * event)
 {
     //gettimeofday(&mMClTime, nullptr);
     QGLViewer::mousePressEvent(event);
+}
+
+void Viewer::mouseMoveEvent(QMouseEvent * event)
+{
+    qglviewer::Vec orig, dir;
+    camera()->convertClickToLine(event->pos(), orig, dir); // orig == camera position
+
+    float f = orig.z/dir.z;
+    mRibbonCurr = orig - dir*f;
+
+    if (mRibbonStart.squaredNorm()) // use as flag that selection has started
+    {
+        update();
+    }
+
+    QGLViewer::mouseMoveEvent(event);
 }
 
 void Viewer::keyPressEvent(QKeyEvent * event)
@@ -145,15 +172,17 @@ void Viewer::postSelection(const QPoint &point)
              mRibbonEnd = orig - dir*f;
              if (mRibbonStart.x > mRibbonEnd.x) swap(mRibbonStart.x, mRibbonEnd.x);
              if (mRibbonStart.y > mRibbonEnd.y) swap(mRibbonStart.y, mRibbonEnd.y);
-             m_canvas->highlightSelection(
+             m_canvas->highlightRibbonSelection(
                  Eigen::Vector3d(mRibbonStart.x, mRibbonStart.y, mRibbonStart.z),
                  Eigen::Vector3d(mRibbonEnd.x, mRibbonEnd.y, mRibbonEnd.z));
             mRibbonStart = qglviewer::Vec(0,0,0);
             mRibbonEnd = qglviewer::Vec(0,0,0);
+            setMouseTracking(false);
         }
         else
         {
-            mRibbonStart = orig - dir*f;
+            mRibbonStart = mRibbonCurr = orig - dir*f;
+            setMouseTracking(true);
         }
         return;
     }

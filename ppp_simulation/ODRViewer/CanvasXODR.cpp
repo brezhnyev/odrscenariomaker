@@ -14,6 +14,7 @@ using namespace odr_1_5;
 using namespace odr;
 using namespace std;
 using namespace Eigen;
+using namespace tinyxml2;
 
 
 CanvasXODR::CanvasXODR(const string & xodrfile, float xodrResolution) : mXodrResolution(xodrResolution)
@@ -357,7 +358,7 @@ double CanvasXODR::getSceneRadius()
     return 0.5*(Eigen::Vector3d(mSceneBB.minX, mSceneBB.minY, mSceneBB.minZ) - Eigen::Vector3d(mSceneBB.maxX, mSceneBB.maxY, mSceneBB.maxZ)).norm();
 }
 
-void CanvasXODR::drawSelectable(uint listid)
+void CanvasXODR::drawSelectable(uint32_t listid)
 {
     glCallList(listid);
 }
@@ -400,21 +401,202 @@ void CanvasXODR::drawWithNames()
     }
 }
 
-glaneid_t CanvasXODR::printLaneInfo(int id, Vector3d p)
+glaneid_t CanvasXODR::printLaneInfo(uint32_t id, Vector3d p)
 {
     mSelectedLane = id;
     return mListID2LaneMap[id].glaneid;
 }
 
-void CanvasXODR::highlightSelection(const Vector3d & start, const Vector3d & end)
+void CanvasXODR::highlightRibbonSelection(const Vector3d & start, const Vector3d & end)
 {
-    using namespace tinyxml2;
-
     BBox<Vector3d> selBox(start.x(), end.x(), start.y(), end.y(), -100, 100);
     mSelectedBoxes.clear();
+    set<uint32_t> selectedRoads;
     for (auto && it : mListID2LaneMap)
     {
         if (it.second.isCrossingOther(selBox))
+        {
             mSelectedBoxes.push_back(it.first);
+            selectedRoads.insert(it.second.glaneid.roadID);
+        }
+    }
+
+    XMLDocument doc;
+    doc.LoadFile(mXodrFile.c_str());
+    XMLElement * pRootElement = doc.RootElement();
+    XMLElement * pElement = pRootElement->FirstChildElement("road");
+    // first make sure that the selected connecting roads will always have the in/out pair:
+    while (pElement)
+    {
+        if (string(pElement->Name()) == "road")
+        {
+            int32_t id = atoi(pElement->Attribute("id"));
+            int32_t jid = atoi(pElement->Attribute("junction"));
+            if (selectedRoads.find(id) != selectedRoads.end() && jid != -1) // i.e. we deal with connecting road
+            {
+                XMLElement * pLinkElement = pElement->FirstChildElement("link");
+                if (pLinkElement)
+                {
+                    XMLElement * pSuccessor = pLinkElement->FirstChildElement("successor");
+                    if (pSuccessor && string(pSuccessor->Attribute("elementType")) == "road")
+                    {
+                        uint32_t iid = atoi(pSuccessor->Attribute("elementId"));
+                        if (selectedRoads.find(iid) == selectedRoads.end())
+                        {
+                            selectedRoads.insert(iid);
+                            cout << "Road " << iid << " added to exported roads, since it is incoming road for a connecting road "  << id << endl;
+                        }
+                    }
+                    XMLElement * pPredecessor = pLinkElement->FirstChildElement("predecessor");
+                    if (pPredecessor && string(pPredecessor->Attribute("elementType")) == "road")
+                    {
+                        uint32_t iid = atoi(pPredecessor->Attribute("elementId"));
+                        if (selectedRoads.find(iid) == selectedRoads.end())
+                        {
+                            selectedRoads.insert(iid);
+                            cout << "Road " << iid << " added to exported roads, since it is incoming road for a connecting road " << id << endl;
+                        }
+                    }
+                }
+            }
+        }
+        pElement = pElement->NextSiblingElement();
+    }
+    // remove unselected roads:
+    pElement = pRootElement->FirstChildElement("road");
+    while (pElement)
+    {
+        XMLElement * pToRemove = pElement;
+        pElement = pElement->NextSiblingElement();
+        if (string(pToRemove->Name()) == "road")
+        {
+            uint32_t id = atoi(pToRemove->Attribute("id"));
+            if (selectedRoads.find(id) == selectedRoads.end())
+            {
+                pToRemove->Parent()->DeleteChild(pToRemove);
+            }
+        }
+    }
+    // find all referenced junctions:
+    set<uint32_t> junctions;
+    pElement = pRootElement->FirstChildElement("road");
+    while (pElement)
+    {
+        XMLElement * pToRemove = pElement;
+        pElement = pElement->NextSiblingElement();
+        if (string(pToRemove->Name()) == "road")
+        {
+            int32_t jid = atoi(pToRemove->Attribute("junction"));
+            if (jid != -1)
+            {// connecting road
+                junctions.insert(jid);
+                continue;
+            }
+            // else
+            XMLElement * pLinkElement = pToRemove->FirstChildElement("link");
+            if (pLinkElement)
+            {
+                XMLElement * pSuccessor = pLinkElement->FirstChildElement("successor");
+                if (pSuccessor && string(pSuccessor->Attribute("elementType")) == "junction")
+                    junctions.insert(atoi(pSuccessor->Attribute("elementId")));
+                XMLElement * pPredecessor = pLinkElement->FirstChildElement("predecessor");
+                if (pPredecessor && string(pPredecessor->Attribute("elementType")) == "junction")
+                    junctions.insert(atoi(pPredecessor->Attribute("elementId")));
+            }
+        }
+    }
+    // remove all unreferenced junctions:
+    pElement = pRootElement->FirstChildElement("junction");
+    while (pElement)
+    {
+        XMLElement * pToRemove = pElement;
+        pElement = pElement->NextSiblingElement();
+        if (string(pToRemove->Name()) == "junction")
+        {
+            uint32_t jid = atoi(pToRemove->Attribute("id"));
+            if (junctions.find(jid) == junctions.end())
+                pToRemove->Parent()->DeleteChild(pToRemove);
+        }
+    }
+    // for those remaining junctions remove unreferneced connections inside the junctions:
+    pElement = pRootElement->FirstChildElement("junction");
+    while (pElement)
+    {
+        if (string(pElement->Name()) == "junction")
+        {
+            XMLElement * pToRemove = pElement;
+            pElement = pElement->NextSiblingElement();
+            XMLElement *pConnection = pToRemove->FirstChildElement("connection");
+            while (pConnection)
+            {
+                XMLElement *pToRemove = pConnection;
+                pConnection = pConnection->NextSiblingElement();
+                if (string(pToRemove->Name()) == "connection")
+                {
+                    uint32_t cid = atoi(pToRemove->Attribute("connectingRoad"));
+                    if (selectedRoads.find(cid) == selectedRoads.end())
+                        pToRemove->Parent()->DeleteChild(pToRemove);
+                }
+            }
+            if (!pToRemove->FirstChildElement("connection"))
+            {
+                junctions.erase(atoi(pToRemove->Attribute("id")));
+                pToRemove->Parent()->DeleteChild(pToRemove);
+            }
+        }
+    }
+
+    // for the remaining roads remove the unreferenced predecessor/successor junctions:
+    pElement = pRootElement->FirstChildElement("road");
+    while (pElement)
+    {
+        if (string(pElement->Name()) == "road")
+        {
+            XMLElement *pLinkElement = pElement->FirstChildElement("link");
+            if (pLinkElement)
+            {
+                auto removeLink = [&](XMLElement *pLink, pair<string, set<uint32_t>&> where, string link)
+                {
+                    if (pLink && string(pLink->Attribute("elementType")) == where.first)
+                    {
+                        uint32_t id = atoi(pLink->Attribute("elementId"));
+                        if (where.second.find(id) == where.second.end())
+                        {
+                            pLink->Parent()->DeleteChild(pLink);
+                            // for all lanes remove the successor or predecessor:
+                            XMLElement *pLane = pElement->FirstChildElement("lanes");
+                            if (pLane)
+                            {
+                                XMLNode *pSection = pLane->FirstChildElement("laneSection");
+                                removeLinks(pSection, link);
+                            }
+                        }
+                    }
+                };
+                vector<string> links = {"successor", "predecessor"};
+                for (auto &&link : links)
+                {
+                    removeLink(pLinkElement->FirstChildElement(link.c_str()), pair<string, set<uint32_t>&>("road", selectedRoads), link);
+                    removeLink(pLinkElement->FirstChildElement(link.c_str()), pair<string, set<uint32_t>&>("junction", junctions), link);
+                }
+            }
+        }
+        pElement = pElement->NextSiblingElement();
+    }
+    doc.SaveFile((mXodrFile + "_cropped.xodr").c_str());
+    cout << "Exported cropped file " << mXodrFile << "_cropped.xodr" << endl;
+}
+
+void CanvasXODR::removeLinks(XMLNode * node, const string &name)
+{
+    if (!node)
+        return;
+    XMLElement *element = node->ToElement();
+    if (string(element->Name()) == name)
+        element->Parent()->DeleteChild(element);
+    else
+    {
+        removeLinks(element->FirstChild(), name);
+        removeLinks(element->NextSiblingElement(), name);
     }
 }

@@ -6,6 +6,7 @@
 #include <GL/gl.h>
 
 #include <eigen3/Eigen/Eigen>
+#include <tinyxml2.h>
 
 #include <string>
 #include <vector>
@@ -132,17 +133,18 @@ public:
     CanvasXODR(const std::string & xodrfile, float xodrResolution);
     ~CanvasXODR();
     void draw();
-    void drawSelectable(uint);
+    void drawSelectable(uint32_t);
     void drawUnSelectable();
     void drawWithNames();
-    glaneid_t printLaneInfo(int id, Eigen::Vector3d);
-    void highlightSelection(const Eigen::Vector3d & , const Eigen::Vector3d &);
+    glaneid_t printLaneInfo(uint32_t id, Eigen::Vector3d);
+    void highlightRibbonSelection(const Eigen::Vector3d & , const Eigen::Vector3d &);
     void init(); // init OpenGL related stuff
     double getSceneRadius();
     typedef std::map<int, std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector4d>>>>> LanesContainer;
 
 private:
     bool parseXodr(const std::string & xodrfile);
+    void removeLinks(tinyxml2::XMLNode *, const std::string &);
 
 private:
     const float mXodrResolution{1};
@@ -153,7 +155,7 @@ private:
     Eigen::Vector4d mEgoTrf {0,0,0,0};
     LaneElementBBox<Eigen::Vector3d> mSceneBB;
     uint mSelectedLane{0};
-    std::map<uint, LaneElementBBox<Eigen::Vector3d>> mListID2LaneMap;
-    std::vector<uint> mSelectedBoxes;
+    std::map<uint32_t, LaneElementBBox<Eigen::Vector3d>> mListID2LaneMap;
+    std::vector<uint32_t> mSelectedBoxes;
     std::string mXodrFile;
 };

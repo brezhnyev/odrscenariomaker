@@ -20,6 +20,7 @@ public:
     void init() override;
     void postSelection(const QPoint &point) override;
     void mousePressEvent(QMouseEvent * event) override;
+    void mouseMoveEvent(QMouseEvent *) override;
     void keyPressEvent(QKeyEvent * event) override;
 
 private:
@@ -29,5 +30,5 @@ private:
     std::string     mInfo;
     qglviewer::Vec  mSelPoint;
     std::string     mCurrentFile;
-    qglviewer::Vec  mRibbonStart, mRibbonEnd;
+    qglviewer::Vec  mRibbonStart, mRibbonCurr, mRibbonEnd;
 };
