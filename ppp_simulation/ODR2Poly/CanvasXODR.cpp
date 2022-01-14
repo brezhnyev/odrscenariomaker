@@ -67,7 +67,7 @@ void CanvasXODR::parseXodr(const string & xodrfile)
             continue;
 
         auto sit = odr_road.sub_lanes->sub_laneSection.begin(); // sections iterator
-        int geom = 0;
+        int gindex = 0;
         for (auto && odr_subroad : odr_road.sub_planView->sub_geometry)
         {
             // starting matrix for this segment:
@@ -190,7 +190,7 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                     {
                         // ONLY 1 center line, actually loop not needed
                         Eigen::Vector4d Ptrf = M * (P + normal*offset);
-                        vizBoundary[*odr_road._id][geom][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
+                        vizBoundary[*odr_road._id][gindex][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
                     }
                 auto buildLane = [&](auto & odr_sublane, int dir, double & twidth)
                 {
@@ -198,10 +198,10 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                     double width = polyInter(S - *odr_lane._s, odr_sublane.sub_width, [](void * it) ->double { return *static_cast<decltype(&odr_sublane.sub_width[0])>(it)->_sOffset; });
                     twidth += dir*width;
                     Eigen::Vector4d Ptrf = M * (P + normal*twidth);
-                    vizBoundary[*odr_road._id][geom][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
+                    vizBoundary[*odr_road._id][gindex][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
                     // Center:
                     Ptrf = M * (P + normal*(twidth - dir*width/2));
-                    vizCenter[*odr_road._id][geom][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
+                    vizCenter[*odr_road._id][gindex][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
                 };
                 double twidth = offset;
                 if (odr_lane.sub_left)
@@ -225,7 +225,7 @@ void CanvasXODR::parseXodr(const string & xodrfile)
             }
             S = prevS + *odr_subroad._length;
             buildSubroad(*odr_subroad._length, S);
-            ++geom;
+            ++gindex;
         }
     }
 }
@@ -246,13 +246,12 @@ void CanvasXODR::init()
         {
             for (auto && s : g.second) // lane section
             {
-                LaneElementBBox<Vector3d> bbox;
+                LaneElementBBox<Vector3d> bbox; // bbox incomprizes multiple lanes
+                bbox.roadID = r.first;
+                bbox.geomID= g.first;
+                bbox.sectID = s.first;
                 for (auto && l : s.second) // lanes
                 {
-                    bbox.roadID = r.first;
-                    bbox.geomID= g.first;
-                    bbox.sectID = s.first;
-                    bbox.laneID = l.first;
                     for (size_t i = 0; i < l.second.size(); ++i) // lanes points
                     {
                         bbox.addPoint(l.second[i].block(0,0,3,1));

@@ -20,7 +20,6 @@ struct LaneElementBBox
     int sectID;
     int geomID;
     int roadID;
-    int laneID;
     bool isPointInside(T p)
     {
         return p[0] >= minX && p[0] <= maxX && p[1] >= minY && p[1] <= maxY && p[2] >= minZ && p[2] <= maxZ;
