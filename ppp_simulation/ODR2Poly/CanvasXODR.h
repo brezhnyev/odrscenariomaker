@@ -18,8 +18,9 @@ struct LaneElementBBox
     typedef typename T::Scalar basetype;
     basetype minX, maxX, minY, maxY, minZ, maxZ;
     int sectID;
-    int shapeID;
+    int geomID;
     int roadID;
+    int laneID;
     bool isPointInside(T p)
     {
         return p[0] >= minX && p[0] <= maxX && p[1] >= minY && p[1] <= maxY && p[2] >= minZ && p[2] <= maxZ;
@@ -71,8 +72,8 @@ public:
     typedef struct 
     {
         int roadID{0};
-        int shapeID{0};
-        int sectionID{0};
+        int geomID{0};
+        int sectID{0};
         int laneID{0};
         Eigen::Vector4d xF{0,0,0,0};
         Eigen::Vector4d yF{0,0,0,0};
@@ -97,7 +98,7 @@ public:
 
 private:
     void parseXodr(const std::string & xodrfile);
-    inline void fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d * trf = nullptr);
+    inline void fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
 
 private:
     const float mRadius{20};

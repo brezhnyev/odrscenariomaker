@@ -58,8 +58,16 @@ void CanvasXODR::parseXodr(const string & xodrfile)
         double S = 0; // total length of road
         uint32_t sindex = 0; // sections index (for storing for rendering)
 
+        // skip of no lanes available
+        if (!odr_road.sub_lanes)
+            continue;
+
+        // skip if lanes empty
+        if (odr_road.sub_lanes->sub_laneSection.empty())
+            continue;
+
         auto sit = odr_road.sub_lanes->sub_laneSection.begin(); // sections iterator
-        int shape = 0;
+        int geom = 0;
         for (auto && odr_subroad : odr_road.sub_planView->sub_geometry)
         {
             // starting matrix for this segment:
@@ -68,13 +76,12 @@ void CanvasXODR::parseXodr(const string & xodrfile)
             M.block(0,3,3,1) = Eigen::Vector3d(*odr_subroad._x, *odr_subroad._y, 0.0);
             Eigen::Matrix3d RM; // remember the rotational part, cause will be changed by superelevation:
             RM = M.block(0,0,3,3);
-            Eigen::Vector4d velocity; velocity.setZero();
-            Eigen::Vector4d normal; normal.setZero();
+            Eigen::Vector3d velocity(1.0,0.0,0.0);
+            Eigen::Vector4d normal(0.0,1.0,0.0,0.0);
+            Eigen::Vector4d P(0, 0, 0, 1);
 
             auto buildSubroad = [&](double s, double S)
             {
-                Eigen::Vector4d P(0, 0, 0, 1);
-
                 if (odr_subroad.sub_arc)
                 {
                     double R = 1.0/(*odr_subroad.sub_arc->_curvature);
@@ -98,7 +105,7 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                 {
                     auto poly3 = odr_subroad.sub_paramPoly3;
                     double t = s;
-                    if (*odr_subroad.sub_paramPoly3->_pRange == "normalized") t /= (*odr_subroad._length);
+                    if (!odr_subroad.sub_paramPoly3->_pRange || *odr_subroad.sub_paramPoly3->_pRange == "normalized") t /= (*odr_subroad._length);
                     // else "arcLength" and t = s
                     P = Eigen::Vector4d(
                         *poly3->_aU + *poly3->_bU * t + *poly3->_cU * t * t + *poly3->_dU * t * t * t,
@@ -123,12 +130,22 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                 }
                 else if (odr_subroad.sub_spiral)
                 {
-                    cout << "Spiral geometry not implemented, skipping ..." << endl;
-                    return;
+                    double t = s/(*odr_subroad._length);
+                    double curvs = *odr_subroad.sub_spiral->_curvStart;
+                    double curve = *odr_subroad.sub_spiral->_curvEnd;
+                    double curvature = (1.0 - t)*curvs + t*curve;
+                    if (abs(curvature) < 1e-10) curvature = curvature < 0 ? -1e-10 : 1e-10;
+                    double R = 1.0/curvature;
+                    Vector3d P2center = R*normal.block(0,0,3,1);
+                    Vector3d center = P.block(0,0,3,1) + P2center;
+                    auto Rot = AngleAxisd(curvature*mXodrResolution, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+                    Vector3d center2pnext = Rot*(-P2center);
+                    Vector3d nextP = center + center2pnext;
+                    velocity.block(0,0,3,1) = (AngleAxisd(curvature < 0 ? -M_PI_2 : M_PI_2, Eigen::Vector3d::UnitZ()).toRotationMatrix()*center2pnext).normalized();
+                    P.block(0,0,3,1) = nextP;
                 }
                 else
                     return;
-
 
                 auto polyInter = [&](double T, auto & polis, double (*getS)(void * itt) ) -> double
                 {
@@ -173,7 +190,7 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                     {
                         // ONLY 1 center line, actually loop not needed
                         Eigen::Vector4d Ptrf = M * (P + normal*offset);
-                        vizBoundary[*odr_road._id][shape][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
+                        vizBoundary[*odr_road._id][geom][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
                     }
                 auto buildLane = [&](auto & odr_sublane, int dir, double & twidth)
                 {
@@ -181,10 +198,10 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                     double width = polyInter(S - *odr_lane._s, odr_sublane.sub_width, [](void * it) ->double { return *static_cast<decltype(&odr_sublane.sub_width[0])>(it)->_sOffset; });
                     twidth += dir*width;
                     Eigen::Vector4d Ptrf = M * (P + normal*twidth);
-                    vizBoundary[*odr_road._id][shape][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
+                    vizBoundary[*odr_road._id][geom][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
                     // Center:
                     Ptrf = M * (P + normal*(twidth - dir*width/2));
-                    vizCenter[*odr_road._id][shape][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
+                    vizCenter[*odr_road._id][geom][sindex][*odr_sublane._id].emplace_back(Ptrf.x(), Ptrf.y(), Ptrf.z(), heading);
                 };
                 double twidth = offset;
                 if (odr_lane.sub_left)
@@ -208,7 +225,7 @@ void CanvasXODR::parseXodr(const string & xodrfile)
             }
             S = prevS + *odr_subroad._length;
             buildSubroad(*odr_subroad._length, S);
-            ++shape;
+            ++geom;
         }
     }
 }
@@ -223,21 +240,22 @@ CanvasXODR::~CanvasXODR()
 void CanvasXODR::init()
 {
     // build the BBoxes for the lane elements only for specific roads in Town04!!!
-    for (auto &&r : vizBoundary) // road
+    for (auto && r : vizBoundary) // road
     {
-        for (auto && shape : r.second)
+        for (auto && g : r.second)
         {
-            for (auto && s : shape.second) // lane section
+            for (auto && s : g.second) // lane section
             {
                 LaneElementBBox<Vector3d> bbox;
-                for (auto it = s.second.begin(); it != s.second.end(); ++it) // lanes
+                for (auto && l : s.second) // lanes
                 {
                     bbox.roadID = r.first;
-                    bbox.shapeID= shape.first;
+                    bbox.geomID= g.first;
                     bbox.sectID = s.first;
-                    for (size_t i = 0; i < it->second.size(); ++i) // lanes points
+                    bbox.laneID = l.first;
+                    for (size_t i = 0; i < l.second.size(); ++i) // lanes points
                     {
-                        bbox.addPoint(it->second[i].block(0,0,3,1));
+                        bbox.addPoint(l.second[i].block(0,0,3,1));
                     }
                 }
                 bbox.minZ -= 0.1;
@@ -263,9 +281,9 @@ void CanvasXODR::init()
     glNewList(listRoad, GL_COMPILE);
     for (auto && r : vizBoundary)
     {
-        for (auto && shape : r.second)
+        for (auto && g : r.second)
         {
-            for (auto && s : shape.second)
+            for (auto && s : g.second)
             {
                 for (auto it1 = s.second.begin(); it1 != s.second.end(); ++it1)
                 {
@@ -294,9 +312,9 @@ void CanvasXODR::init()
 
     for (auto && r : vizBoundary)
     {
-        for (auto && shape : r.second)
+        for (auto && g : r.second)
         {
-            for (auto && s : shape.second)
+            for (auto && s : g.second)
             {
                 for (auto && l : s.second)
                 {
@@ -317,9 +335,9 @@ void CanvasXODR::init()
     glNewList(listCenterlines, GL_COMPILE);
     for (auto && r : vizCenter)
     {
-        for (auto && shape : r.second)
+        for (auto && g : r.second)
         {
-            for (auto && s : shape.second)
+            for (auto && s : g.second)
             {
                 for (auto && l : s.second)
                 {
@@ -366,7 +384,7 @@ void CanvasXODR::drawUnSelectable()
     glLineWidth(5);
     glPointSize(10);
     // visualize the Ego positino and direction;
-    glColor3f(1.0f, 0.5f, 0.5f);
+    glColor3f(1.0f, 1.0f, 0.0f);
     glPushMatrix();
     glTranslated(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2] + 0.2);
     glBegin(GL_POINTS);
@@ -378,11 +396,11 @@ void CanvasXODR::drawUnSelectable()
     glEnd();
     glPopMatrix();
     // visualize all boundaries:
-    float radius2 = mRadius*mRadius;
+    const float radius2 = mRadius*mRadius;
     Vector3d egoTrl = Vector3d(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2]);
     for (auto && b : mLocallLaneBoxes)
     {
-        auto && baundaries = vizBoundary[b.roadID][b.shapeID][b.sectID];
+        auto && baundaries = vizBoundary[b.roadID][b.geomID][b.sectID];
         for (auto && bps : baundaries)
         {
             glColor3f(0.0f, 0.0f, 1.0f);    
@@ -406,23 +424,21 @@ void CanvasXODR::drawUnSelectable()
         glTranslated(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2] + 0.3);
         glRotatef(mEgoTrf[3]*180/M_PI, 0, 0, 1);
         glBegin(GL_LINE_STRIP);
-#if 1
+#if 0
         for (double t = 0.0; t <= poly.length; t += 0.1) // step in meters if used non-unitless solution in poly fitting
         //for (double t = 0.0; t <= 1; t += 0.01) // unitless (percents) step if used unitless solution in poly fitting
         {
             auto x = poly.xF[0]*t*t*t + poly.xF[1]*t*t + poly.xF[2]*t + poly.xF[3];
             auto y = poly.yF[0]*t*t*t + poly.yF[1]*t*t + poly.yF[2]*t + poly.yF[3];
             auto z = poly.zF[0]*t*t*t + poly.zF[1]*t*t + poly.zF[2]*t + poly.zF[3];
-            if ((Vector3d(x, y, z)).squaredNorm() < radius2) // since we are no in Ego CS, dont need to subtract Ego trl
-                glVertex3f(x, y, z + 0.3);
+            glVertex3f(x, y, z + 0.2);
         }
 #else // AVL AD stack Polyline representation:
         float xlen = poly.xmax - poly.xmin;
         for (float t = poly.xmin; t < poly.xmax; t += 0.1)
         {
             auto y = poly.xy[0]*t*t*t + poly.xy[1]*t*t + poly.xy[2]*t + poly.xy[3];
-            if ((Vector2d(t, y)).squaredNorm() < radius2)
-                glVertex3f(t,y,0.3);
+            glVertex3f(t,y,0.2);
         }
 #endif
         glEnd();
@@ -430,7 +446,7 @@ void CanvasXODR::drawUnSelectable()
     }
 }
 
-void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, const Matrix4d * trf)
+void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, const Matrix4d trf)
 {
     // Processing:
     // Approximation of the points by a polynomial function.
@@ -441,12 +457,26 @@ void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     // x is the unknown vector [c0,c1,c2,c3]T, T stands for transposed
     // and b is w
     // The final solutiong is x = (ATA)-1ATb  where T is transposed and -1 is inverted
-    const size_t S = points.size();
+    // We make a copy of the points, since they should be filtered by distance:
+    const float radius2 = mRadius*mRadius;
+    vector<Vector4d> tfpoints;
+    tfpoints.reserve(points.size());
+    for (auto && p : points)
+    {
+        Vector4d tfp = trf*(Vector4d(p.x(), p.y(), p.z(), 1.0)); // beware p[3] is storing heading info (not the 1)!
+        if (tfp.block(0,0,3,1).squaredNorm() < radius2)
+            tfpoints.push_back(tfp);
+    }
+
+    const size_t S = tfpoints.size();
+    if (S < 4)
+        return;
+
     MatrixXd A(S, 4); // ex. A(S,2) for a line, A(S,3) for parabol and A(S,4) for cubic approximation
     MatrixXd b(S, 3); // one column for X, one column for Y, and one for Z axis
 
     double t = 0; // parameter changing in [0,1]
-    double closingSegmentLength = (points[S-2].block(0,0,3,1) - points[S-1].block(0,0,3,1)).norm(); // generally not equal mXodrResolution!
+    double closingSegmentLength = (tfpoints[S-2].block(0,0,3,1) - tfpoints[S-1].block(0,0,3,1)).norm(); // generally not equal mXodrResolution!
     double L = (S-2)*mXodrResolution + closingSegmentLength; // |.....|.....|.....|..|  // ex. 5 points: closingSegment is usually shorter!
     double s = 0;
     for (size_t i = 0; i < S; ++i)
@@ -459,8 +489,7 @@ void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
         A(i, 1) = t*t;
         A(i, 2) = t;
         A(i, 3) = 1.0;
-        Vector4d p = points[i];
-        if (trf) p = *trf*Vector4d(p[0], p[1], p[2], 1);
+        Vector4d p = tfpoints[i];
         b(i, 0) = p[0];
         b(i, 1) = p[1];
         b(i, 2) = p[2];
@@ -472,8 +501,6 @@ void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     pf.length = L;
 
     // specifically for AVL AD stack also fit into XY poly:
-    auto tfpoints = points;
-    for (auto && tfp : tfpoints) tfp = (*trf)*Vector4d(tfp[0], tfp[1], tfp[2], 1);
     double xincr = (tfpoints[S-1].x() - tfpoints[0].x())/(S-1);
     t = tfpoints[0].x();
     for (size_t i = 0; i < S; ++i)
@@ -529,7 +556,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
         {
             if (b.isPointInside(p))
             {
-                auto && sections = vizCenter[b.roadID][b.shapeID][b.sectID];
+                auto && sections = vizCenter[b.roadID][b.geomID][b.sectID];
                 for (auto && cps : sections)
                 {
                     for (size_t i = 0; i < cps.second.size(); ++i)
@@ -558,7 +585,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
 
     for (auto && b : mLocallLaneBoxes)
     {
-        auto && baundaries = vizBoundary[b.roadID][b.shapeID][b.sectID];
+        auto && baundaries = vizBoundary[b.roadID][b.geomID][b.sectID];
         for (auto && bps : baundaries)
         {
             PolyFactors pf;
@@ -566,13 +593,28 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
             if (bps.second.size() > 3)
             {
                 // tarnsform the points into Ego CS:
-                fitPoly(bps.second, pf, &egoTrfInv);
+                fitPoly(bps.second, pf, egoTrfInv);
                 pf.roadID = b.roadID;
-                pf.shapeID = b.shapeID;
-                pf.sectionID = b.sectID;
+                pf.geomID = b.geomID;
+                pf.sectID = b.sectID;
                 pf.laneID = bps.first;
                 mPolys.push_back(pf);
             }
         }
+    }
+    cout << "polylines" << endl << endl;
+    for (auto && poly : mPolys)
+    {
+        cout << "\t" << "roadID: " << poly.roadID << endl;
+        cout << "\t" << "geomID: " << poly.geomID << endl;
+        cout << "\t" << "sectID: " << poly.sectID << endl;
+        cout << "\t" << "laneID: " << poly.laneID << endl;
+        cout << "\t" << "xF: " << poly.xF.transpose() << endl;
+        cout << "\t" << "xY: " << poly.yF.transpose() << endl;
+        cout << "\t" << "xZ: " << poly.zF.transpose() << endl;
+        cout << "\t" << "xy: " << poly.xy[0] << " " << poly.xy[1] << " " << poly.xy[2] << " " << poly.xy[3] << endl;
+        cout << "\t" << "minx: " << poly.xmin << endl;
+        cout << "\t" << "maxx: " << poly.xmax << endl;
+        cout << endl;
     }
 }
