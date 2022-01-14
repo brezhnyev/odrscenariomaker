@@ -29,7 +29,7 @@ extern Matrix4f camTrf;
 using namespace std;
 
 
-Viewer::Viewer(string xodrfiles, float xodrResolution) : mFr(xodrfiles), mXodrRes(xodrResolution), mRibbonStart(0,0,0)
+Viewer::Viewer(QWidget * parent, string xodrfiles, float xodrResolution) : QGLViewer(parent), mFr(xodrfiles), mXodrRes(xodrResolution), mRibbonStart(0,0,0)
 {
     using namespace net;
 
@@ -58,6 +58,12 @@ Viewer::Viewer(string xodrfiles, float xodrResolution) : mFr(xodrfiles), mXodrRe
 }
 
 Viewer::~Viewer() {}
+
+void Viewer::selectID(QString id)
+{
+    m_canvas->highlightSelected(id.toInt());
+    update();
+}
 
 void Viewer::init()
 {
@@ -189,7 +195,7 @@ void Viewer::postSelection(const QPoint &point)
 
     mSelPoint = camera()->pointUnderPixel(point, found);
     int id = selectedName();
-    glaneid_t laneID = m_canvas->printLaneInfo(id, Vector3d(mSelPoint.x, mSelPoint.y, mSelPoint.z));
+    xodrid_t laneID = m_canvas->highlightSelected(id, Vector3d(mSelPoint.x, mSelPoint.y, mSelPoint.z));
     // display the lane info:
     stringstream ss;
     ss << laneID;

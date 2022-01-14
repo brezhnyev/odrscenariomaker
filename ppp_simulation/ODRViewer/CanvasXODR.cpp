@@ -275,10 +275,10 @@ void CanvasXODR::init()
                     }
                     glEnd();
                     glEndList();
-                    bbox.glaneid.roadID = r.first;
-                    bbox.glaneid.geoID= geom.first;
-                    bbox.glaneid.sectID = s.first;
-                    bbox.glaneid.laneID = it1->first >= 0 ? it1->first + 1 : it1->first;
+                    bbox.xodrid.roadID = r.first;
+                    bbox.xodrid.geoID= geom.first;
+                    bbox.xodrid.sectID = s.first;
+                    bbox.xodrid.laneID = it1->first >= 0 ? it1->first + 1 : it1->first;
                     bbox.minZ -= 0.1;
                     bbox.maxZ += 0.1;
                     mListID2LaneMap[listid] = bbox;
@@ -401,10 +401,20 @@ void CanvasXODR::drawWithNames()
     }
 }
 
-glaneid_t CanvasXODR::printLaneInfo(uint32_t id, Vector3d p)
+xodrid_t CanvasXODR::highlightSelected(uint32_t glid, Vector3d p)
 {
-    mSelectedLane = id;
-    return mListID2LaneMap[id].glaneid;
+    mSelectedLane = glid;
+    return mListID2LaneMap[glid].xodrid;
+}
+
+void CanvasXODR::highlightSelected(uint32_t xodrid)
+{
+    mSelectedBoxes.clear();
+    for (auto && bbox : mListID2LaneMap)
+    {
+        if (bbox.second.xodrid.roadID == xodrid)
+            mSelectedBoxes.push_back(bbox.first);
+    }
 }
 
 void CanvasXODR::highlightRibbonSelection(const Vector3d & start, const Vector3d & end)
@@ -417,7 +427,7 @@ void CanvasXODR::highlightRibbonSelection(const Vector3d & start, const Vector3d
         if (it.second.isCrossingOther(selBox))
         {
             mSelectedBoxes.push_back(it.first);
-            selectedRoads.insert(it.second.glaneid.roadID);
+            selectedRoads.insert(it.second.xodrid.roadID);
         }
     }
 

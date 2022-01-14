@@ -112,15 +112,15 @@ typedef struct
     int geoID{0};
     int sectID{0};
     int laneID{0};
-} glaneid_t;
+} xodrid_t;
 
 template <typename T>
 struct LaneElementBBox : BBox<T>
 {
-    glaneid_t glaneid;
+    xodrid_t xodrid;
 };
 
-inline std::ostream & operator << (std::ostream & os, const glaneid_t & glid)
+inline std::ostream & operator << (std::ostream & os, const xodrid_t & glid)
 {
     os << "roadID=" << glid.roadID << "  geoID=" << glid.geoID << "  sectID=" << glid.sectID << "  laneID=" << glid.laneID << std::endl;
     return os;
@@ -136,7 +136,8 @@ public:
     void drawSelectable(uint32_t);
     void drawUnSelectable();
     void drawWithNames();
-    glaneid_t printLaneInfo(uint32_t id, Eigen::Vector3d);
+    xodrid_t highlightSelected(uint32_t glid, Eigen::Vector3d);
+    void highlightSelected(uint32_t xodrid);
     void highlightRibbonSelection(const Eigen::Vector3d & , const Eigen::Vector3d &);
     void init(); // init OpenGL related stuff
     double getSceneRadius();

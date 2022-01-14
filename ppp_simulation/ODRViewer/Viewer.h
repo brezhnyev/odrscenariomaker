@@ -13,7 +13,7 @@ class Viewer : public QGLViewer
 {
     Q_OBJECT
 public:
-    Viewer(std::string xodrfile, float xodrResolution);
+    Viewer(QWidget * parent, std::string xodrfile, float xodrResolution);
     ~Viewer() override;
     void draw() override;
     void drawWithNames() override;
@@ -22,6 +22,7 @@ public:
     void mousePressEvent(QMouseEvent * event) override;
     void mouseMoveEvent(QMouseEvent *) override;
     void keyPressEvent(QKeyEvent * event) override;
+    void selectID(QString id);
 
 private:
     FolderReader<std::set<std::string, LexCompare>>  mFr;
