@@ -15,6 +15,8 @@ using namespace odr;
 using namespace std;
 using namespace Eigen;
 
+//#define AVL_STACK
+
 
 CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResolution) : mRadius(radius), mXodrResolution(xodrResolution)
 {
@@ -397,21 +399,6 @@ void CanvasXODR::drawUnSelectable()
     // visualize all boundaries:
     const float radius2 = mRadius*mRadius;
     Vector3d egoTrl = Vector3d(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2]);
-    for (auto && b : mLocallLaneBoxes)
-    {
-        auto && baundaries = vizBoundary[b.roadID][b.geomID][b.sectID];
-        for (auto && bps : baundaries)
-        {
-            glColor3f(0.0f, 0.0f, 1.0f);    
-            glBegin(GL_LINE_STRIP);
-            for (size_t i = 0; i < bps.second.size(); ++i)
-            {
-                if ((Vector3d(bps.second[i].x(), bps.second[i].y(), bps.second[i].z()) - egoTrl).squaredNorm() < radius2)
-                    glVertex3f(bps.second[i].x(), bps.second[i].y(), bps.second[i].z() + 0.2f);
-            }
-            glEnd();
-        }
-    }
 
     // visualize the fitted Polys:
     for (auto && poly : mPolys)
@@ -423,21 +410,21 @@ void CanvasXODR::drawUnSelectable()
         glTranslated(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2] + 0.3);
         glRotatef(mEgoTrf[3]*180/M_PI, 0, 0, 1);
         glBegin(GL_LINE_STRIP);
-#if 0
+#ifndef AVL_STACK
         for (double t = 0.0; t <= poly.length; t += 0.1) // step in meters if used non-unitless solution in poly fitting
         //for (double t = 0.0; t <= 1; t += 0.01) // unitless (percents) step if used unitless solution in poly fitting
         {
             auto x = poly.xF[0]*t*t*t + poly.xF[1]*t*t + poly.xF[2]*t + poly.xF[3];
             auto y = poly.yF[0]*t*t*t + poly.yF[1]*t*t + poly.yF[2]*t + poly.yF[3];
             auto z = poly.zF[0]*t*t*t + poly.zF[1]*t*t + poly.zF[2]*t + poly.zF[3];
-            glVertex3f(x, y, z + 0.2);
+            glVertex3f(x, y, z + 0.1);
         }
 #else // AVL AD stack Polyline representation:
         float xlen = poly.xmax - poly.xmin;
         for (float t = poly.xmin; t < poly.xmax; t += 0.1)
         {
             auto y = poly.xy[0]*t*t*t + poly.xy[1]*t*t + poly.xy[2]*t + poly.xy[3];
-            glVertex3f(t,y,0.2);
+            glVertex3f(t,y,0.1);
         }
 #endif
         glEnd();
@@ -463,7 +450,7 @@ void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     for (auto && p : points)
     {
         Vector4d tfp = trf*(Vector4d(p.x(), p.y(), p.z(), 1.0)); // beware p[3] is storing heading info (not the 1)!
-        if (tfp.block(0,0,3,1).squaredNorm() < radius2)
+        if (tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2)
             tfpoints.push_back(tfp);
     }
 
@@ -582,6 +569,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
     egoTrf.block(0,3,3,1) = mEgoTrf.block(0,0,3,1);
     Matrix4d egoTrfInv = egoTrf.inverse();
 
+#ifndef AVL_STACK
     for (auto && b : mLocallLaneBoxes)
     {
         auto && baundaries = vizBoundary[b.roadID][b.geomID][b.sectID];
@@ -601,6 +589,35 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
             }
         }
     }
+#else
+    // for AVL stack we need ONE lane per road:
+    map<int, map<int, vector<Vector4d>>> lanes;
+    for (auto && b : mLocallLaneBoxes)
+    {
+        auto && boundaries = vizBoundary[b.roadID][b.geomID][b.sectID];
+        for (auto & bsp : boundaries)
+            lanes[b.roadID][bsp.first].insert(lanes[b.roadID][bsp.first].end(), bsp.second.begin(), bsp.second.end());
+    }
+
+    for (auto && r : lanes) // road
+    {
+        for (auto && l : r.second) // lane
+        {
+            PolyFactors pf;
+            // having 3 and fewer points makes the solution numerically unstable:
+            if (l.second.size() > 3)
+            {
+                // tarnsform the points into Ego CS:
+                fitPoly(l.second, pf, egoTrfInv);
+                pf.roadID = r.first;
+                pf.geomID = __INT_MAX__;
+                pf.sectID = __INT_MAX__;
+                pf.laneID = l.first;
+                mPolys.push_back(pf);
+            }
+        }
+    }
+#endif
     cout << "polylines" << endl << endl;
     for (auto && poly : mPolys)
     {
@@ -611,6 +628,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
         cout << "\t" << "xF: " << poly.xF.transpose() << endl;
         cout << "\t" << "xY: " << poly.yF.transpose() << endl;
         cout << "\t" << "xZ: " << poly.zF.transpose() << endl;
+        cout << "\t" << "length: " << poly.length << endl;
         cout << "\t" << "xy: " << poly.xy[0] << " " << poly.xy[1] << " " << poly.xy[2] << " " << poly.xy[3] << endl;
         cout << "\t" << "minx: " << poly.xmin << endl;
         cout << "\t" << "maxx: " << poly.xmax << endl;
