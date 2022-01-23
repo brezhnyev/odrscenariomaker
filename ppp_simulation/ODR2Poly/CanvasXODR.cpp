@@ -15,7 +15,7 @@ using namespace odr;
 using namespace std;
 using namespace Eigen;
 
-//#define AVL_STACK
+#define AVL_STACK
 
 
 CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResolution) : mRadius(radius), mXodrResolution(xodrResolution)
@@ -617,21 +617,21 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
             }
         }
     }
+    // cout << "polylines" << endl << endl;
+    // for (auto && poly : mPolys)
+    // {
+    //     cout << "\t" << "roadID: " << poly.roadID << endl;
+    //     cout << "\t" << "geomID: " << poly.geomID << endl;
+    //     cout << "\t" << "sectID: " << poly.sectID << endl;
+    //     cout << "\t" << "laneID: " << poly.laneID << endl;
+    //     cout << "\t" << "xF: " << poly.xF.transpose() << endl;
+    //     cout << "\t" << "xY: " << poly.yF.transpose() << endl;
+    //     cout << "\t" << "xZ: " << poly.zF.transpose() << endl;
+    //     cout << "\t" << "length: " << poly.length << endl;
+    //     cout << "\t" << "xy: " << poly.xy[0] << " " << poly.xy[1] << " " << poly.xy[2] << " " << poly.xy[3] << endl;
+    //     cout << "\t" << "minx: " << poly.xmin << endl;
+    //     cout << "\t" << "maxx: " << poly.xmax << endl;
+    //     cout << endl;
+    // }
 #endif
-    cout << "polylines" << endl << endl;
-    for (auto && poly : mPolys)
-    {
-        cout << "\t" << "roadID: " << poly.roadID << endl;
-        cout << "\t" << "geomID: " << poly.geomID << endl;
-        cout << "\t" << "sectID: " << poly.sectID << endl;
-        cout << "\t" << "laneID: " << poly.laneID << endl;
-        cout << "\t" << "xF: " << poly.xF.transpose() << endl;
-        cout << "\t" << "xY: " << poly.yF.transpose() << endl;
-        cout << "\t" << "xZ: " << poly.zF.transpose() << endl;
-        cout << "\t" << "length: " << poly.length << endl;
-        cout << "\t" << "xy: " << poly.xy[0] << " " << poly.xy[1] << " " << poly.xy[2] << " " << poly.xy[3] << endl;
-        cout << "\t" << "minx: " << poly.xmin << endl;
-        cout << "\t" << "maxx: " << poly.xmax << endl;
-        cout << endl;
-    }
 }
