@@ -450,7 +450,7 @@ void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     for (auto && p : points)
     {
         Vector4d tfp = trf*(Vector4d(p.x(), p.y(), p.z(), 1.0)); // beware p[3] is storing heading info (not the 1)!
-        if (tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2)
+        if (mDir*tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2)
             tfpoints.push_back(tfp);
     }
 
@@ -485,26 +485,58 @@ void CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     pf.yF = x.block(0,1,4,1);
     pf.zF = x.block(0,2,4,1);
     pf.length = L;
+}
 
-    // specifically for AVL AD stack also fit into XY poly:
-    double xincr = (tfpoints[S-1].x() - tfpoints[0].x())/(S-1);
-    t = tfpoints[0].x();
+
+void CanvasXODR::fitPolyAVL(const vector<Vector4d> & points, PolyFactors & pf, const Matrix4d trf)
+{
+    // Processing:
+    // Approximation of the points by a polynomial function.
+    // The fitting will be done for X,Y and Z components of the points separately (similarly to poly3 from ODR)
+    // We will use notation c0*t*t*t + c1*t*t + c2*t + c3 = X(Y or Z), where t is a unit-less parameter [0,1]
+    // In terms of LSA the above equation has the traditional form:
+    // Ax = b, where A is the matrix with N lines of form [t3 t2 t 1], where N is number of measurements
+    // x is the unknown vector [c0,c1,c2,c3]T, T stands for transposed
+    // and b is w
+    // The final solutiong is x = (ATA)-1ATb  where T is transposed and -1 is inverted
+    // We make a copy of the points, since they should be filtered by distance:
+    const float radius2 = mRadius*mRadius;
+    vector<Vector4d> tfpoints;
+    tfpoints.reserve(points.size());
+    for (auto && p : points)
+    {
+        Vector4d tfp = trf*(Vector4d(p.x(), p.y(), p.z(), 1.0)); // beware p[3] is storing heading info (not the 1)!
+        if (mDir*tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2)
+            tfpoints.push_back(tfp);
+    }
+
+    const size_t S = tfpoints.size();
+    if (S < 4)
+        return;
+
+    MatrixXd A(S, 4); // ex. A(S,2) for a line, A(S,3) for parabol and A(S,4) for cubic approximation
+    MatrixXd b(S, 1); // one column for Y
+
     for (size_t i = 0; i < S; ++i)
     {
+        double t = tfpoints[i].x();
         A(i, 0) = t*t*t;
         A(i, 1) = t*t;
         A(i, 2) = t;
         A(i, 3) = 1.0;
-        b(i, 0) = tfpoints[i][0]; // not using this
-        b(i, 1) = tfpoints[i][1]; // << using for dependency y = f(x)
-        b(i, 2) = tfpoints[i][2]; // not using this
-        t += xincr;
+        b(i, 0) = tfpoints[i][1]; // << using for dependency y = f(x)
     }
-    x = (A.transpose()*A).inverse()*A.transpose()*b;
-    for (size_t i = 0; i < 4; ++i) { pf.xy[i] = x(i,1); }
-    pf.xmin = tfpoints[0].x() < tfpoints[S-1].x() ? tfpoints[0].x() : tfpoints[S-1].x();
-    pf.xmax = tfpoints[0].x() > tfpoints[S-1].x() ? tfpoints[0].x() : tfpoints[S-1].x();
+    Matrix<double,4,1> x = (A.transpose()*A).inverse()*A.transpose()*b;
+    for (size_t i = 0; i < 4; ++i) { pf.xy[i] = x(i,0); }
+    pf.xmin = __FLT_MAX__;
+    pf.xmax = __FLT_MIN__;
+    for (auto && p : tfpoints)
+    {
+        if (p.x() < pf.xmin) pf.xmin = p.x();
+        if (p.x() > pf.xmax) pf.xmax = p.x();
+    }
 }
+
 
 void CanvasXODR::draw()
 {
@@ -590,31 +622,27 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
         }
     }
 #else
-    // for AVL stack we need ONE lane per road:
-    map<int, map<int, vector<Vector4d>>> lanes;
+    // for AVL stack the SINGLE road will have unique lanes each for the length of the road:
+    map<int, vector<Vector4d>> lanes;
     for (auto && b : mLocallLaneBoxes)
     {
         auto && boundaries = vizBoundary[b.roadID][b.geomID][b.sectID];
         for (auto & bsp : boundaries)
-            lanes[b.roadID][bsp.first].insert(lanes[b.roadID][bsp.first].end(), bsp.second.begin(), bsp.second.end());
+            lanes[bsp.first].insert(lanes[bsp.first].end(), bsp.second.begin(), bsp.second.end());
     }
-
-    for (auto && r : lanes) // road
+    for (auto && l : lanes) // lane
     {
-        for (auto && l : r.second) // lane
+        PolyFactors pf;
+        // having 3 and fewer points makes the solution numerically unstable:
+        if (l.second.size() > 3)
         {
-            PolyFactors pf;
-            // having 3 and fewer points makes the solution numerically unstable:
-            if (l.second.size() > 3)
-            {
-                // tarnsform the points into Ego CS:
-                fitPoly(l.second, pf, egoTrfInv);
-                pf.roadID = r.first;
-                pf.geomID = __INT_MAX__;
-                pf.sectID = __INT_MAX__;
-                pf.laneID = l.first;
-                mPolys.push_back(pf);
-            }
+            // tarnsform the points into Ego CS:
+            fitPolyAVL(l.second, pf, egoTrfInv);
+            pf.roadID = __INT_MAX__;
+            pf.geomID = __INT_MAX__;
+            pf.sectID = __INT_MAX__;
+            pf.laneID = l.first;
+            mPolys.push_back(pf);
         }
     }
     // cout << "polylines" << endl << endl;

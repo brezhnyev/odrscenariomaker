@@ -79,8 +79,8 @@ public:
         Eigen::Vector4d zF{0,0,0,0};
         float length{0.0f};
         double xy [4]; ///< c0,c1,c2,c3 of y = f(x) polynomial
-        float xmin;   ///< minimal x
-        float xmax;   ///< maximal x
+        float xmin{0.0f};     ///< minimal x
+        float xmax{100.0f};   ///< maximal x
     } PolyFactors;
 
     CanvasXODR(const std::string & xodrfile, float radius, float xodrResolution);
@@ -94,10 +94,16 @@ public:
     std::vector<PolyFactors> getPolys() { return mPolys; }
     double getSceneRadius();
     typedef std::map<int, std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector4d>>>>> LanesContainer;
+    void toggleDirection()
+    {
+        mDir *= -1;
+        computePolys(mEgoTrf.block(0,0,3,1));
+    }
 
 private:
     void parseXodr(const std::string & xodrfile);
-    inline void fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
+    void fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
+    void fitPolyAVL(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
 
 private:
     const float mRadius{20};
@@ -111,4 +117,5 @@ private:
     Eigen::Vector4d mEgoTrf {0,0,0,0};
     std::vector<PolyFactors> mPolys;
     LaneElementBBox<Eigen::Vector3d> mSceneBB;
+    int mDir{1}; // sets the direction of the poly computation (forward-backward)
 };

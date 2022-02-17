@@ -18,6 +18,7 @@ public:
     void init() override;
     void postSelection(const QPoint &point) override;
     void mousePressEvent(QMouseEvent * event) override;
+    void keyPressEvent(QKeyEvent *) override;
 
 private:
     CanvasXODR      m_canvas;

@@ -1,6 +1,7 @@
 #include <Viewer.h>
 #include <QGLViewer/vec.h>
 #include <QtWidgets/QMessageBox>
+#include <QKeyEvent>
 
 #include <iostream>
 #include <sstream>
@@ -94,4 +95,15 @@ void Viewer::postSelection(const QPoint &point)
         int id = selectedName();
         // KB: no need to call update, since this function is a virtual and the update is called after it from OGLViewer
     }
+}
+
+
+void Viewer::keyPressEvent(QKeyEvent * event)
+{
+    if(event->key() == Qt::Key_D)
+    {
+        m_canvas.toggleDirection();
+        update();
+    }
+    QGLViewer::keyPressEvent(event);
 }
