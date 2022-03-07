@@ -40,13 +40,12 @@ CanvasXODR::CanvasXODR(string xodrfile)
             M.block(0,3,3,1) = Eigen::Vector3d(*odr_subroad._x, *odr_subroad._y, 0.0);
             Eigen::Matrix3d RM; // remember the rotational part, cause will be changed by superelevation:
             RM = M.block(0,0,3,3);
-            Eigen::Vector4d velocity; velocity.setZero();
-            Eigen::Vector4d normal; normal.setZero();
+            Eigen::Vector3d velocity(1.0,0.0,0.0);
+            Eigen::Vector4d normal(0.0,1.0,0.0,0.0);
+            Eigen::Vector4d P(0, 0, 0, 1);
 
             auto buildSubroad = [&](double s, double S)
             {
-                Eigen::Vector4d P(0, 0, 0, 1);
-
                 if (odr_subroad.sub_arc)
                 {
                     double R = 1.0/(*odr_subroad.sub_arc->_curvature);
@@ -69,7 +68,9 @@ CanvasXODR::CanvasXODR(string xodrfile)
                 else if (odr_subroad.sub_paramPoly3 && odr_subroad._length)
                 {
                     auto poly3 = odr_subroad.sub_paramPoly3;
-                    double t = s / (*odr_subroad._length);
+                    double t = s;
+                    if (!odr_subroad.sub_paramPoly3->_pRange || *odr_subroad.sub_paramPoly3->_pRange == "normalized") t /= (*odr_subroad._length);
+                    // else "arcLength" and t = s
                     P = Eigen::Vector4d(
                         *poly3->_aU + *poly3->_bU * t + *poly3->_cU * t * t + *poly3->_dU * t * t * t,
                         *poly3->_aV + *poly3->_bV * t + *poly3->_cV * t * t + *poly3->_dV * t * t * t,
@@ -93,10 +94,23 @@ CanvasXODR::CanvasXODR(string xodrfile)
                 }
                 else if (odr_subroad.sub_spiral)
                 {
-                    return;
+                    double t = s/(*odr_subroad._length);
+                    double curvs = *odr_subroad.sub_spiral->_curvStart;
+                    double curve = *odr_subroad.sub_spiral->_curvEnd;
+                    double curvature = (1.0 - t)*curvs + t*curve;
+                    if (abs(curvature) < 1e-10) curvature = curvature < 0 ? -1e-10 : 1e-10;
+                    double R = 1.0/curvature;
+                    Vector3d P2center = R*normal.block(0,0,3,1);
+                    Vector3d center = P.block(0,0,3,1) + P2center;
+                    auto Rot = AngleAxisd(curvature*mXodrResolution, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+                    Vector3d center2pnext = Rot*(-P2center);
+                    Vector3d nextP = center + center2pnext;
+                    velocity.block(0,0,3,1) = (AngleAxisd(curvature < 0 ? -M_PI_2 : M_PI_2, Eigen::Vector3d::UnitZ()).toRotationMatrix()*center2pnext).normalized();
+                    P.block(0,0,3,1) = nextP;
                 }
                 else
                     return;
+
 
 
                 auto polyInter = [&](double T, auto & polis, double (*getS)(void * itt) ) -> double
@@ -168,7 +182,7 @@ CanvasXODR::CanvasXODR(string xodrfile)
                 }
             };
             double prevS = S;
-            for (double s = 0; s < *odr_subroad._length; s++, S++)
+            for (double s = 0; s < *odr_subroad._length; s += mXodrResolution, S += mXodrResolution)
             {
                 buildSubroad(s, S);
             }

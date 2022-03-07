@@ -13,7 +13,7 @@ class Viewer : public QGLViewer
 {
     Q_OBJECT
 public:
-    Viewer(Scenario & scenario);
+    Viewer(Scenario & scenario, const std::string & xodrfile);
     ~Viewer() override {};
     void draw() override;
     void drawWithNames() override;

@@ -59,4 +59,5 @@ private:
     uint listRoad, listBounadries, listCenterlines;
     // ATTENTION STATIC!!!
     static std::vector<LaneElementBBox<double>> s_lboxes;
+    float mXodrResolution {0.1};
 };

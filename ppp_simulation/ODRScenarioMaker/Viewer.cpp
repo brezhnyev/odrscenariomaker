@@ -26,7 +26,7 @@ using namespace Eigen;
 extern Matrix4f camTrf;
 
 
-Viewer::Viewer(Scenario & scenario) : m_scenario(scenario), m_canvas("/home/kbrezhnyev/DATA/carla-export/Town03/Town03.xodr")
+Viewer::Viewer(Scenario & scenario, const string & xodrfile) : m_scenario(scenario), m_canvas(xodrfile)
 {
     using namespace net;
 

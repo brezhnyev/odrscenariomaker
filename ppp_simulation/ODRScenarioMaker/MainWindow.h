@@ -14,7 +14,7 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    MainWindow(QWidget * parent = nullptr);
+    MainWindow(const std::string & xodrfile, QWidget * parent = nullptr);
     void update()
     {
         m_viewer->update();

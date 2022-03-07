@@ -12,13 +12,15 @@ using namespace std;
 extern int play(Scenario & scenario);
 extern bool doStop;
 
-MainWindow::MainWindow(QWidget * parent) : QMainWindow(parent)
+MainWindow::MainWindow(const string & xodrfile, QWidget * parent) : QMainWindow(parent)
+, m_viewer(nullptr)
+, m_treeView(nullptr)
 , m_pointProps(nullptr)
 , m_pathProps(nullptr)
 , m_vehicleProps(nullptr)
 , m_scenarioProps(nullptr)
 {
-    m_viewer = new Viewer(m_scenario);
+    m_viewer = new Viewer(m_scenario, xodrfile);
     setCentralWidget(m_viewer);
 
     m_treeView = new TreeView(m_scenario);
