@@ -16,8 +16,7 @@
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/IMUMeasurement.h>
 
-#include "../scenario.h"
-#include "../Serializer.h"
+#include "./scenario.h"
 
 #include <chrono>
 #include <iostream>
@@ -61,17 +60,10 @@ typedef carla::SharedPtr<cc::Actor> ShrdPtrActor;
 
 bool doStop;
 extern MainWindow * mw;
-static string delim_ = ",";
-ofstream hlpout;
 static int FPS = 10;
 Matrix4f camTrf;
-static int initLaneID = 1000;
 static bool realtime_playback = true;
-ShrdPtrActor imu;
-carla::SharedPtr<csd::IMUMeasurement> imuMeas;
-constexpr float GRAVITY = 9.81f;
 
-constexpr double EARTHR = 6371000.0;
 
 static map <string, cg::Location> town2InitLocation
 {
@@ -82,158 +74,11 @@ static map <string, cg::Location> town2InitLocation
     {"Town05", cg::Location(-162.532, -95.1386, 0.3)},
 };
 
-static map<string, string> carla2ppp
-{
-    {"vehicle.audi.a2", "car"},
-    {"vehicle.tesla.model3", "car"},
-    {"vehicle.bh.crossbike", "bicycle"},
-    {"vehicle.bmw.grandtourer", "car"},
-    {"vehicle.audi.etron", "car"},
-    {"vehicle.seat.leon", "car"},
-    {"vehicle.volkswagen.t2", "truck"},
-    {"vehicle.kawasaki.ninja", "motorcycle"},
-    {"vehicle.mustang.mustang", "car"},
-    {"vehicle.tesla.cybertruck", "car"},
-    {"vehicle.lincoln.mkz2017", "car"},
-    {"vehicle.lincoln2020.mkz2020", "car"},
-    {"vehicle.dodge_charger.police", "car"},
-    {"vehicle.gazelle.omafiets", "bicycle"},
-    {"vehicle.yamaha.yzf", "motorcycle"},
-    {"vehicle.audi.tt", "car"},
-    {"vehicle.jeep.wrangler_rubicon", "car"},
-    {"vehicle.harley-davidson.low_rider", "motorcycle"},
-    {"vehicle.chevrolet.impala", "car"},
-    {"vehicle.nissan.patrol", "car"},
-    {"vehicle.nissan.micra", "car"},
-    {"vehicle.mercedesccc.mercedesccc", "car"},
-    {"vehicle.bmw.isetta", "car"},
-    {"vehicle.mini.cooperst", "car"},
-    {"vehicle.chargercop2020.chargercop2020", "car"},
-    {"vehicle.toyota.prius", "car"},
-    {"vehicle.mercedes-benz.coupe", "car"},
-    {"vehicle.diamondback.century", "bicycle"},
-    {"vehicle.citroen.c3", "car"},
-    {"vehicle.charger2020.charger2020", "car"},
-    {"vehicle.carlamotors.carlacola", "car"}
-};
 
-string getHLPHeader()
-{
-    return "timestamp" + delim_ +
-           "Obstacles_UniqueId" + delim_ +
-           "Obstacles_Type" + delim_ +
-           "Obstacles_RelativePosition_X" + delim_ +
-           "Obstacles_RelativePosition_Y" + delim_ +
-           "Obstacles_RelativePosition_Z" + delim_ +
-           "Obstacles_RelativeVelocity_X" + delim_ +
-           "Obstacles_RelativeVelocity_Y" + delim_ +
-           "Obstacles_RelativeVelocity_Z" + delim_ +
-           "Obstacles_RelativeSpeed" + delim_ +
-           "Obstacles_Length" + delim_ +
-           "Obstacles_Width" + delim_ +
-           "Obstacles_Height" + delim_ +
-           "Obstacles_RelativeRoll" + delim_ +
-           "Obstacles_RelativePitch" + delim_ +
-           "Obstacles_RelativeYaw" + delim_ +
-           "Obstacles_TimeToCollision" + delim_ +
-           "Obstacles_RelativeLane" + delim_ +
-           "Obstacles_AbsoluteLane" + delim_ +
-           "Ego_AbsolutePosition_X" + delim_ +
-           "Ego_AbsolutePosition_Y" + delim_ +
-           "Ego_AbsolutePosition_Z" + delim_ +
-           "Ego_AbsoluteVelocity_X" + delim_ +
-           "Ego_AbsoluteVelocity_Y" + delim_ +
-           "Ego_AbsoluteVelocity_Z" + delim_ +
-           "Ego_AbsoluteSpeed" + delim_ +
-           "Ego_Roll" + delim_ +
-           "Ego_Pitch" + delim_ +
-           "Ego_Yaw" + delim_ +
-           "Ego_YawRate" + delim_ +
-           "Ego_AbsoluteLane" + delim_ +
-           "Ego_Lattitude" + delim_ +
-           "Ego_Longitude" + delim_ +
-           "Ego_Atttitude" + delim_ +
-           "Ego_Acceleration_X_Raw" + delim_ +
-           "Ego_Acceleration_Y_Raw" + delim_ +
-           "Ego_Acceleration_Z_Raw" + delim_ +
-           "\n";
-}
-
-void printObject(uint64_t timestamp, ShrdPtrActor obstacle, ShrdPtrActor ego)
-{
-    auto trf = ego->GetTransform();
-    int egoLaneID = CanvasXODR::getLaneID(Vector3d(trf.location.x, -trf.location.y, trf.location.z));
-    if (initLaneID == 1000) initLaneID = egoLaneID;
-
-    hlpout << timestamp << delim_;
-    if (obstacle)
-    {
-        hlpout << obstacle->GetId() << delim_;
-        hlpout << carla2ppp[obstacle->GetDisplayId().substr(11,obstacle->GetDisplayId().size()-12)] << delim_;
-        Matrix4d om, em; // obstacle and ego matrix
-        om.setIdentity();
-        em.setIdentity();
-        auto otrf = obstacle->GetTransform();
-        auto etrf = ego->GetTransform();
-        om.block(0,0,3,3) = AngleAxisd(otrf.rotation.roll*DEG2RAD, Vector3d::UnitX())*AngleAxisd(otrf.rotation.pitch*DEG2RAD, Vector3d::UnitY())*AngleAxisd(-otrf.rotation.yaw*DEG2RAD, Vector3d::UnitZ()).toRotationMatrix();
-        om.block(0,3,3,1) = Vector3d(otrf.location.x, -otrf.location.y, otrf.location.z);
-        em.block(0,0,3,3) = AngleAxisd(etrf.rotation.roll*DEG2RAD, Vector3d::UnitX())*AngleAxisd(etrf.rotation.pitch*DEG2RAD, Vector3d::UnitY())*AngleAxisd(-etrf.rotation.yaw*DEG2RAD, Vector3d::UnitZ()).toRotationMatrix();
-        em.block(0,3,3,1) = Vector3d(etrf.location.x, -etrf.location.y, etrf.location.z);
-        // relative transformation:
-        Matrix4d trf = em.inverse()*om;
-        Matrix3d rotM = trf.block(0,0,3,3);
-        double yaw = atan2(rotM(1,0),rotM(0,0));
-        double pitch = asin(rotM(2,0));
-        rotM = rotM*AngleAxis<double>(-yaw, Vector3d::UnitZ())*AngleAxis<double>(-pitch, Vector3d::UnitY());
-        double roll = asin(rotM(2,1));
-        hlpout << trf(0,3) << delim_ << trf(1,3) << delim_ << trf(2,3) << delim_;
-        // relative velocity:
-        auto vel = obstacle->GetVelocity() - ego->GetVelocity(); // velocity relative to EGO in World CS
-        Vector3d rvel = em.block(0,0,3,3).inverse()*Vector3d(vel.x, -vel.y, vel.z); // velocity relative to EGO in EGO CS
-        hlpout << rvel.x() << delim_ << rvel.y() << delim_ << rvel.z() << delim_;
-        hlpout << rvel.norm() << delim_; // speed
-        hlpout << 2*obstacle->GetBoundingBox().extent.x << delim_ << 2*obstacle->GetBoundingBox().extent.y << delim_ << 2*obstacle->GetBoundingBox().extent.z << delim_;
-        // roll pitch yaw:
-        hlpout << roll*RAD2DEG << delim_ << pitch*RAD2DEG << delim_ << yaw*RAD2DEG << delim_;
-        hlpout << 0 << delim_; // time-to-collision // TODO
-        int laneID = CanvasXODR::getLaneID(Vector3d(otrf.location.x, -otrf.location.y, otrf.location.z));
-        hlpout << (laneID - egoLaneID) << delim_;  // relative-lane
-        hlpout << (laneID - initLaneID) << delim_; // absolute-lane
-    }
-    else for (int i = 0; i < 18; ++i) hlpout << delim_;
-    
-    hlpout << trf.location.x << delim_ << -trf.location.y << delim_ << trf.location.z << delim_;
-    auto vel = ego->GetVelocity();
-    hlpout << vel.x << delim_ << -vel.y << delim_ << vel.z << delim_;
-    hlpout << vel.Length() << delim_; // speed
-    hlpout << trf.rotation.roll << delim_ << trf.rotation.pitch << delim_ << -trf.rotation.yaw << delim_;
-    hlpout << imuMeas->GetGyroscope().z*RAD2DEG << delim_;
-    hlpout << (egoLaneID - initLaneID) << delim_; // absolute late id
-    // GPS:
-    hlpout << asin((double)trf.location.x/EARTHR)*RAD2DEG << delim_ << asin((double)trf.location.y/EARTHR)*RAD2DEG << delim_ << asin((double)trf.location.z/EARTHR)*RAD2DEG << delim_;
-    // ACC:
-    hlpout << (imuMeas->GetAccelerometer().x/GRAVITY) << delim_ << (-imuMeas->GetAccelerometer().y/GRAVITY) << delim_ << (imuMeas->GetAccelerometer().z/GRAVITY);
-    hlpout << endl;
-}
-
-void setupIMU(cc::World & world, ShrdPtrActor ego)
-{
-    auto blueprint_library = world.GetBlueprintLibrary();
-    // Find a camera blueprint.
-    auto imu_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.other.imu"));
-    imu = world.SpawnActor(*imu_bp, cg::Transform(), ego.get());
-    static_cast<cc::Sensor*>(imu.get())->Listen([&](auto data) {
-        imuMeas = boost::static_pointer_cast<csd::IMUMeasurement>(data);
-    });
-}
-
-int play(Scenario & scenario)
+void play(Scenario & scenario)
 {
     doStop = false;
-    hlpout.open("hlp.csv");
-    hlpout << getHLPHeader();
     camTrf.setIdentity();
-    initLaneID = 1000;
 
     auto client = cc::Client("127.0.0.1", 2000);
     client.SetTimeout(10s);
@@ -291,11 +136,6 @@ int play(Scenario & scenario)
         vehicle->ApplyControl(control);
         vehicle->SetSimulatePhysics();
         vehicles.push_back(actor);
-
-        if (0 == i) // ego vehicle set IMU:
-        {
-            setupIMU(world, actor);
-        }
     }
     world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
 
@@ -380,11 +220,6 @@ int play(Scenario & scenario)
                     brake(0.01f*acc, vehicle, targetSpeed);
                     Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
                     if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, -trf.rotation.yaw);
-
-                    if (vehicles.size() == 1) // only ego vehicle
-                        printObject((double)frameID/FPS*1000000000ull, nullptr, vehicles[0]);
-                    else if (actor != &vehicles[0])
-                        printObject((double)frameID/FPS*1000000000ull, *actor, vehicles[0]);
                 }
             }
             mw->update();
@@ -400,12 +235,8 @@ int play(Scenario & scenario)
 
     world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     for (auto v : vehicles) v->Destroy();
-    static_cast<cc::Sensor*>(imu.get())->Stop();
-    imu->Destroy();
 
     usleep(1e6);
-
-    hlpout.close();
 }
 
 
