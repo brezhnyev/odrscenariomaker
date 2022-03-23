@@ -45,7 +45,7 @@ std::string Vehicle::colorToString()
 
 Eigen::Vector3i Vehicle::stringToColor()
 {
-
+    return Eigen::Vector3i(0,0,0);
 }
 
 void Vehicle::drawWithNames()
