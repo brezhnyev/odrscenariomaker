@@ -11,6 +11,18 @@ One of the possibilities to view the exported osm file is to use OSM2World Viewe
 </pre>
 ![osm2worlviewer](./images/osm2worlviewer.jpg)  
 
+<pre>
+Troubleshooting:
+1. Gtk-Message: 19:09:47.867: Failed to load module "canberra-gtk-module":
+sudo apt install libcanberra-gtk-module libcanberra-gtk3-module
+2. Inconsistency detected by ld.so: dl-lookup.c: 111: check_match: Asser:
+Downgrade the openjkd to version 8, example of dpkg -l | grep jdk output:
+ii  openjdk-11-jre:amd64
+ii  openjdk-11-jre-headless:amd64
+sudo apt remove --purge openjdk-11-*
+sudo apt install openjdk-8-jre
+</pre>
+
 Edditing the OSM files is possible with some editors, ex. netedit from SUMO:
 <pre>./netedit</pre>
 ![sumo-netedit](./images/sumo-netedit.jpg)  
