@@ -19,5 +19,5 @@ public:
     void drawGeometry() override;
 
 private:
-    std::vector<Waypoint> m_smoothPath;
+    std::vector<WaypointSmoothed> m_smoothPath;
 };

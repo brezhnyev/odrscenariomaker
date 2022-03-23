@@ -79,7 +79,7 @@ void Waypath::updateSmoothPath()
         Waypoint * wp1 = static_cast<Waypoint*>(it1->second);
         Waypoint * wp2 = static_cast<Waypoint*>(it2->second);
         float speed = (1.0f - (float)s/STEPS)*wp1->getSpeed() + (float)s/STEPS*wp2->getSpeed();
-        Waypoint wp(Vector3f(curve.node(i).x, curve.node(i).y, curve.node(i).z), speed);
+        WaypointSmoothed wp(Vector3f(curve.node(i).x, curve.node(i).y, curve.node(i).z), speed);
 		m_smoothPath.push_back(wp);
 	}
 }
