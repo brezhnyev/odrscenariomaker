@@ -24,5 +24,5 @@ signals:
 
 private:
     TreeModel   * m_treeModel;
-    Scenario    & m_scenario;
+    Scenario & m_scenario;
 };

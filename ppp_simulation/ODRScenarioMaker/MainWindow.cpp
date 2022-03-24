@@ -20,10 +20,10 @@ MainWindow::MainWindow(const string & xodrfile, QWidget * parent) : QMainWindow(
 , m_vehicleProps(nullptr)
 , m_scenarioProps(nullptr)
 {
-    m_viewer = new Viewer(m_scenario, xodrfile);
+    m_viewer = new Viewer(xodrfile);
     setCentralWidget(m_viewer);
 
-    m_treeView = new TreeView(m_scenario);
+    m_treeView = new TreeView(m_viewer->getScenario());
     QDockWidget *treeDock = new QDockWidget(tr("Paths"), this);
     addDockWidget(Qt::LeftDockWidgetArea, treeDock);
     treeDock->setWidget(m_treeView);
@@ -36,7 +36,7 @@ MainWindow::MainWindow(const string & xodrfile, QWidget * parent) : QMainWindow(
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
     connect(m_viewer, &Viewer::signal_select, 
     [&, this, propsDock](int id){
-        auto item = m_scenario.findSelectable(id);
+        auto item = m_viewer->getScenario().findSelectable(id);
 
         if (!item) return;
 
@@ -102,7 +102,7 @@ MainWindow::MainWindow(const string & xodrfile, QWidget * parent) : QMainWindow(
     {
         std::thread t([&]()
         {
-            play(m_scenario);
+            play(m_viewer->getScenario());
         });
         t.detach();
     });

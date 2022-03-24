@@ -23,7 +23,6 @@ public:
 private:
     Viewer         *m_viewer;
     TreeView       *m_treeView;
-    Scenario        m_scenario;
     WaypointProps  *m_pointProps;
     WaypathProps   *m_pathProps;
     VehicleProps   *m_vehicleProps;

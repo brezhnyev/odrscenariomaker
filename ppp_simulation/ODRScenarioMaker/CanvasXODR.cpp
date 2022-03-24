@@ -15,12 +15,6 @@ using namespace odr;
 using namespace std;
 using namespace Eigen;
 
-static set<int> validroads =
-{45, 6, 41, 1400, 1401, 40, 1184, 1185, 39, 1091, 1092, 38, 1601, 1602, 37, 760, 761, 36, 861,
-862, 35, 43, 266, 267, 42, 50, 1173, 1173, 49, 901, 902, 48, 774, 775, 47, 1072, 1073, 46, 144, 145};
-
-std::vector<LaneElementBBox<double>> CanvasXODR::s_lboxes;
-
 CanvasXODR::CanvasXODR(string xodrfile)
 {
     OpenDRIVEFile ODR;
@@ -201,47 +195,6 @@ CanvasXODR::~CanvasXODR()
 
 void CanvasXODR::init()
 {
-    // build the BBoxes for the lane elements only for specific roads in Town04!!!
-    for (auto && r : vizBoundary)
-    {
-        if (validroads.find(r.first) != validroads.end())
-        {
-            for (auto && s : r.second)
-            {
-                for (auto it1 = s.second.begin(); it1 != s.second.end(); ++it1)
-                {
-                    auto it2 = it1;
-                    advance(it2, 1);
-                    if (it2 == s.second.end()) break;
-
-                    deque<Vector3d> buff;
-
-                    for (size_t i = 0; i < min(it1->second.size(), it2->second.size()); ++i)
-                    {
-                        buff.emplace_back(it1->second[i]);
-                        buff.emplace_back(it2->second[i]);
-                    
-                        if (buff.size() == 4)
-                        {
-                            LaneElementBBox<double> bbox;
-                            bbox.addPoint(buff[0]);
-                            bbox.addPoint(buff[1]);
-                            bbox.addPoint(buff[2]);
-                            bbox.addPoint(buff[3]);
-                            // lanes are: .. -2, -1, 1, 2 .. we need: ..-2, -1, 0, 1
-                            bbox.laneID = it1->first > 0 ? it1->first - 1 : it1->first;
-                            // slightly increase the Z range:
-                            bbox.minZ-=1.0;
-                            bbox.maxZ+=1.0;
-                            s_lboxes.push_back(bbox);
-                            buff.pop_front();
-                            buff.pop_front();
-                        }
-                    }
-                }
-            }
-        }
-    }
     // roads:
     listRoad = glGenLists(1);
     glNewList(listRoad, GL_COMPILE);
@@ -328,14 +281,4 @@ void CanvasXODR::drawWithNames()
     glPushName(m_id);
     glCallList(listRoad);
     glPopName();
-}
-
-int CanvasXODR::getLaneID(Eigen::Vector3d p)
-{
-    for (auto && b : s_lboxes)
-    {
-        if (b.isPointInside(p))
-            return b.laneID;
-    }
-    return 1000;
 }

@@ -26,7 +26,7 @@ using namespace Eigen;
 extern Matrix4f camTrf;
 
 
-Viewer::Viewer(Scenario & scenario, const string & xodrfile) : m_scenario(scenario), m_canvas(xodrfile)
+Viewer::Viewer(const string & xodrfile) : m_canvas(xodrfile)
 {
     using namespace net;
 
@@ -44,12 +44,14 @@ void Viewer::init()
     glDisable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     m_canvas.init();
+    m_world3d.init();
 }
 
 void Viewer::draw()
 {
     m_canvas.draw();
     m_scenario.draw();
+    m_world3d.draw();
     //camera()->getModelViewMatrix(camTrf.data());
 }
 
