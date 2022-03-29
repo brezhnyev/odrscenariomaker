@@ -10,6 +10,7 @@ class TreeView : public QTreeView
     Q_OBJECT
 public:
     TreeView(Scenario & scenario);
+    void loadScenario();
 
 public slots:
     void slot_addVehicle(int);
@@ -23,6 +24,10 @@ signals:
     void signal_select(int id);
 
 private:
+    void addItem(int id, Selectable *);
+
+private:
     TreeModel   * m_treeModel;
     Scenario & m_scenario;
+    int m_scenarioID{0};
 };

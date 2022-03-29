@@ -58,7 +58,9 @@ using namespace Eigen;
 
 typedef carla::SharedPtr<cc::Actor> ShrdPtrActor;
 
-bool doStop;
+int playStatus;
+condition_variable playCondVar;
+mutex playCondVarMtx;
 extern MainWindow * mw;
 static int FPS = 10;
 Matrix4f camTrf;
@@ -77,7 +79,7 @@ static map <string, cg::Location> town2InitLocation
 
 void play(Scenario & scenario)
 {
-    doStop = false;
+    playStatus = 2; // 0 stop, 1 pause, 2 play
     camTrf.setIdentity();
 
     auto client = cc::Client("127.0.0.1", 2000);
@@ -86,7 +88,7 @@ void play(Scenario & scenario)
     cout << "Client API version : " << client.GetClientVersion() << '\n';
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    string town("Town04");
+    string town("Connex02");
 
     auto world = client.LoadWorld(town);
 
@@ -163,9 +165,7 @@ void play(Scenario & scenario)
         vehicle->ApplyControl(control);
     };
 
-    uint64_t frameID = 0;
-    bool isAnimationFinished = false;
-    while (!doStop)
+    auto camCtrl = [&]()
     {
         // set the camera:
         auto spectator = world.GetSpectator();
@@ -182,49 +182,66 @@ void play(Scenario & scenario)
         float roll = -asin(rotM(2,1));
         transform.rotation = cg::Rotation(pitch*RAD2DEG, yaw*RAD2DEG, roll*RAD2DEG);
         spectator->SetTransform(transform);
+    };
+
+    thread t([&]()
+    {
+        while (playStatus)
+        {
+            auto * actor = &vehicles[0];
+            for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++actor)
+            {
+                auto vehicle = static_cast<cc::Vehicle*>((*actor).get());
+
+                auto trf = vehicle->GetTransform();
+                auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
+                auto speed =  vehicle->GetVelocity().Length();
+
+                Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(it->second);
+                Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
+
+                // Get the next waypoints in some distance away:
+                Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
+                float targetSpeed;
+                Eigen::Vector3f targetDir;
+                if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
+                {
+                    return;
+                }
+                cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
+                auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
+                auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
+
+                control.steer = sign * arc.Length()*0.5f;
+                vehicle->ApplyControl(control);
+                // The stronger is the curvature the lower speed:
+                float R = abs(3 * tan(M_PI_2 - control.steer)); // 3 is the ~length between axes
+                float acc = speed*speed/R; // get centrifusual acceleration
+                brake(0.01f*acc, vehicle, targetSpeed);
+                Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
+                if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, -trf.rotation.yaw);
+
+                unique_lock<mutex> lk(playCondVarMtx);
+                playCondVar.wait(lk);
+            }
+        }
+    });
+
+    while (playStatus)
+    {
         try
         {
             std::chrono::time_point<std::chrono::system_clock> timenow = std::chrono::system_clock::now();
-            if (!isAnimationFinished)
+            if (1 == playStatus)
             {
-                auto * actor = &vehicles[0];
-                for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++actor)
-                {
-                    auto vehicle = static_cast<cc::Vehicle*>((*actor).get());
-
-                    auto trf = vehicle->GetTransform();
-                    auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
-                    auto speed =  vehicle->GetVelocity().Length();
-
-                    Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(it->second);
-                    Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
-
-                    // Get the next waypoints in some distance away:
-                    Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
-                    float targetSpeed;
-                    Eigen::Vector3f targetDir;
-                    if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
-                    {
-                        isAnimationFinished = true;
-                        break;
-                    }
-                    cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
-                    auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
-                    auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
-
-                    control.steer = sign * arc.Length()*0.5f;
-                    vehicle->ApplyControl(control);
-                    // The stronger is the curvature the lower speed:
-                    float R = abs(3 * tan(M_PI_2 - control.steer)); // 3 is the ~length between axes
-                    float acc = speed*speed/R; // get centrifusual acceleration
-                    brake(0.01f*acc, vehicle, targetSpeed);
-                    Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
-                    if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, -trf.rotation.yaw);
-                }
+                unique_lock<mutex> lk(playCondVarMtx);
+                playCondVar.wait(lk);
             }
+            // unfortunately we cannot Tick for Navigation only - in this case the Actors will live "on their onw"
             mw->update();
+            camCtrl();
+            playCondVar.notify_all();
             world.Tick(carla::time_duration(1s));
-            ++frameID;
 
             auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
             if (realtime_playback)
@@ -235,6 +252,7 @@ void play(Scenario & scenario)
 
     world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     for (auto v : vehicles) v->Destroy();
+    t.join();
 
     usleep(1e6);
 }

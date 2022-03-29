@@ -10,6 +10,7 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QFileDialog>
+#include <QtWidgets/QLineEdit>
 
 #include <fstream>
 #include <string>
@@ -19,16 +20,41 @@ using namespace std;
 
 #define MINMAXPOS 1000000
 
+
 ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
     QLabel * m_idInfo = new QLabel(this);
     m_idInfo->setText(QString(scenario.getType().c_str()) + " ID: " + QString::number(scenario.getID()));
+    mainLayout->addWidget(m_idInfo);
+
+    // addd rosbag file
+    QGroupBox * rosGroup = new QGroupBox(this);
+    QVBoxLayout * rosLayout = new QVBoxLayout();
+    rosGroup->setLayout(rosLayout);
+
+    rosLayout->addWidget(new QLabel("Rosbag file:", rosGroup));
+    QLineEdit * rosBagfile = new QLineEdit(rosGroup);
+    rosBagfile->setText(m_scenario.getRosbagFile().c_str());
+    connect(rosBagfile, &QLineEdit::textChanged, [&](const QString & text){ m_scenario.setRosbagFile(text.toStdString()); });
+    rosLayout->addWidget(rosBagfile);
+
+    rosLayout->addWidget(new QLabel("Rosbag topic:", rosGroup));
+    QLineEdit * rosTopic = new QLineEdit(rosGroup);
+    rosTopic->setText(m_scenario.getRosbagTopic().c_str());
+    connect(rosTopic, &QLineEdit::textChanged, [&](const QString & text){ m_scenario.setRosbagTopic(text.toStdString()); });
+    rosLayout->addWidget(rosTopic);
+
+    rosLayout->addWidget(new QLabel("Rosbag playback offset:"));
+    QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
+    rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
+    connect(rosTimeOffset, &QLineEdit::textChanged, [&](const QString & text){ m_scenario.setRosbagOffset(text.toFloat()); });
+    rosLayout->addWidget(rosTimeOffset);
+    mainLayout->addWidget(rosGroup);
+
 
     QPushButton * addVehicle = new QPushButton(this);
     addVehicle->setText("Add vehicle");
-
-    mainLayout->addWidget(m_idInfo);
     mainLayout->addWidget(addVehicle);
 
     QVBoxLayout * bl1 = new QVBoxLayout();
@@ -73,7 +99,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     QPushButton * loadScenario = new QPushButton();
     loadScenario->setText("Load Scenario");
     mainLayout->addWidget(loadScenario);
-    connect(loadScenario, &QPushButton::pressed, [this](){
+    connect(loadScenario, &QPushButton::pressed, [this, rosBagfile, rosTopic, rosTimeOffset](){
         QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
         if (name.isEmpty()) return;
         
@@ -82,6 +108,9 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         stringstream ss; ss << ifs.rdbuf();
         m_scenario = Serializer::deserialize_yaml(ss.str());
         emit signal_updateOnScenarioLoad();
+        rosBagfile->setText(m_scenario.getRosbagFile().c_str());
+        rosTopic->setText(m_scenario.getRosbagTopic().c_str());
+        rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
         ifs.close();
     });
 

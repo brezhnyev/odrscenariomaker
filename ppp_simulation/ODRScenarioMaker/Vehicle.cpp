@@ -40,7 +40,7 @@ void Vehicle::draw()
 
 std::string Vehicle::colorToString()
 {
-    return to_string(m_color[0]) + ", " + to_string(m_color[1]) + ", " + to_string(m_color[2]);
+    return to_string(m_color[0]) + "," + to_string(m_color[1]) + "," + to_string(m_color[2]);
 }
 
 Eigen::Vector3i Vehicle::stringToColor()

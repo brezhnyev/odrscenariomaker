@@ -12,6 +12,8 @@ set(CARLA_PATH "/home/carla" CACHE STRING "carla (git) path")
 
 find_package(yaml-cpp)
 find_package(Qt5 COMPONENTS Core Gui Widgets Xml OpenGL REQUIRED)
+find_package(catkin REQUIRED COMPONENTS rosbag )
+include_directories("${rosbag_INCLUDE_DIRS}")
 
 include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser/include)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser)
@@ -91,6 +93,7 @@ target_link_libraries(${PROJECT_NAME}
     rt
     pthread
     ${CARLA_LIB}
+    ${catkin_LIBRARIES}
     libboost_filesystem.so
     -lrpc
     -lGLU

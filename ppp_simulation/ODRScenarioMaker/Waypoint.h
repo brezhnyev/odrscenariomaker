@@ -40,6 +40,7 @@ class WaypointSmoothed : public Drawable
 public:
     WaypointSmoothed(Eigen::Vector3f pos, float speed);
     void draw() override;
+    void drawWithNames() override {};
 
     Eigen::Vector3f getPosition() { return m_pos; }
     void  setPosition(Eigen::Vector3f val) { m_pos = val; }

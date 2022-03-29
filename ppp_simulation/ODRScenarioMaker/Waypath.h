@@ -16,6 +16,7 @@ public:
     Eigen::Vector3f getInitialPosition();
     void updateSmoothPath();
     void draw() override;
+    void drawWithNames() override {};
     void drawGeometry() override;
 
 private:

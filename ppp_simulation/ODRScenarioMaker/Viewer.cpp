@@ -26,17 +26,17 @@ using namespace Eigen;
 extern Matrix4f camTrf;
 
 
-Viewer::Viewer(const string & xodrfile) : m_canvas(xodrfile)
+Viewer::Viewer(const string & xodrfile, string objfile) : m_canvas(xodrfile), m_world3d(objfile)
 {
     using namespace net;
 
     // cout << "Version: " << glGetString(GL_VERSION) << endl; // KB: causes cout stop!
     // cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
     // cout.flush();
-    camera()->setSceneRadius(200);
+    camera()->setSceneRadius(400);
     camera()->fitSphere(Vec(0, 0, 0), 200);
     camera()->setZNearCoefficient(0.01);
-    camera()->setFieldOfView(M_PI_2/2);
+    camera()->setFieldOfView(M_PI_2);
 }
 
 void Viewer::init()
@@ -52,7 +52,7 @@ void Viewer::draw()
     m_canvas.draw();
     m_scenario.draw();
     m_world3d.draw();
-    //camera()->getModelViewMatrix(camTrf.data());
+    camera()->getModelViewMatrix(camTrf.data());
 }
 
 void Viewer::drawWithNames()
@@ -74,7 +74,7 @@ void Viewer::postSelection(const QPoint &point)
 
     if (selectedName() == -1) return;
 
-    if (selectedName() == 1) // Canvas
+    if (selectedName() == m_canvas.getID()) // Canvas
     {
         int id = m_scenario.addWaypoint(Vector3f(sp.x, sp.y, sp.z));
         if (id == -1)

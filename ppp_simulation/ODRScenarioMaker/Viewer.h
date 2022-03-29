@@ -14,7 +14,7 @@ class Viewer : public QGLViewer
 {
     Q_OBJECT
 public:
-    Viewer(const std::string & xodrfile);
+    Viewer(const std::string & xodrfile, std::string objfile = "");
     ~Viewer() override {};
     void draw() override;
     void drawWithNames() override;
