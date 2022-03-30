@@ -30,5 +30,4 @@ private:
     CameraProps    *m_camProps{nullptr};
     VehicleProps   *m_vehicleProps{nullptr};
     ScenarioProps  *m_scenarioProps{nullptr};
-    QLabel         *m_rosbagImage{nullptr};
 };

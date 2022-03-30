@@ -129,9 +129,9 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
     QPushButton *playButton = new QPushButton(playDock);
     playButton->setText("Play");
-    m_rosbagImage = new QLabel();
+    QLabel * rosbagImage = new QLabel(); // need to be created in the parent thread, creating in the thread does not update it
 
-    connect(playButton, &QPushButton::pressed, [&, playButton]()
+    connect(playButton, &QPushButton::pressed, [&, rosbagImage, playButton]()
     {
         if (0 == playStatus)
         {
@@ -181,7 +181,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         });
         t2.detach();
 
-        std::thread t3([&, this]()
+        std::thread t3([&, rosbagImage, this]()
         {
             string bagFileName = m_viewer->getScenario().getRosbagFile();
             if (access(bagFileName.c_str(), F_OK) != 0)
@@ -208,8 +208,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             rosbag::Bag bag;
             bag.open(bagFileName);
             auto &&messages = rosbag::View(bag);
-            m_rosbagImage->resize(800,600);
-            m_rosbagImage->show();
+            rosbagImage->resize(640,360);
+            rosbagImage->show();
 
             for (rosbag::MessageInstance const &msg : messages)
             {
@@ -227,8 +227,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
                         backBuffer.loadFromData(&comp_img_msg->data[0], comp_img_msg->data.size(), "PNG");
                     else continue;
 
-                    m_rosbagImage->setPixmap(backBuffer.scaled(m_rosbagImage->size(), Qt::KeepAspectRatio));
-                    m_rosbagImage->update();
+                    rosbagImage->setPixmap(backBuffer.scaled(rosbagImage->size(), Qt::KeepAspectRatio));
+                    rosbagImage->update();
                     unique_lock<mutex> lk(playCondVarMtx);
                     playCondVar.wait(lk);
                 }
@@ -240,7 +240,6 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     QPushButton *stopButton = new QPushButton(playDock);
     stopButton->setText("Stop");
     connect(stopButton, &QPushButton::pressed, [&]() { playStatus = 0; playCondVar.notify_all(); });
-    //connect(&m_scenario, &Scenario::signal_update, [this](){m_viewer->update();} );
 
     playLayout->addWidget(playButton);
     playLayout->addWidget(stopButton);

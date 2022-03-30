@@ -61,10 +61,11 @@ typedef carla::SharedPtr<cc::Actor> ShrdPtrActor;
 int playStatus;
 condition_variable playCondVar;
 mutex playCondVarMtx;
+Matrix4f camTrf;
 extern MainWindow * mw;
 static int FPS = 10;
-Matrix4f camTrf;
 static bool realtime_playback = true;
+//extern vector<QLabel*> camera_widgets; // need to be extern to be created in the parent thread
 
 
 static map <string, cg::Location> town2InitLocation
@@ -99,45 +100,81 @@ void play(Scenario & scenario)
     world.SetWeather(crpc::WeatherParameters::ClearNoon);
 
     // Spawn Vehicles:
-    auto scenario_vehicles = scenario.children();
-    const int number_of_vehicles = scenario_vehicles.size();
     // Crashes for some towns. Eventually still has to do something with Qt.
     //auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
-    vector<ShrdPtrActor> vehicles; vehicles.reserve(number_of_vehicles);
-
+    vector<ShrdPtrActor> vehicles;
     cc::Vehicle::Control control;
+    std::vector<ShrdPtrActor> cameras;
 
     int i = 0;
-    for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++i)
+    for (auto && child : scenario.children())
     {
-        Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(it->second);
-        auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_vehicle.getName()))[0];
-        if (blueprint.ContainsAttribute("color"))
+        Vehicle * scenario_vehicle = dynamic_cast<Vehicle*>(child.second);
+        if (scenario_vehicle) // can be also ex. Sensor (Camera or Lidar) or Walker 
         {
-            auto &attribute = blueprint.GetAttribute("color");
-            blueprint.SetAttribute("color", scenario_vehicle.colorToString());
+            auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_vehicle->getName()))[0];
+            if (blueprint.ContainsAttribute("color"))
+            {
+                auto &attribute = blueprint.GetAttribute("color");
+                blueprint.SetAttribute("color", scenario_vehicle->colorToString());
+            }
+            // Spawn the vehicle.
+            auto actor = world.TrySpawnActor(blueprint, cg::Transform(town2InitLocation[town], cg::Rotation()));
+            if (!actor)
+            {
+                cout << "Failed to spawn actor ------" << endl;
+                continue;
+            }
+            cout << "Spawned " << actor->GetDisplayId() << '\n';
+            // Set the scenario start position:
+            for (auto && child : scenario_vehicle->children())
+            {
+                Waypath * waypath = dynamic_cast<Waypath*>(child.second);
+                // KB: here we need to think if we really need multiple waypaths for a vehicle
+                if (waypath)
+                {
+                    waypath->updateSmoothPath();
+                    Eigen::Vector3f dir = waypath->getInitialDirection();
+                    Eigen::Vector3f pos = waypath->getInitialPosition();
+                    auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
+                    cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
+                    actor->SetTransform(transform);
+                }
+                Camera * camera = dynamic_cast<Camera*>(child.second);
+                if (camera)
+                {
+                    auto blueprint_library = world.GetBlueprintLibrary();
+                    // Find a camera blueprint.
+                    auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.camera.rgb"));
+
+                    camera_bp->SetAttribute("image_size_x", "640");
+                    camera_bp->SetAttribute("image_size_y", "360");
+                    camera_bp->SetAttribute("fov", "60");
+
+                    auto camera_transform = cg::Transform{
+                        cg::Location{camera->getPos().x(), camera->getPos().y(), camera->getPos().z()},        // x, y, z.
+                        cg::Rotation{camera->getOri().y(), camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
+
+                    cameras.push_back(world.SpawnActor(*camera_bp, camera_transform, actor.get()));
+                    (*camera->getCamWidget())->resize(640, 480);
+                    (*camera->getCamWidget())->show();
+
+                    // Register a callback to save images to disk.
+                    ((cc::Sensor*)cameras.back().get())->Listen([camera](auto data)
+                    {
+                        auto image = boost::static_pointer_cast<csd::Image>(data);
+                        QPixmap backBuffer = QPixmap::fromImage(QImage((unsigned char*)image->data(), image->GetWidth(), image->GetHeight(), QImage::Format_RGBX8888).rgbSwapped());
+                        (*camera->getCamWidget())->setPixmap(backBuffer.scaled((*camera->getCamWidget())->size(), Qt::KeepAspectRatio));
+                        (*camera->getCamWidget())->update();
+                    });
+                }
+            }
+            auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
+            control.throttle = 1.0f;
+            vehicle->ApplyControl(control);
+            vehicle->SetSimulatePhysics();
+            vehicles.push_back(actor);
         }
-        // Spawn the vehicle.
-        auto actor = world.TrySpawnActor(blueprint, cg::Transform(town2InitLocation[town], cg::Rotation()));
-        if (!actor)
-        {
-            cout << "Failed to spawn actor ------" << endl;
-            continue;
-        }
-        cout << "Spawned " << actor->GetDisplayId() << '\n';
-        // Set the scenario start position:
-        Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
-        waypath.updateSmoothPath();
-        Eigen::Vector3f dir = waypath.getInitialDirection();
-        Eigen::Vector3f pos = waypath.getInitialPosition();
-        auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
-        cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
-        actor->SetTransform(transform);
-        auto vehicle = static_cast<cc::Vehicle*>(actor.get());
-        control.throttle = 1.0f;
-        vehicle->ApplyControl(control);
-        vehicle->SetSimulatePhysics();
-        vehicles.push_back(actor);
     }
     world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
 
@@ -189,6 +226,7 @@ void play(Scenario & scenario)
         while (playStatus)
         {
             auto * actor = &vehicles[0];
+            auto scenario_vehicles = scenario.children();
             for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++actor)
             {
                 auto vehicle = static_cast<cc::Vehicle*>((*actor).get());
