@@ -9,18 +9,6 @@
 using namespace Eigen;
 using namespace std;
 
-int Waypath::delChild(int id) // id is dummy parameter for Waypath
-{
-    if (m_children.empty()) return -1;
-
-    id = m_children.rbegin()->first;
-    m_children.erase(id);
-    if (m_children.empty()) m_activeChild = -1;
-    else m_activeChild = 0;
-
-    return id;
-}
-
 void Waypath::drawGeometry()
 {
     float psz;

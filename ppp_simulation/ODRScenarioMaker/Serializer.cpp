@@ -35,11 +35,11 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
     {
         YAML::Node node;
         node["type"] = object->getType();
-        node["name"] = object->getName();
         if (object->getType() == "Vehicle")
         {
             Vehicle * vehicle = dynamic_cast<Vehicle*>(object);
             YAML::Node color;
+            node["name"] = vehicle->getName();
             color["r"] = vehicle->m_color[0];
             color["g"] = vehicle->m_color[1];
             color["b"] = vehicle->m_color[2];

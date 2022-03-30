@@ -24,9 +24,29 @@ using namespace std;
 ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
-    QLabel * m_idInfo = new QLabel(this);
-    m_idInfo->setText(QString(scenario.getType().c_str()) + " ID: " + QString::number(scenario.getID()));
-    mainLayout->addWidget(m_idInfo);
+    mainLayout->addWidget(new QLabel(QString(scenario.getType().c_str()) + " ID: " + QString::number(scenario.getID()), this));
+
+
+    QPushButton * addVehicle = new QPushButton("Add vehicle", this);
+    mainLayout->addWidget(addVehicle);
+
+    setLayout(mainLayout);
+
+    connect(addVehicle, &QPushButton::pressed, [this]()
+    { 
+        int id = m_scenario.addChild(new Vehicle());
+        if (id == -1)
+        {
+            QMessageBox::warning(this, "Error adding Element", "Failed to add Vehicle: index not found!");
+            return;
+        }
+        emit signal_addVehicle(id);
+    });
+
+    QPushButton * loadScenario = new QPushButton("Load Scenario", this);
+    mainLayout->addWidget(loadScenario);
+    QPushButton * saveScenario = new QPushButton("Save Scenario", this);
+    mainLayout->addWidget(saveScenario);
 
     // addd rosbag file
     QGroupBox * rosGroup = new QGroupBox(this);
@@ -52,53 +72,6 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     rosLayout->addWidget(rosTimeOffset);
     mainLayout->addWidget(rosGroup);
 
-
-    QPushButton * addVehicle = new QPushButton(this);
-    addVehicle->setText("Add vehicle");
-    mainLayout->addWidget(addVehicle);
-
-    QVBoxLayout * bl1 = new QVBoxLayout();
-    QComboBox * delCombo = new QComboBox(this);
-    for (auto && child : m_scenario.children()) delCombo->addItem(QString::number(child.second->getID()));
-    QPushButton * delButton = new QPushButton(this);
-    delButton->setText("Delete");
-    bl1->addWidget(delButton);
-    bl1->addWidget(delCombo);
-    QGroupBox * delGroup = new QGroupBox(this);
-    delGroup->setTitle("Delete vehicle");
-    delGroup->setLayout(bl1);
-    mainLayout->addWidget(delGroup);
-
-    setLayout(mainLayout);
-
-    connect(addVehicle, &QPushButton::pressed, [this, delCombo]()
-    { 
-        int id = m_scenario.addChild(new Vehicle());
-        if (id == -1)
-        {
-            QMessageBox::warning(this, "Error adding Element", "Failed to add Vehicle: index not found!");
-            return;
-        }
-        emit signal_addVehicle(id);
-        delCombo->clear();
-        for (auto && child : m_scenario.children()) delCombo->addItem(QString::number(child.second->getID()));
-    });
-    connect(delButton, &QPushButton::pressed, [this, delCombo]()
-    { 
-        int id = m_scenario.delChild(delCombo->currentText().toInt());
-        if (id == -1)
-        {
-            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Vehicle: index not found!");
-            return;
-        }
-        emit signal_delVehicle(id);
-        delCombo->clear();
-        for (auto && child : m_scenario.children()) delCombo->addItem(QString::number(child.second->getID()));
-    });
-
-    QPushButton * loadScenario = new QPushButton();
-    loadScenario->setText("Load Scenario");
-    mainLayout->addWidget(loadScenario);
     connect(loadScenario, &QPushButton::pressed, [this, rosBagfile, rosTopic, rosTimeOffset](){
         QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
         if (name.isEmpty()) return;
@@ -107,16 +80,13 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         m_scenario.clear();
         stringstream ss; ss << ifs.rdbuf();
         m_scenario = Serializer::deserialize_yaml(ss.str());
-        emit signal_updateOnScenarioLoad();
+        emit signal_update();
         rosBagfile->setText(m_scenario.getRosbagFile().c_str());
         rosTopic->setText(m_scenario.getRosbagTopic().c_str());
         rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
         ifs.close();
     });
 
-    QPushButton * saveScenario = new QPushButton();
-    saveScenario->setText("Save Scenario");
-    mainLayout->addWidget(saveScenario);
     connect(saveScenario, &QPushButton::pressed, [this](){
         string contents = Serializer::serialize_yaml(&m_scenario);
         QString name = QFileDialog::getSaveFileName(this, tr("Save Scenario"), "/home/scenario.yaml", tr("Scenarios (*.yaml)"));

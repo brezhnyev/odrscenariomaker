@@ -12,12 +12,9 @@ public:
     WaypointProps(Waypoint & p);
 
 signals:
-    void update();
+    void signal_update();
+    void signal_delete(int);
 
 private:
-    QDoubleSpinBox *m_x;
-    QDoubleSpinBox *m_y;
-    QDoubleSpinBox *m_z;
-    QDoubleSpinBox *m_speed;
     Waypoint & m_waypoint;
 };

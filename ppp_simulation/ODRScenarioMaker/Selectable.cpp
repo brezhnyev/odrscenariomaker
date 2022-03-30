@@ -6,6 +6,10 @@ using namespace std;
 
 int Selectable::s_ID = 0;
 
+Drawable::~Drawable() {}
+
+Selectable::~Selectable() {}
+
 Selectable::Selectable() : m_selected(false), m_activeChild(-1)
 { 
     m_id = s_ID; ++s_ID;

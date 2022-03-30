@@ -49,6 +49,11 @@ void TreeView::slot_addWaypath(int id)
     m_treeModel->addItem(m_scenario.getActiveActorID(), id, "Waypath");
 }
 
+void TreeView::slot_addCamera(int id)
+{
+    m_treeModel->addItem(m_scenario.getActiveActorID(), id, "Camera");
+}
+
 void TreeView::slot_addWaypoint(int id)
 {
     m_treeModel->addItem(m_scenario.getActiveWaypathID(), id, "Waypoint");

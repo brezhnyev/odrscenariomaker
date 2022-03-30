@@ -10,7 +10,7 @@ class Drawable
 {
 public:
     Drawable() {}
-    virtual ~Drawable() {}
+    virtual ~Drawable() = 0;
     // the current design assums that the Drawable does not have children
     virtual void draw() = 0;
     virtual void drawWithNames() = 0;
@@ -23,14 +23,14 @@ class Selectable : public Drawable
 {
 public:
     Selectable();
+    virtual ~Selectable() = 0;
     void draw() override;
     void drawWithNames() override;
     virtual bool select(int);
     virtual std::string getType() const = 0;
-    virtual std::string getName() const { return "unnamed"; }
 
-    virtual int addChild(Selectable * child);
-    virtual int delChild(int id);
+    int addChild(Selectable * child);
+    int delChild(int id);
 
     Selectable * findSelectable(int id);
     int getID() const { return m_id; }

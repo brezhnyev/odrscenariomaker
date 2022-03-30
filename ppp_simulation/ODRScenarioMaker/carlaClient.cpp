@@ -219,7 +219,7 @@ void play(Scenario & scenario)
                 float acc = speed*speed/R; // get centrifusual acceleration
                 brake(0.01f*acc, vehicle, targetSpeed);
                 Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
-                if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, -trf.rotation.yaw);
+                if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
 
                 unique_lock<mutex> lk(playCondVarMtx);
                 playCondVar.wait(lk);

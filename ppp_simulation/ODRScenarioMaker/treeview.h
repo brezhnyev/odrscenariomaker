@@ -16,6 +16,7 @@ public slots:
     void slot_addVehicle(int);
     void slot_addWalker(int);
     void slot_addWaypath(int);
+    void slot_addCamera(int);
     void slot_addWaypoint(int);
     void slot_delItem(int);
     void slot_select(int);

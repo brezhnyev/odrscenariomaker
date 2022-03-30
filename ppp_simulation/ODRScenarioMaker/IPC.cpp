@@ -83,7 +83,7 @@ void IPC::listenForResponse()
         float z; ss >> z;
         float yaw; ss >> yaw;
         Actor * actor = dynamic_cast<Actor*>(m_scenario.children()[id]);
-        if (actor) actor->setTrf(x,-y,z, -yaw);
+        if (actor) actor->setTrf(x,-y,z, 0, 0, -yaw);
         emit signal_update();
     }
 

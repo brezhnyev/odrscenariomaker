@@ -74,6 +74,7 @@ add_executable(${PROJECT_NAME}
     Serializer.cpp
     ScenarioProps.cpp
     World3D.cpp
+    CameraProps.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}

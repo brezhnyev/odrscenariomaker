@@ -4,6 +4,7 @@
 #include "Viewer.h"
 #include "WaypointProps.h"
 #include "WaypathProps.h"
+#include "CameraProps.h"
 #include "ActorProps.h"
 #include "ScenarioProps.h"
 #include "IPC.h"
@@ -22,11 +23,12 @@ public:
     }
 
 private:
-    Viewer         *m_viewer;
-    TreeView       *m_treeView;
-    WaypointProps  *m_pointProps;
-    WaypathProps   *m_pathProps;
-    VehicleProps   *m_vehicleProps;
-    ScenarioProps  *m_scenarioProps;
-    QLabel         *m_rosbagImage;
+    Viewer         *m_viewer{nullptr};
+    TreeView       *m_treeView{nullptr};
+    WaypointProps  *m_pointProps{nullptr};
+    WaypathProps   *m_pathProps{nullptr};
+    CameraProps    *m_camProps{nullptr};
+    VehicleProps   *m_vehicleProps{nullptr};
+    ScenarioProps  *m_scenarioProps{nullptr};
+    QLabel         *m_rosbagImage{nullptr};
 };

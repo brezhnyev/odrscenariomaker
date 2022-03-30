@@ -1,5 +1,6 @@
 #include "ActorProps.h"
 #include "Waypath.h"
+#include "Camera.h"
 
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QVBoxLayout>
@@ -20,30 +21,17 @@
 ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
-    QLabel * m_idInfo = new QLabel(this);
-    m_idInfo->setText(QString(actor.getType().c_str()) + " ID: " + QString::number(actor.getID()));
+    mainLayout->addWidget(new QLabel(QString(actor.getType().c_str()) + " ID: " + QString::number(actor.getID()), this));
 
-    QPushButton * addWaypath = new QPushButton(this);
-    addWaypath->setText("Add waypath");
-
-    mainLayout->addWidget(m_idInfo);
+    QPushButton * addWaypath = new QPushButton("Add waypath", this);
     mainLayout->addWidget(addWaypath);
 
-    QVBoxLayout * bl1 = new QVBoxLayout();
-    QComboBox * delCombo = new QComboBox(this);
-    for (auto && child : m_actor.children()) delCombo->addItem(QString::number(child.second->getID()));
-    QPushButton * delButton = new QPushButton(this);
-    delButton->setText("Delete");
-    bl1->addWidget(delButton);
-    bl1->addWidget(delCombo);
-    QGroupBox * delGroup = new QGroupBox(this);
-    delGroup->setTitle("Delete path");
-    delGroup->setLayout(bl1);
-    mainLayout->addWidget(delGroup);
+    QPushButton * addCamera = new QPushButton("Add Camera", this);
+    mainLayout->addWidget(addCamera);
 
     setLayout(mainLayout);
 
-    connect(addWaypath, &QPushButton::pressed, [this, delCombo]()
+    connect(addWaypath, &QPushButton::pressed, [this]()
     { 
         int id = m_actor.addChild(new Waypath());
         if (id == -1)
@@ -52,20 +40,16 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
             return;
         }
         emit signal_addWaypath(id);
-        delCombo->clear();
-        for (auto && child : m_actor.children()) delCombo->addItem(QString::number(child.second->getID()));
     });
-    connect(delButton, &QPushButton::pressed, [this, delCombo]()
-    { 
-        int id = m_actor.delChild(delCombo->currentText().toInt());
+    connect(addCamera, &QPushButton::pressed, [this]()
+    {
+        int id = m_actor.addChild(new Camera());
         if (id == -1)
         {
-            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Waypath: index not found!");
+            QMessageBox::warning(this, "Error adding Element", "Failed to add Waypath: index not found!");
             return;
         }
-        emit signal_delWaypath(id);
-        delCombo->clear();
-        for (auto && child : m_actor.children()) delCombo->addItem(QString::number(child.second->getID()));
+        emit signal_addCamera(id);
     });
 }
 
@@ -122,5 +106,21 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     // KB: crashes if setName() function is used, should be checked later
     connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.m_name = name.toStdString(); });
 
-    //mainLayout->addStretch(1);
+    ((QVBoxLayout*)mainLayout)->addStretch(1);
+
+    QPushButton * delButton = new QPushButton();
+    delButton->setText("Delete");
+    mainLayout->addWidget(delButton);
+
+    connect(delButton, &QPushButton::pressed, [this]()
+    { 
+        int id = m_actor.getID();
+        if (id == -1)
+        {
+            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Waypath: index not found!");
+            return;
+        }
+        emit signal_delete(id);
+        close();
+    });
 }

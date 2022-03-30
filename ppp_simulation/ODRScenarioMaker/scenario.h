@@ -12,13 +12,7 @@ class Scenario : public Selectable
 public:
     std::string getType() const override { return "Scenario"; }
 
-    int addVehicle();
-    int addWaypath();
     int addWaypoint(Eigen::Vector3f);
-
-    int delActor(int id);
-    int delWaypath(int id);
-    int delWaypoint(int id);
 
     Actor *     getActiveActor();
     Waypath *   getActiveWaypath();

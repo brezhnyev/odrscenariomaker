@@ -10,35 +10,29 @@
 WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
 {
     QVBoxLayout * lh = new QVBoxLayout();
-    QLabel * idInfo = new QLabel(this);
-    idInfo->setText("Waypath " + QString::number(p.getID()));
 
-    QPushButton * delLastPoint = new QPushButton(this);
-    delLastPoint->setText("Delete last waypoint");
-
-    lh->addWidget(idInfo);
-    lh->addWidget(delLastPoint);
+    lh->addWidget(new QLabel("Waypath " + QString::number(p.getID()), this));
+    QPushButton * updateWaypath = new QPushButton(new QPushButton("Update Waypath", this));
+    lh->addWidget(updateWaypath);
+    QPushButton * delThis = new QPushButton("Delete", this);
+    lh->addStretch(1);
+    lh->addWidget(delThis);
 
     setLayout(lh);
-    // delChild(0) with dummy 0 parameter. The overriden delChild will pop the last waypoint from waypath
-    connect(delLastPoint, &QPushButton::pressed, [this]()
+    connect(delThis, &QPushButton::pressed, [this]()
     {
-        int id = m_waypath.delChild(0);
+        int id = m_waypath.getID();
         if (id == -1)
         {
             QMessageBox::warning(this, "Error deleting Element", "Failed to delete Waypoint: index not found!");
         }
-        emit signal_delWaypoint(id);
+        emit signal_delete(id);
+        close();
     });
-
-    QPushButton * updateWaypath = new QPushButton(this);
-    updateWaypath->setText("Update Waypath");
-
-    lh->addWidget(updateWaypath);
     connect(updateWaypath, &QPushButton::pressed, [this]()
     {
         m_waypath.updateSmoothPath();
-        emit signal_updateSmoothPath();
+        emit signal_update();
     });
     lh->addStretch(1);
 }

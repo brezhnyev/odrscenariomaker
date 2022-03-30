@@ -22,12 +22,6 @@ extern condition_variable playCondVar;
 extern mutex playCondVarMtx;
 
 MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent) : QMainWindow(parent)
-, m_viewer(nullptr)
-, m_treeView(nullptr)
-, m_pointProps(nullptr)
-, m_pathProps(nullptr)
-, m_vehicleProps(nullptr)
-, m_scenarioProps(nullptr)
 {
     m_viewer = new Viewer(xodrfile, objfile);
     setCentralWidget(m_viewer);
@@ -58,7 +52,13 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
             m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item));
             propsDock->setWidget(m_pointProps);
-            connect(m_pointProps, &WaypointProps::update, [this](){m_viewer->update(); });
+            connect(m_pointProps, &WaypointProps::signal_update, [this](){m_viewer->update(); });
+            connect(m_pointProps, &WaypointProps::signal_delete, [this](int id)
+            {
+                m_treeView->slot_delItem(id);
+                m_viewer->getScenario().getActiveWaypath()->delChild(id);
+                update();
+            });
         }
         else if (item->getType() == "Waypath")
         {
@@ -69,8 +69,24 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
             m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item));
             propsDock->setWidget(m_pathProps);
-            connect(m_pathProps, &WaypathProps::signal_delWaypoint, [this](int id){ m_treeView->slot_delItem(id); m_viewer->update(); });
-            connect(m_pathProps, &WaypathProps::signal_updateSmoothPath, [this](){ m_viewer->update(); });
+            connect(m_pathProps, &WaypathProps::signal_update, [this](){ m_viewer->update(); });
+            connect(m_pathProps, &WaypathProps::signal_delete, [this](int id)
+            { 
+                m_treeView->slot_delItem(id);
+                m_viewer->getScenario().getActiveActor()->delChild(id);
+                update();
+            });
+        }
+        else if (item->getType() == "Camera")
+        {
+            if (m_camProps)
+            {
+                m_camProps->close();
+                delete m_camProps;
+            }
+            m_camProps = new CameraProps(*dynamic_cast<Camera*>(item));
+            propsDock->setWidget(m_camProps);
+            //connect(m_camProps, &CameraProps::update, [this](){ m_viewer->update(); });
         }
         else if (item->getType() == "Vehicle")
         {
@@ -81,9 +97,15 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
             m_vehicleProps = new VehicleProps(*dynamic_cast<Vehicle*>(item));
             propsDock->setWidget(m_vehicleProps);
-            connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addWaypath(id); update(); });
-            connect(m_vehicleProps, &VehicleProps::signal_delWaypath, [this](int id){ m_treeView->slot_delItem(id); update(); });
+            connect(m_vehicleProps, &VehicleProps::signal_delete, [this](int id)
+            {
+                m_treeView->slot_delItem(id);
+                m_viewer->getScenario().delChild(id);
+                update();
+            });
             connect(m_vehicleProps, &VehicleProps::signal_update, [this](){ update(); }); // color update
+            connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addWaypath(id); update(); });
+            connect(m_vehicleProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addCamera(id);  update(); });
         }
         else if (item->getType() == "Scenario")
         {
@@ -95,8 +117,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
             propsDock->setWidget(m_scenarioProps);
             connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addVehicle(id); update(); });
-            connect(m_scenarioProps, &ScenarioProps::signal_delVehicle, [this](int id){ m_treeView->slot_delItem(id); update(); });
-            connect(m_scenarioProps, &ScenarioProps::signal_updateOnScenarioLoad, [this](){ m_treeView->loadScenario(); update(); });
+            connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->loadScenario(); update(); });
         }
         propsDock->setMaximumWidth(200);
         propsDock->setMinimumWidth(200);
