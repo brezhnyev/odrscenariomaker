@@ -1,4 +1,5 @@
 #include "Serializer.h"
+#include "Camera.h"
 
 #include <eigen3/Eigen/Eigen>
 
@@ -45,7 +46,7 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
             color["b"] = vehicle->m_color[2];
             node["color"] = color;
             YAML::Node waypaths;
-            node["waypaths"] = waypaths;
+            node["facilities"] = waypaths;
             for (auto && child : object->children()) serialize_yaml(waypaths, child.second);
             parent.push_back(node);
         }
@@ -55,6 +56,21 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
             YAML::Node waypoints;
             node["waypoints"] = waypoints;
             for (auto && child : object->children()) serialize_yaml(waypoints, child.second);
+            parent.push_back(node);
+        }
+        else if (object->getType() == "Camera")
+        {
+            Camera * camera = dynamic_cast<Camera*>(object);
+            YAML::Node location;
+            location["x"] = camera->getPos().x();
+            location["y"] = camera->getPos().y();
+            location["z"] = camera->getPos().z();
+            node["location"] = location;
+            YAML::Node orientation;
+            orientation["roll"] = camera->getOri().x();
+            orientation["pitch"] = camera->getOri().y();
+            orientation["yaw"] = camera->getOri().z();
+            node["orientation"] = orientation;
             parent.push_back(node);
         }
         else if (object->getType() == "Waypoint")
@@ -106,8 +122,8 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             int g = color["g"].as<int>();
             int b = color["b"].as<int>();
             vehicle->m_color = Eigen::Vector3i(r,g,b);
-            if (!child["waypaths"].IsNull())
-                deserialize_yaml(child["waypaths"], *vehicle);
+            if (!child["facilities"].IsNull())
+                deserialize_yaml(child["facilities"], *vehicle);
         }
         if (child["type"].as<string>() == "Waypath")
         {
@@ -115,6 +131,21 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             object.addChild(waypath);
             if (!child["waypoints"].IsNull())
                 deserialize_yaml(child["waypoints"], *waypath);
+        }
+        if (child["type"].as<string>() == "Camera")
+        {
+            Camera * camera = new Camera();
+            auto location = child["location"];
+            float x = location["x"].as<float>();
+            float y = location["y"].as<float>();
+            float z = location["z"].as<float>();
+            camera->setPos(Eigen::Vector3f(x,y,z));
+            auto orientation = child["orientation"];
+            float roll = orientation["roll"].as<float>();
+            float pitch = orientation["pitch"].as<float>();
+            float yaw = orientation["yaw"].as<float>();
+            camera->setOri(Eigen::Vector3f(roll,pitch,yaw));
+            object.addChild(camera);
         }
         if (child["type"].as<string>() == "Waypoint")
         {

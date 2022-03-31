@@ -12,7 +12,7 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
     QVBoxLayout * lh = new QVBoxLayout();
 
     lh->addWidget(new QLabel("Waypath " + QString::number(p.getID()), this));
-    QPushButton * updateWaypath = new QPushButton(new QPushButton("Update Waypath", this));
+    QPushButton * updateWaypath = new QPushButton("Update Waypath", this);
     lh->addWidget(updateWaypath);
     QPushButton * delThis = new QPushButton("Delete", this);
     lh->addStretch(1);
