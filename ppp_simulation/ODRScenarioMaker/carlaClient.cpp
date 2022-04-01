@@ -97,7 +97,12 @@ void play(Scenario & scenario)
     auto defaultSettings = world.GetSettings();
     crpc::EpisodeSettings wsettings(true, false, 1.0 / FPS); // (synchrone, noRender, interval)
     world.ApplySettings(wsettings, carla::time_duration::seconds(10));
-    world.SetWeather(crpc::WeatherParameters::ClearNoon);
+    auto weather = world.GetWeather();
+    weather.fog_density = 0.0f; // higher saturation
+    weather.mie_scattering_scale = 0.0f; // better sky contrast
+    weather.sun_altitude_angle = 80.0f;
+    weather.cloudiness = 10.0f;
+    world.SetWeather(weather);
 
     // Spawn Vehicles:
     // Crashes for some towns. Eventually still has to do something with Qt.
@@ -156,16 +161,16 @@ void play(Scenario & scenario)
                         cg::Rotation{camera->getOri().y(), camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
 
                     cameras.push_back(world.SpawnActor(*camera_bp, camera_transform, actor.get()));
-                    (*camera->getCamWidget())->resize(640, 480);
-                    (*camera->getCamWidget())->show();
+                    camera->getCamWidget()->resize(640, 480);
+                    camera->getCamWidget()->show();
 
                     // Register a callback to save images to disk.
                     ((cc::Sensor*)cameras.back().get())->Listen([camera](auto data)
                     {
                         auto image = boost::static_pointer_cast<csd::Image>(data);
                         QPixmap backBuffer = QPixmap::fromImage(QImage((unsigned char*)image->data(), image->GetWidth(), image->GetHeight(), QImage::Format_RGBX8888).rgbSwapped());
-                        (*camera->getCamWidget())->setPixmap(backBuffer.scaled((*camera->getCamWidget())->size(), Qt::KeepAspectRatio));
-                        (*camera->getCamWidget())->update();
+                        camera->getCamWidget()->setPixmap(backBuffer.scaled(camera->getCamWidget()->size(), Qt::KeepAspectRatio));
+                        camera->getCamWidget()->update();
                     });
                 }
             }
@@ -229,6 +234,9 @@ void play(Scenario & scenario)
             auto scenario_vehicles = scenario.children();
             for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++actor)
             {
+                if (!playStatus)
+                    break;
+
                 auto vehicle = static_cast<cc::Vehicle*>((*actor).get());
 
                 auto trf = vehicle->GetTransform();
@@ -244,7 +252,7 @@ void play(Scenario & scenario)
                 Eigen::Vector3f targetDir;
                 if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
                 {
-                    return;
+                    continue;
                 }
                 cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
                 auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles

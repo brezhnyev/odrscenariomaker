@@ -23,14 +23,14 @@ public:
     int         getActiveWaypointID();
 
     void        setRosbagFile(const std::string & text)     { m_rosbagFile = text;  }
-    void        setRosbagTopic(const std::string & text)    { m_rosbagTopic = text; }
+    void        setRosbagTopics(std::vector<std::string> topics)    { m_rosbagTopics = topics; }
     void        setRosbagOffset(float offset)               { m_rosbagOffset=offset;}
     std::string getRosbagFile()                             { return m_rosbagFile;  }
-    std::string getRosbagTopic()                            { return m_rosbagTopic; }
+    std::vector<std::string> getRosbagTopics()              { return m_rosbagTopics;}
     float       getRosbagOffset()                           { return m_rosbagOffset;}
 
 protected:
     std::string  m_rosbagFile;
-    std::string  m_rosbagTopic;
+    std::vector<std::string>  m_rosbagTopics;
     float        m_rosbagOffset{0.0f};
 };  

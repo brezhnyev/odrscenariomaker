@@ -216,7 +216,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
                 if (0 == playStatus)
                     break;
                 const std::string msg_topic = msg.getTopic();
-                if (msg_topic == m_viewer->getScenario().getRosbagTopic())
+                if (msg_topic == m_viewer->getScenario().getRosbagTopics()[0])
                 {
                     sensor_msgs::CompressedImage::ConstPtr comp_img_msg = msg.instantiate<sensor_msgs::CompressedImage>();
 

@@ -11,6 +11,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QTextEdit>
 
 #include <fstream>
 #include <string>
@@ -60,29 +61,38 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     rosLayout->addWidget(rosBagfile);
 
     rosLayout->addWidget(new QLabel("Rosbag topic:", rosGroup));
-    QLineEdit * rosTopic = new QLineEdit(rosGroup);
-    rosTopic->setText(m_scenario.getRosbagTopic().c_str());
-    connect(rosTopic, &QLineEdit::textChanged, [&](const QString & text){ m_scenario.setRosbagTopic(text.toStdString()); });
-    rosLayout->addWidget(rosTopic);
+    QTextEdit * rosTopics = new QTextEdit(rosGroup);
+    for (auto && topic : m_scenario.getRosbagTopics())
+        rosTopics->append(topic.c_str());
+    connect(rosTopics, &QTextEdit::textChanged, [this, rosTopics]()
+    {
+        stringstream ss(rosTopics->toPlainText().toStdString());
+        vector<string> topics; string line;
+        while (ss >> line) topics.push_back(line);
+        m_scenario.setRosbagTopics(topics);
+    });
+    rosLayout->addWidget(rosTopics);
 
-    rosLayout->addWidget(new QLabel("Rosbag playback offset:"));
-    QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
+rosLayout->addWidget(new QLabel("Rosbag playback offset:"));
+QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
     rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
     connect(rosTimeOffset, &QLineEdit::textChanged, [&](const QString & text){ m_scenario.setRosbagOffset(text.toFloat()); });
     rosLayout->addWidget(rosTimeOffset);
     mainLayout->addWidget(rosGroup);
 
-    connect(loadScenario, &QPushButton::pressed, [this, rosBagfile, rosTopic, rosTimeOffset](){
+    connect(loadScenario, &QPushButton::pressed, [this, rosBagfile, rosTopics, rosTimeOffset](){
         QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
         if (name.isEmpty()) return;
         
         ifstream ifs(name.toStdString());
         m_scenario.clear();
-        stringstream ss; ss << ifs.rdbuf();
-        m_scenario = Serializer::deserialize_yaml(ss.str());
+        stringstream ssf; ssf << ifs.rdbuf();
+        m_scenario = Serializer::deserialize_yaml(ssf.str());
         emit signal_update();
+
         rosBagfile->setText(m_scenario.getRosbagFile().c_str());
-        rosTopic->setText(m_scenario.getRosbagTopic().c_str());
+        for (auto && topic : m_scenario.getRosbagTopics())
+            rosTopics->append(topic.c_str());
         rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
         ifs.close();
     });

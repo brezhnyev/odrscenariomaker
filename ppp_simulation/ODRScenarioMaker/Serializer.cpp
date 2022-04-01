@@ -26,7 +26,12 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
         Scenario * scenario = dynamic_cast<Scenario*>(object);
         parent["type"] = "Scenario";
         parent["rosbagfile"] = scenario->getRosbagFile();
-        parent["rosbagtopic"] = scenario->getRosbagTopic();
+        for (auto && rostopic : scenario->getRosbagTopics())
+        {
+            YAML::Node topic;
+            topic["topic"] = rostopic;
+            parent["rosbagtopics"].push_back(topic);
+        }
         parent["rosbagoffset"] = scenario->getRosbagOffset();
         YAML::Node actors;
         parent["actors"] = actors;
@@ -98,7 +103,13 @@ Scenario Serializer::deserialize_yaml(const std::string & data)
     {
         Scenario * scenario = dynamic_cast<Scenario*>(&object);
         scenario->setRosbagFile(root["rosbagfile"].as<string>());
-        scenario->setRosbagTopic(root["rosbagtopic"].as<string>());
+        auto topics = root["rosbagtopics"];
+        vector<string> rostopics;
+        for (auto && topic : topics)
+        {
+            rostopics.push_back(topic["topic"].as<string>());
+        }
+        scenario->setRosbagTopics(rostopics);
         scenario->setRosbagOffset(root["rosbagoffset"].as<float>());
     }
 

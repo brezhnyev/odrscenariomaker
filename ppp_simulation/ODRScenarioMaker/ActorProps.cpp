@@ -50,7 +50,6 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
             QMessageBox::warning(this, "Error adding Element", "Failed to add Waypath: index not found!");
             return;
         }
-        (*camera->getCamWidget()) = new QLabel();
         emit signal_addCamera(id);
     });
 }
