@@ -25,6 +25,7 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
     {
         Scenario * scenario = dynamic_cast<Scenario*>(object);
         parent["type"] = "Scenario";
+        parent["townname"] = scenario->getTownName();
         parent["rosbagfile"] = scenario->getRosbagFile();
         for (auto && rostopic : scenario->getRosbagTopics())
         {
@@ -102,6 +103,7 @@ Scenario Serializer::deserialize_yaml(const std::string & data)
     if (root["type"].as<string>() == "Scenario")
     {
         Scenario * scenario = dynamic_cast<Scenario*>(&object);
+        scenario->setTownName(root["townname"].as<string>());
         scenario->setRosbagFile(root["rosbagfile"].as<string>());
         auto topics = root["rosbagtopics"];
         vector<string> rostopics;

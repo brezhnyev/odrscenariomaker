@@ -80,6 +80,11 @@ static map <string, cg::Location> town2InitLocation
 
 void play(Scenario & scenario)
 {
+    if (scenario.getTownName().empty())
+    {
+        cout << "Empty Town name! Skipping..." << endl;
+        return;
+    }
     playStatus = 2; // 0 stop, 1 pause, 2 play
     camTrf.setIdentity();
 
@@ -89,9 +94,7 @@ void play(Scenario & scenario)
     cout << "Client API version : " << client.GetClientVersion() << '\n';
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    string town("Connex02");
-
-    auto world = client.LoadWorld(town);
+    auto world = client.LoadWorld(scenario.getTownName());
 
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
@@ -124,7 +127,7 @@ void play(Scenario & scenario)
                 blueprint.SetAttribute("color", scenario_vehicle->colorToString());
             }
             // Spawn the vehicle.
-            auto actor = world.TrySpawnActor(blueprint, cg::Transform(town2InitLocation[town], cg::Rotation()));
+            auto actor = world.TrySpawnActor(blueprint, cg::Transform(town2InitLocation[scenario.getTownName()], cg::Rotation()));
             if (!actor)
             {
                 cout << "Failed to spawn actor ------" << endl;

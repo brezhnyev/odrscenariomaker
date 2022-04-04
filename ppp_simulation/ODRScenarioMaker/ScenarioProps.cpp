@@ -27,6 +27,19 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     QVBoxLayout * mainLayout = new QVBoxLayout();
     mainLayout->addWidget(new QLabel(QString(scenario.getType().c_str()) + " ID: " + QString::number(scenario.getID()), this));
 
+    QGroupBox * general = new QGroupBox();
+    QVBoxLayout * generalLayout = new QVBoxLayout();
+    generalLayout->addWidget(new QLabel("Carla Town name:"));
+    QLineEdit * townName = new QLineEdit();
+    generalLayout->addWidget(townName);
+    connect(townName, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setTownName(text.toStdString()); });
+    QPushButton * loadScenario = new QPushButton("Load Scenario", this);
+    generalLayout->addWidget(loadScenario);
+    QPushButton * saveScenario = new QPushButton("Save Scenario", this);
+    generalLayout->addWidget(saveScenario);
+    general->setLayout(generalLayout);
+    mainLayout->addWidget(general);
+
 
     QPushButton * addVehicle = new QPushButton("Add vehicle", this);
     mainLayout->addWidget(addVehicle);
@@ -44,10 +57,6 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         emit signal_addVehicle(id);
     });
 
-    QPushButton * loadScenario = new QPushButton("Load Scenario", this);
-    mainLayout->addWidget(loadScenario);
-    QPushButton * saveScenario = new QPushButton("Save Scenario", this);
-    mainLayout->addWidget(saveScenario);
 
     // addd rosbag file
     QGroupBox * rosGroup = new QGroupBox(this);
@@ -57,7 +66,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     rosLayout->addWidget(new QLabel("Rosbag file:", rosGroup));
     QLineEdit * rosBagfile = new QLineEdit(rosGroup);
     rosBagfile->setText(m_scenario.getRosbagFile().c_str());
-    connect(rosBagfile, &QLineEdit::textChanged, [&](const QString & text){ m_scenario.setRosbagFile(text.toStdString()); });
+    connect(rosBagfile, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setRosbagFile(text.toStdString()); });
     rosLayout->addWidget(rosBagfile);
 
     rosLayout->addWidget(new QLabel("Rosbag topic:", rosGroup));
@@ -76,11 +85,11 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 rosLayout->addWidget(new QLabel("Rosbag playback offset:"));
 QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
     rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
-    connect(rosTimeOffset, &QLineEdit::textChanged, [&](const QString & text){ m_scenario.setRosbagOffset(text.toFloat()); });
+    connect(rosTimeOffset, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setRosbagOffset(text.toFloat()); });
     rosLayout->addWidget(rosTimeOffset);
     mainLayout->addWidget(rosGroup);
 
-    connect(loadScenario, &QPushButton::pressed, [this, rosBagfile, rosTopics, rosTimeOffset](){
+    connect(loadScenario, &QPushButton::pressed, [this, townName, rosBagfile, rosTopics, rosTimeOffset](){
         QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
         if (name.isEmpty()) return;
         
@@ -90,6 +99,7 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
         m_scenario = Serializer::deserialize_yaml(ssf.str());
         emit signal_update();
 
+        townName->setText(m_scenario.getTownName().c_str());
         rosBagfile->setText(m_scenario.getRosbagFile().c_str());
         for (auto && topic : m_scenario.getRosbagTopics())
             rosTopics->append(topic.c_str());
