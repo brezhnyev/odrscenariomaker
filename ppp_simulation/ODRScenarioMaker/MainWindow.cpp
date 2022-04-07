@@ -208,14 +208,23 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             rosbag::Bag bag;
             bag.open(bagFileName);
             auto &&messages = rosbag::View(bag);
-            rosbagImage->resize(640,360);
+            rosbagImage->resize(1280,720);
             rosbagImage->show();
+            double rostimestart = 0;
+            double systimestart = 0;
 
             for (rosbag::MessageInstance const &msg : messages)
             {
                 if (0 == playStatus)
                     break;
                 const std::string msg_topic = msg.getTopic();
+                if (!rostimestart)
+                {
+                    rostimestart = msg.getTime().toSec();
+                    timeval tv; gettimeofday(&tv, nullptr);
+                    systimestart = tv.tv_sec + 0.000001*tv.tv_usec;
+                }
+
                 if (msg_topic == m_viewer->getScenario().getRosbagTopics()[0])
                 {
                     sensor_msgs::CompressedImage::ConstPtr comp_img_msg = msg.instantiate<sensor_msgs::CompressedImage>();
@@ -229,8 +238,14 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
                     rosbagImage->setPixmap(backBuffer.scaled(rosbagImage->size(), Qt::KeepAspectRatio));
                     rosbagImage->update();
+
                     unique_lock<mutex> lk(playCondVarMtx);
-                    playCondVar.wait(lk);
+                    playCondVar.wait(lk, [&]()
+                    {
+                        timeval tv; gettimeofday(&tv, nullptr);
+                        double systime = tv.tv_sec + 0.000001*tv.tv_usec;
+                        return  (systime - systimestart) > (msg.getTime().toSec() - rostimestart);
+                    });
                 }
             }
         });

@@ -109,7 +109,7 @@ bool Waypath::getNext(Vector3f & pos, Vector3f & dir, float & targetSpeed, float
         }
     }
 
-    if (index == m_smoothPath.size() - 2)
+    if (index >= m_smoothPath.size() - 2)
         return false;
 
     targetSpeed = m_smoothPath[index].getSpeed();

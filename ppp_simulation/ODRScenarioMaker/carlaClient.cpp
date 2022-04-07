@@ -63,7 +63,7 @@ condition_variable playCondVar;
 mutex playCondVarMtx;
 Matrix4f camTrf;
 extern MainWindow * mw;
-static int FPS = 10;
+static int FPS = 30;
 static bool realtime_playback = true;
 //extern vector<QLabel*> camera_widgets; // need to be extern to be created in the parent thread
 
@@ -111,10 +111,8 @@ void play(Scenario & scenario)
     // Crashes for some towns. Eventually still has to do something with Qt.
     //auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
     vector<ShrdPtrActor> vehicles;
-    cc::Vehicle::Control control;
     std::vector<ShrdPtrActor> cameras;
 
-    int i = 0;
     for (auto && child : scenario.children())
     {
         Vehicle * scenario_vehicle = dynamic_cast<Vehicle*>(child.second);
@@ -155,16 +153,16 @@ void play(Scenario & scenario)
                     // Find a camera blueprint.
                     auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.camera.rgb"));
 
-                    camera_bp->SetAttribute("image_size_x", "640");
-                    camera_bp->SetAttribute("image_size_y", "360");
-                    camera_bp->SetAttribute("fov", "60");
+                    camera_bp->SetAttribute("image_size_x", "1280");
+                    camera_bp->SetAttribute("image_size_y", "720");
+                    camera_bp->SetAttribute("fov", to_string(camera->getFOV()));
 
                     auto camera_transform = cg::Transform{
                         cg::Location{camera->getPos().x(), camera->getPos().y(), camera->getPos().z()},        // x, y, z.
                         cg::Rotation{camera->getOri().y(), camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
 
                     cameras.push_back(world.SpawnActor(*camera_bp, camera_transform, actor.get()));
-                    camera->getCamWidget()->resize(640, 480);
+                    camera->getCamWidget()->resize(1280, 720);
                     camera->getCamWidget()->show();
 
                     // Register a callback to save images to disk.
@@ -178,30 +176,27 @@ void play(Scenario & scenario)
                 }
             }
             auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
-            control.throttle = 1.0f;
-            vehicle->ApplyControl(control);
             vehicle->SetSimulatePhysics();
             vehicles.push_back(actor);
         }
     }
     world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
 
-    auto brake = [&](float strength, cc::Vehicle* vehicle, float targetSpeed)
+    auto applyControl = [&](float accLat, float accLon, cc::Vehicle* vehicle, float targetSpeed, float steer)
     {
         auto ls = vehicle->GetLightState();
         auto speed =  vehicle->GetVelocity().Length();
-        const float threshold = 0.05f;
-
-        if (strength < threshold && speed < targetSpeed)
+        cc::Vehicle::Control control;
+        control.steer = steer;
+        if (accLon >= 0)
         {
             control.brake = 0.0f;
-            control.throttle = exp(-speed/targetSpeed);
+            control.throttle = abs(accLon);
             ls = crpc::VehicleLightState::LightState::None;
         }
-        else
+        if (accLon < 0 || !speed)
         {
-            strength = max(strength, threshold);
-            control.brake = strength;
+            control.brake = 0.02*abs(accLon);
             control.throttle = 0.0f;
             ls = crpc::VehicleLightState::LightState::Brake;
         }
@@ -240,7 +235,7 @@ void play(Scenario & scenario)
                 if (!playStatus)
                     break;
 
-                auto vehicle = static_cast<cc::Vehicle*>((*actor).get());
+                auto vehicle = static_cast<cc::Vehicle*>(actor->get());
 
                 auto trf = vehicle->GetTransform();
                 auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
@@ -255,18 +250,25 @@ void play(Scenario & scenario)
                 Eigen::Vector3f targetDir;
                 if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
                 {
+                    cc::Vehicle::Control control;
+                    control.brake = 1.0f;
+                    control.throttle = 0.0f;
+                    auto ls = vehicle->GetLightState();
+                    ls = crpc::VehicleLightState::LightState::Brake;
+                    vehicle->SetLightState(ls);
+                    vehicle->ApplyControl(control);
                     continue;
                 }
                 cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
                 auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
                 auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
 
-                control.steer = sign * arc.Length()*0.5f;
-                vehicle->ApplyControl(control);
+                float steer = sign * arc.Length()*0.5f;
                 // The stronger is the curvature the lower speed:
-                float R = abs(3 * tan(M_PI_2 - control.steer)); // 3 is the ~length between axes
-                float acc = speed*speed/R; // get centrifusual acceleration
-                brake(0.01f*acc, vehicle, targetSpeed);
+                float R = abs(3 * tan(M_PI_2 - steer)); // 3 is the ~length between axes
+                float accLat = speed*speed/R;
+                float accLon = (targetSpeed - speed);
+                applyControl(accLat, accLon, vehicle, targetSpeed, steer);
                 Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
                 if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
 

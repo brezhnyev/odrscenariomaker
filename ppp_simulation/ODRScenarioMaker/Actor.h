@@ -28,8 +28,8 @@ public:
     std::string getName() { return m_name; }
     void setName(std::string name) { m_name = name; }
 
-    std::string m_name; // Due to crash in the ActorProps this made public
 protected:
+    std::string m_name;
     Eigen::Vector3f m_pos{0.0f, 0.0f, 0.0f};
     Eigen::Vector3f m_ori{0.0f, 0.0f, 0.0f};
 };

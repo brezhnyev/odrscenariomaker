@@ -32,6 +32,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     generalLayout->addWidget(new QLabel("Carla Town name:"));
     QLineEdit * townName = new QLineEdit();
     generalLayout->addWidget(townName);
+    townName->setText(m_scenario.getTownName().c_str());
     connect(townName, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setTownName(text.toStdString()); });
     QPushButton * loadScenario = new QPushButton("Load Scenario", this);
     generalLayout->addWidget(loadScenario);
@@ -95,6 +96,7 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
         
         ifstream ifs(name.toStdString());
         m_scenario.clear();
+        rosTopics->clear();
         stringstream ssf; ssf << ifs.rdbuf();
         m_scenario = Serializer::deserialize_yaml(ssf.str());
         emit signal_update();

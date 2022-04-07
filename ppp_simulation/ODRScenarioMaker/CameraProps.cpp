@@ -74,8 +74,21 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     mainLayout->addWidget(oriInfo);
 
     connect(roll,  static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [pitch,yaw,this ](double val){ m_camera.setOri(Eigen::Vector3f(val, pitch->value(), yaw->value()));  emit update(); });
-    connect(pitch, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [roll,yaw, this ](double val){ m_camera.setPos(Eigen::Vector3f(roll->value(), val,  yaw->value()));  emit update(); });
-    connect(yaw,   static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [roll,pitch,this](double val){ m_camera.setPos(Eigen::Vector3f(roll->value(), pitch->value(), val));emit update(); });
+    connect(pitch, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [roll,yaw, this ](double val){ m_camera.setOri(Eigen::Vector3f(roll->value(), val,  yaw->value()));  emit update(); });
+    connect(yaw,   static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [roll,pitch,this](double val){ m_camera.setOri(Eigen::Vector3f(roll->value(), pitch->value(), val)); emit update(); });
+
+    QVBoxLayout * l3 = new QVBoxLayout();
+    QDoubleSpinBox * FOV = new QDoubleSpinBox(this);
+    FOV->setRange(-180, 180);
+    FOV->setSingleStep(0.01);
+    FOV->setValue(camera.getFOV());
+    l3->addWidget(FOV);
+    QGroupBox * intrinsics = new QGroupBox(this);
+    intrinsics->setTitle("Cam props");
+    intrinsics->setLayout(l3);
+    mainLayout->addWidget(intrinsics);
+
+    connect(FOV, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [this](double val){ m_camera.setFOV(val); emit update(); });
 
     QPushButton * delButton = new QPushButton("Delete", this);
     mainLayout->addStretch(1);

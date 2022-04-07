@@ -129,7 +129,7 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
         {
             Vehicle * vehicle = new Vehicle();
             object.addChild(vehicle);
-            vehicle->m_name = child["name"].as<string>();
+            vehicle->setName(child["name"].as<string>());
             auto color = child["color"];
             int r = color["r"].as<int>();
             int g = color["g"].as<int>();
