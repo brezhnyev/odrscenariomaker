@@ -28,4 +28,4 @@ thirdparty/odrparser/odr_1_5.cc
 thirdparty/tinyxml2/tinyxml2.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} -lOpenGL ${Qt5Core_LIB} Qt5::Core Qt5::Gui Qt5::Widgets ${QGLVIEWER_LIBRARY} -fopenmp)
+target_link_libraries(${PROJECT_NAME} -lQGLViewer-qt5 -lOpenGL -lGLU Qt5::Core Qt5::Gui Qt5::Xml Qt5::Widgets ${QGLVIEWER_LIBRARY} -fopenmp)
