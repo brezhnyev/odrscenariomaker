@@ -1,5 +1,6 @@
 #include "ActorProps.h"
 #include "Waypath.h"
+#include "Camera.h"
 
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QVBoxLayout>
@@ -20,30 +21,17 @@
 ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
-    QLabel * m_idInfo = new QLabel(this);
-    m_idInfo->setText(QString(actor.getType().c_str()) + " ID: " + QString::number(actor.getID()));
+    mainLayout->addWidget(new QLabel(QString(actor.getType().c_str()) + " ID: " + QString::number(actor.getID()), this));
 
-    QPushButton * addWaypath = new QPushButton(this);
-    addWaypath->setText("Add waypath");
-
-    mainLayout->addWidget(m_idInfo);
+    QPushButton * addWaypath = new QPushButton("Add waypath", this);
     mainLayout->addWidget(addWaypath);
 
-    QVBoxLayout * bl1 = new QVBoxLayout();
-    QComboBox * delCombo = new QComboBox(this);
-    for (auto && child : m_actor.children()) delCombo->addItem(QString::number(child.second->getID()));
-    QPushButton * delButton = new QPushButton(this);
-    delButton->setText("Delete");
-    bl1->addWidget(delButton);
-    bl1->addWidget(delCombo);
-    QGroupBox * delGroup = new QGroupBox(this);
-    delGroup->setTitle("Delete path");
-    delGroup->setLayout(bl1);
-    mainLayout->addWidget(delGroup);
+    QPushButton * addCamera = new QPushButton("Add Camera", this);
+    mainLayout->addWidget(addCamera);
 
     setLayout(mainLayout);
 
-    connect(addWaypath, &QPushButton::pressed, [this, delCombo]()
+    connect(addWaypath, &QPushButton::pressed, [this]()
     { 
         int id = m_actor.addChild(new Waypath());
         if (id == -1)
@@ -52,20 +40,17 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
             return;
         }
         emit signal_addWaypath(id);
-        delCombo->clear();
-        for (auto && child : m_actor.children()) delCombo->addItem(QString::number(child.second->getID()));
     });
-    connect(delButton, &QPushButton::pressed, [this, delCombo]()
-    { 
-        int id = m_actor.delChild(delCombo->currentText().toInt());
+    connect(addCamera, &QPushButton::pressed, [this]()
+    {
+        Camera * camera = new Camera();
+        int id = m_actor.addChild(camera);
         if (id == -1)
         {
-            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Waypath: index not found!");
+            QMessageBox::warning(this, "Error adding Element", "Failed to add Waypath: index not found!");
             return;
         }
-        emit signal_delWaypath(id);
-        delCombo->clear();
-        for (auto && child : m_actor.children()) delCombo->addItem(QString::number(child.second->getID()));
+        emit signal_addCamera(id);
     });
 }
 
@@ -74,33 +59,45 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     auto mainLayout = layout();
     QComboBox * typeCombo = new QComboBox(this);
     QStringList ls;
-    ls << "vehicle.audi.a2" <<
-    "vehicle.audi.tt" <<
-    "vehicle.carlamotors.carlacola" <<
-    "vehicle.dodge_charger.police" <<
-    "vehicle.jeep.wrangler_rubicon" <<
-    "vehicle.chevrolet.impala" <<
-    "vehicle.mini.cooperst" <<
-    "vehicle.bmw.isetta" <<
+    ls << 
+    "vehicle.audi.a2" <<
     "vehicle.audi.etron" <<
-    "vehicle.mercedes-benz.coupe" <<
+    "vehicle.audi.tt" <<
+    "vehicle.bh.crossbike" <<
     "vehicle.bmw.grandtourer" <<
-    "vehicle.toyota.prius" <<
+    "vehicle.carlamotors.carlacola" <<
+    "vehicle.carlamotors.firetruck" <<
+    "vehicle.chevrolet.impala" <<
     "vehicle.citroen.c3" <<
-    "vehicle.mustang.mustang" <<
-    "vehicle.tesla.model3" <<
     "vehicle.diamondback.century" <<
+    "vehicle.dodge.charger_2020" <<
+    "vehicle.dodge.charger_police" <<
+    "vehicle.dodge.charger_police_2020" <<
+    "vehicle.ford.ambulance" <<
+    "vehicle.ford.mustang" <<
     "vehicle.gazelle.omafiets" <<
     "vehicle.harley-davidson.low_rider" <<
-    "vehicle.bh.crossbike" <<
-    "vehicle.tesla.cybertruck" <<
-    "vehicle.volkswagen.t2" <<
+    "vehicle.jeep.wrangler_rubicon" <<
     "vehicle.kawasaki.ninja" <<
-    "vehicle.lincoln.mkz2017" <<
-    "vehicle.seat.leon" <<
-    "vehicle.yamaha.yzf" <<
+    "vehicle.lincoln.mkz_2017" <<
+    "vehicle.lincoln.mkz_2020" <<
+    "vehicle.mercedes.coupe" <<
+    "vehicle.mercedes.coupe_2020" <<
+    "vehicle.mercedes.sprinter" <<
+    "vehicle.micro.microlino" <<
+    "vehicle.mini.cooper_s" <<
+    "vehicle.mini.cooper_s_2021" <<
+    "vehicle.nissan.micra" <<
     "vehicle.nissan.patrol" <<
-    "vehicle.nissan.micra";
+    "vehicle.nissan.patrol_2021" <<
+    "vehicle.seat.leon" <<
+    "vehicle.tesla.cybertruck" <<
+    "vehicle.tesla.model3" <<
+    "vehicle.toyota.prius" <<
+    "vehicle.vespa.zx125" <<
+    "vehicle.volkswagen.t2" <<
+    "vehicle.yamaha.yzf";
+
     typeCombo->addItems(ls);
 
     // vehicle color:
@@ -119,8 +116,23 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     mainLayout->addWidget(m_colorPicker);
 
     mainLayout->addWidget(typeCombo);
-    // KB: crashes if setName() function is used, should be checked later
-    connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.m_name = name.toStdString(); });
+    connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.setName(name.toStdString()); });
 
-    //mainLayout->addStretch(1);
+    ((QVBoxLayout*)mainLayout)->addStretch(1);
+
+    QPushButton * delButton = new QPushButton();
+    delButton->setText("Delete");
+    mainLayout->addWidget(delButton);
+
+    connect(delButton, &QPushButton::pressed, [this]()
+    { 
+        int id = m_actor.getID();
+        if (id == -1)
+        {
+            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Waypath: index not found!");
+            return;
+        }
+        emit signal_delete(id);
+        close();
+    });
 }

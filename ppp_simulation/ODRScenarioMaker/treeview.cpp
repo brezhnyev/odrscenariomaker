@@ -17,6 +17,21 @@ TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
         emit signal_select(treeItem->getID());
     });
     m_treeModel->addItem(-1, m_scenario.getID(), "Scenario");
+    m_scenarioID = scenario.getID();
+}
+
+void TreeView::addItem(int id, Selectable * item)
+{
+    m_treeModel->addItem(id, item->getID(), item->getType());
+    for (auto child : item->children())
+        addItem(item->getID(), child.second);
+}
+
+void TreeView::loadScenario()
+{
+    m_treeModel->delItem(m_scenarioID);
+    addItem(-1, &m_scenario);
+    m_scenarioID = m_scenario.getID();
 }
 
 void TreeView::slot_addVehicle(int id)
@@ -32,6 +47,11 @@ void TreeView::slot_addWalker(int id)
 void TreeView::slot_addWaypath(int id)
 {
     m_treeModel->addItem(m_scenario.getActiveActorID(), id, "Waypath");
+}
+
+void TreeView::slot_addCamera(int id)
+{
+    m_treeModel->addItem(m_scenario.getActiveActorID(), id, "Camera");
 }
 
 void TreeView::slot_addWaypoint(int id)

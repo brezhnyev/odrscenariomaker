@@ -9,18 +9,6 @@
 using namespace Eigen;
 using namespace std;
 
-int Waypath::delChild(int id) // id is dummy parameter for Waypath
-{
-    if (m_children.empty()) return -1;
-
-    id = m_children.rbegin()->first;
-    m_children.erase(id);
-    if (m_children.empty()) m_activeChild = -1;
-    else m_activeChild = 0;
-
-    return id;
-}
-
 void Waypath::drawGeometry()
 {
     float psz;
@@ -79,7 +67,7 @@ void Waypath::updateSmoothPath()
         Waypoint * wp1 = static_cast<Waypoint*>(it1->second);
         Waypoint * wp2 = static_cast<Waypoint*>(it2->second);
         float speed = (1.0f - (float)s/STEPS)*wp1->getSpeed() + (float)s/STEPS*wp2->getSpeed();
-        Waypoint wp(Vector3f(curve.node(i).x, curve.node(i).y, curve.node(i).z), speed);
+        WaypointSmoothed wp(Vector3f(curve.node(i).x, curve.node(i).y, curve.node(i).z), speed);
 		m_smoothPath.push_back(wp);
 	}
 }
@@ -121,7 +109,7 @@ bool Waypath::getNext(Vector3f & pos, Vector3f & dir, float & targetSpeed, float
         }
     }
 
-    if (index == m_smoothPath.size() - 2)
+    if (index >= m_smoothPath.size() - 2)
         return false;
 
     targetSpeed = m_smoothPath[index].getSpeed();

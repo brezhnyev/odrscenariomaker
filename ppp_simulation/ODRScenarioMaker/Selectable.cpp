@@ -6,6 +6,10 @@ using namespace std;
 
 int Selectable::s_ID = 0;
 
+Drawable::~Drawable() {}
+
+Selectable::~Selectable() {}
+
 Selectable::Selectable() : m_selected(false), m_activeChild(-1)
 { 
     m_id = s_ID; ++s_ID;
@@ -72,12 +76,12 @@ Selectable * Selectable::findSelectable(int id)
     return selection;
 }
 
-void Selectable::clearRecursively(Selectable * s)
+void Selectable::clear(Selectable * s)
 {
     for (auto && c : s->children())
     {
         if (c.second->children().empty()) delete c.second;
-        else clearRecursively(c.second);
+        else clear(c.second);
     }
     s->children().clear();
 }

@@ -10,6 +10,8 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QFileDialog>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QTextEdit>
 
 #include <fstream>
 #include <string>
@@ -19,33 +21,33 @@ using namespace std;
 
 #define MINMAXPOS 1000000
 
+
 ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
-    QLabel * m_idInfo = new QLabel(this);
-    m_idInfo->setText(QString(scenario.getType().c_str()) + " ID: " + QString::number(scenario.getID()));
+    mainLayout->addWidget(new QLabel(QString(scenario.getType().c_str()) + " ID: " + QString::number(scenario.getID()), this));
 
-    QPushButton * addVehicle = new QPushButton(this);
-    addVehicle->setText("Add vehicle");
+    QGroupBox * general = new QGroupBox();
+    QVBoxLayout * generalLayout = new QVBoxLayout();
+    generalLayout->addWidget(new QLabel("Carla Town name:"));
+    QLineEdit * townName = new QLineEdit();
+    generalLayout->addWidget(townName);
+    townName->setText(m_scenario.getTownName().c_str());
+    connect(townName, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setTownName(text.toStdString()); });
+    QPushButton * loadScenario = new QPushButton("Load Scenario", this);
+    generalLayout->addWidget(loadScenario);
+    QPushButton * saveScenario = new QPushButton("Save Scenario", this);
+    generalLayout->addWidget(saveScenario);
+    general->setLayout(generalLayout);
+    mainLayout->addWidget(general);
 
-    mainLayout->addWidget(m_idInfo);
+
+    QPushButton * addVehicle = new QPushButton("Add vehicle", this);
     mainLayout->addWidget(addVehicle);
-
-    QVBoxLayout * bl1 = new QVBoxLayout();
-    QComboBox * delCombo = new QComboBox(this);
-    for (auto && child : m_scenario.children()) delCombo->addItem(QString::number(child.second->getID()));
-    QPushButton * delButton = new QPushButton(this);
-    delButton->setText("Delete");
-    bl1->addWidget(delButton);
-    bl1->addWidget(delCombo);
-    QGroupBox * delGroup = new QGroupBox(this);
-    delGroup->setTitle("Delete vehicle");
-    delGroup->setLayout(bl1);
-    mainLayout->addWidget(delGroup);
 
     setLayout(mainLayout);
 
-    connect(addVehicle, &QPushButton::pressed, [this, delCombo]()
+    connect(addVehicle, &QPushButton::pressed, [this]()
     { 
         int id = m_scenario.addChild(new Vehicle());
         if (id == -1)
@@ -54,40 +56,59 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             return;
         }
         emit signal_addVehicle(id);
-        delCombo->clear();
-        for (auto && child : m_scenario.children()) delCombo->addItem(QString::number(child.second->getID()));
-    });
-    connect(delButton, &QPushButton::pressed, [this, delCombo]()
-    { 
-        int id = m_scenario.delChild(delCombo->currentText().toInt());
-        if (id == -1)
-        {
-            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Vehicle: index not found!");
-            return;
-        }
-        emit signal_delVehicle(id);
-        delCombo->clear();
-        for (auto && child : m_scenario.children()) delCombo->addItem(QString::number(child.second->getID()));
     });
 
-    QPushButton * loadScenario = new QPushButton();
-    loadScenario->setText("Load Scenario");
-    mainLayout->addWidget(loadScenario);
-    connect(loadScenario, &QPushButton::pressed, [this](){
+
+    // addd rosbag file
+    QGroupBox * rosGroup = new QGroupBox(this);
+    QVBoxLayout * rosLayout = new QVBoxLayout();
+    rosGroup->setLayout(rosLayout);
+
+    rosLayout->addWidget(new QLabel("Rosbag file:", rosGroup));
+    QLineEdit * rosBagfile = new QLineEdit(rosGroup);
+    rosBagfile->setText(m_scenario.getRosbagFile().c_str());
+    connect(rosBagfile, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setRosbagFile(text.toStdString()); });
+    rosLayout->addWidget(rosBagfile);
+
+    rosLayout->addWidget(new QLabel("Rosbag topic:", rosGroup));
+    QTextEdit * rosTopics = new QTextEdit(rosGroup);
+    for (auto && topic : m_scenario.getRosbagTopics())
+        rosTopics->append(topic.c_str());
+    connect(rosTopics, &QTextEdit::textChanged, [this, rosTopics]()
+    {
+        stringstream ss(rosTopics->toPlainText().toStdString());
+        vector<string> topics; string line;
+        while (ss >> line) topics.push_back(line);
+        m_scenario.setRosbagTopics(topics);
+    });
+    rosLayout->addWidget(rosTopics);
+
+rosLayout->addWidget(new QLabel("Rosbag playback offset:"));
+QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
+    rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
+    connect(rosTimeOffset, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setRosbagOffset(text.toFloat()); });
+    rosLayout->addWidget(rosTimeOffset);
+    mainLayout->addWidget(rosGroup);
+
+    connect(loadScenario, &QPushButton::pressed, [this, townName, rosBagfile, rosTopics, rosTimeOffset](){
         QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
         if (name.isEmpty()) return;
         
         ifstream ifs(name.toStdString());
         m_scenario.clear();
-        stringstream ss; ss << ifs.rdbuf();
-        m_scenario = Serializer::deserialize_yaml(ss.str());
-        emit signal_updateOnScenarioLoad();
+        rosTopics->clear();
+        stringstream ssf; ssf << ifs.rdbuf();
+        m_scenario = Serializer::deserialize_yaml(ssf.str());
+        emit signal_update();
+
+        townName->setText(m_scenario.getTownName().c_str());
+        rosBagfile->setText(m_scenario.getRosbagFile().c_str());
+        for (auto && topic : m_scenario.getRosbagTopics())
+            rosTopics->append(topic.c_str());
+        rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
         ifs.close();
     });
 
-    QPushButton * saveScenario = new QPushButton();
-    saveScenario->setText("Save Scenario");
-    mainLayout->addWidget(saveScenario);
     connect(saveScenario, &QPushButton::pressed, [this](){
         string contents = Serializer::serialize_yaml(&m_scenario);
         QString name = QFileDialog::getSaveFileName(this, tr("Save Scenario"), "/home/scenario.yaml", tr("Scenarios (*.yaml)"));

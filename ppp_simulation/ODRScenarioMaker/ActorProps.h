@@ -11,12 +11,12 @@ class ActorProps : public QWidget
     Q_OBJECT
 public:
     ActorProps(Actor & actor);
-    virtual ~ActorProps() {}
 
 signals:
-    void signal_addWaypath(int);
-    void signal_delWaypath(int);
     void signal_update();
+    void signal_delete(int);
+    void signal_addWaypath(int);
+    void signal_addCamera(int);
 
 protected:
     Actor & m_actor;

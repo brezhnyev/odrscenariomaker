@@ -12,19 +12,28 @@ class Scenario : public Selectable
 public:
     std::string getType() const override { return "Scenario"; }
 
-    int addVehicle();
-    int addWaypath();
     int addWaypoint(Eigen::Vector3f);
 
-    int delActor(int id);
-    int delWaypath(int id);
-    int delWaypoint(int id);
+    Actor *     getActiveActor();
+    Waypath *   getActiveWaypath();
+    Waypoint *  getActiveWaypoint();
 
-    Actor *      getActiveActor();
-    Waypath *    getActiveWaypath();
-    Waypoint *   getActiveWaypoint();
+    int         getActiveActorID();
+    int         getActiveWaypathID();
+    int         getActiveWaypointID();
 
-    int          getActiveActorID();
-    int          getActiveWaypathID();
-    int          getActiveWaypointID();
+    void        setRosbagFile(const std::string & text)     { m_rosbagFile = text;  }
+    void        setRosbagTopics(std::vector<std::string> topics)    { m_rosbagTopics = topics; }
+    void        setRosbagOffset(float offset)               { m_rosbagOffset=offset;}
+    void        setTownName(std::string name)               { m_townName = name;    }
+    std::string getRosbagFile()                             { return m_rosbagFile;  }
+    std::vector<std::string> getRosbagTopics()              { return m_rosbagTopics;}
+    float       getRosbagOffset()                           { return m_rosbagOffset;}
+    std::string getTownName()                               { return m_townName;    }
+
+protected:
+    std::string  m_rosbagFile;
+    std::vector<std::string>  m_rosbagTopics;
+    std::string m_townName;
+    float        m_rosbagOffset{0.0f};
 };  
