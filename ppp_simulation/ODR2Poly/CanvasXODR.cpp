@@ -15,7 +15,7 @@ using namespace odr;
 using namespace std;
 using namespace Eigen;
 
-#define AVL_STACK
+//#define AVL_STACK
 
 
 CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResolution) : mRadius(radius), mXodrResolution(xodrResolution)
@@ -58,7 +58,6 @@ void CanvasXODR::parseXodr(const string & xodrfile)
     for (auto && odr_road : ODR.OpenDRIVE1_5->sub_road)
     {
         double S = 0; // total length of road
-        uint32_t sindex = 0; // sections index (for storing for rendering)
 
         // skip of no lanes available
         if (!odr_road.sub_lanes)
@@ -68,7 +67,6 @@ void CanvasXODR::parseXodr(const string & xodrfile)
         if (odr_road.sub_lanes->sub_laneSection.empty())
             continue;
 
-        auto sit = odr_road.sub_lanes->sub_laneSection.begin(); // sections iterator
         int gindex = 0;
         for (auto && odr_subroad : odr_road.sub_planView->sub_geometry)
         {
@@ -178,9 +176,11 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                 double heading = atan2(velocityGlobal.y(), velocityGlobal.x());
 
                 // find out if we are at the proper section of the road:
-                ++sit; ++sindex;
-                if (sit == odr_road.sub_lanes->sub_laneSection.end() || *sit->_s > S) { --sit; --sindex; }
-                auto && odr_lane = *sit;
+                auto sections = odr_road.sub_lanes->sub_laneSection; // sections iterator
+                uint32_t sindex = 0;
+                while (sindex < sections.size() && *(sections[sindex]._s) < S) ++sindex;
+                if (sindex) --sindex;
+                auto && odr_lane = sections[sindex];
 
                 // set the lanes:
                 double offset = 0.0;
