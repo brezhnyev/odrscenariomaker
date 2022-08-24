@@ -72,8 +72,6 @@ void CanvasXODR::parseXodr(const string & xodrfile)
             Eigen::Matrix4d M; M.setIdentity();
             M.block(0,0,3,3) = Eigen::AngleAxisd(*odr_subroad._hdg, Eigen::Vector3d::UnitZ()).toRotationMatrix();
             M.block(0,3,3,1) = Eigen::Vector3d(*odr_subroad._x, *odr_subroad._y, 0.0);
-            Eigen::Matrix3d RM; // remember the rotational part, cause will be changed by superelevation:
-            RM = M.block(0,0,3,3);
             Eigen::Vector3d velocity(1.0,0.0,0.0);
             Eigen::Vector4d normal(0.0,1.0,0.0,0.0);
             Eigen::Vector4d P(0, 0, 0, 1);
@@ -86,7 +84,6 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                 double R = 1.0/(*odr_subroad.sub_arc->_curvature);
                 double radians = s / R;
                 M.block(0,0,3,3) = Eigen::AngleAxisd(*odr_subroad._hdg - M_PI_2, Eigen::Vector3d::UnitZ()).toRotationMatrix();
-                RM = M.block(0,0,3,3);
                 P = Eigen::Vector4d(R*cos(radians) - R, R*sin(radians), 0.0, 1.0); // found from trial and error
                 // velocity as first derivative of position:
                 velocity.x() =-R*sin(radians);
@@ -143,8 +140,11 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                 velocity.block(0,0,3,1) = (AngleAxisd(curvature < 0 ? -M_PI_2 : M_PI_2, Eigen::Vector3d::UnitZ()).toRotationMatrix()*center2pnext).normalized();
                 P.block(0,0,3,1) = nextP;
             }
-            else
-                return;
+
+            // left normal:
+            normal.x() =-velocity.y();
+            normal.y() = velocity.x();
+            normal.normalize();
 
             auto polyInter = [&](double T, auto & polis, double (*getS)(void * itt) ) -> double
             {
@@ -155,20 +155,21 @@ void CanvasXODR::parseXodr(const string & xodrfile)
                 return *(pit->_a) + *(pit->_b)*t + *(pit->_c)*t*t + *(pit->_d)*t*t*t;
             };
 
-            // Super-elevation (not tested):
-            // if (odr_road.sub_lateralProfile && !odr_road.sub_lateralProfile->sub_superelevation.empty())
-            // {
-            //     double roll = polyInter(S, odr_road.sub_lateralProfile->sub_superelevation, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_lateralProfile->sub_superelevation[0])>(it)->_s; });
-            //     M.block(0,0,3,3) = Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()).toRotationMatrix()*RM;
-            // }
             // Elevation:
             if (odr_road.sub_elevationProfile && !odr_road.sub_elevationProfile->sub_elevation.empty())
                 P.z() = polyInter(S, odr_road.sub_elevationProfile->sub_elevation, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_elevationProfile->sub_elevation[0])>(it)->_s; });
 
-            // left normal:
-            normal.x() =-velocity.y();
-            normal.y() = velocity.x();
-            normal.normalize();
+            // Super-elevation:
+            if (odr_road.sub_lateralProfile && !odr_road.sub_lateralProfile->sub_superelevation.empty())
+            {
+                double roll = polyInter(S, odr_road.sub_lateralProfile->sub_superelevation, [](void * it) ->double { return *static_cast<decltype(&odr_road.sub_lateralProfile->sub_superelevation[0])>(it)->_s; });
+                Matrix3d ori; ori.setIdentity();
+                ori.block(0,0,3,1) = velocity.normalized();
+                ori.block(0,1,3,1) =-normal.block(0,0,3,1); // to make right handed CS
+                ori.block(0,2,3,1) = Vector3d(0,0,1);
+                ori = ori*Eigen::AngleAxisd(-roll, Eigen::Vector3d::UnitX()).toRotationMatrix();
+                normal.block(0,0,3,1) =-ori.block(0,1,3,1);
+            }
 
             // heading:
             Vector3d velocityGlobal = M.block(0,0,3,3) * Vector3d(velocity.x(), velocity.y(), 0);
