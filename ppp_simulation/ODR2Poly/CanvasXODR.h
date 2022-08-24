@@ -6,6 +6,8 @@
 #include <GL/gl.h>
 
 #include <eigen3/Eigen/Eigen>
+#include "odr_1_5.hpp"
+#include "odrparser/odrparser.h"
 
 #include <string>
 #include <vector>
@@ -83,6 +85,15 @@ public:
         float xmax{100.0f};   ///< maximal x
     } PolyFactors;
 
+    typedef struct
+    {
+        odr_1_5::t_road_planView_geometry * psubroad{nullptr};
+        odr_1_5::t_road_lanes_laneSection * psection{nullptr};
+        int gindex{0};
+        double gs{0}; // geometry s
+        int sindex{0};
+    } SValue;
+
     CanvasXODR(const std::string & xodrfile, float radius, float xodrResolution);
     ~CanvasXODR();
     void draw();
@@ -104,6 +115,7 @@ private:
     void parseXodr(const std::string & xodrfile);
     void fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
     void fitPolyAVL(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
+    std::multimap<double, SValue> collectSValues(const odr_1_5::t_road &);
 
 private:
     const float mRadius{20};
