@@ -6,8 +6,7 @@
 #include <GL/gl.h>
 
 #include <eigen3/Eigen/Eigen>
-#include "odr_1_5.hpp"
-#include "odrparser/odrparser.h"
+#include <XodrBuilder/XodrBuilder.h>
 
 #include <string>
 #include <vector>
@@ -104,6 +103,7 @@ public:
     void computePolys(Eigen::Vector3d p, Eigen::Vector2f dir = Eigen::Vector2f(0.0f, 0.0f));
     std::vector<PolyFactors> getPolys() { return mPolys; }
     double getSceneRadius();
+    // key1: roadID, key2: roadGEometry, key3: laneSection, key4: laneID, Value: {x,y,z,heading}
     typedef std::map<int, std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector4d>>>>> LanesContainer;
     void toggleDirection()
     {
@@ -120,9 +120,7 @@ private:
 private:
     const float mRadius{20};
     const float mXodrResolution{1};
-    // key1: roadID, key2: roadShapeID, key3: laneSection, key4: laneID. Value: {x,y,z,heading}
-    LanesContainer vizBoundary;
-    LanesContainer vizCenter;
+    XodrBuilder m_xodrBuilder;
     uint listRoad, listBounadries, listCenterlines;
     std::vector<LaneElementBBox<Eigen::Vector3d>> mLaneBoxes;
     std::vector<LaneElementBBox<Eigen::Vector3d>> mLocallLaneBoxes;

@@ -4,12 +4,6 @@
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
 
-// ROS
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-#include <sensor_msgs/CompressedImage.h>
-
-
 #include <iostream>
 #include <thread>
 #include <condition_variable>
@@ -180,76 +174,6 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
         });
         t2.detach();
-
-        std::thread t3([&, rosbagImage, this]()
-        {
-            string bagFileName = m_viewer->getScenario().getRosbagFile();
-            if (access(bagFileName.c_str(), F_OK) != 0)
-            {
-                cout << "Rosbag file does not exist, skipping playback of the rosbag file.";
-                return;
-            }
-            cout << "Rosbag file: " << bagFileName << endl;
-
-            if (2 == playStatus) // we wait for the first tick (since scene loading/actors spawning can take time)
-            {
-                unique_lock<mutex> lk(playCondVarMtx);
-                playCondVar.wait(lk);
-            }
-
-            if (m_viewer->getScenario().getRosbagOffset() < 0)
-            {
-                // KB: the negative offset will cause hanging!!!
-                // negative offset should be handled in a different way
-                cout << "Negative time offset for playback of rosbag files is now not supported!!!" << endl;
-            }
-            else usleep(m_viewer->getScenario().getRosbagOffset()*1e6);
-
-            rosbag::Bag bag;
-            bag.open(bagFileName);
-            auto &&messages = rosbag::View(bag);
-            rosbagImage->resize(1280,720);
-            rosbagImage->show();
-            double rostimestart = 0;
-            double systimestart = 0;
-
-            for (rosbag::MessageInstance const &msg : messages)
-            {
-                if (0 == playStatus)
-                    break;
-                const std::string msg_topic = msg.getTopic();
-                if (!rostimestart)
-                {
-                    rostimestart = msg.getTime().toSec();
-                    timeval tv; gettimeofday(&tv, nullptr);
-                    systimestart = tv.tv_sec + 0.000001*tv.tv_usec;
-                }
-
-                if (msg_topic == m_viewer->getScenario().getRosbagTopics()[0])
-                {
-                    sensor_msgs::CompressedImage::ConstPtr comp_img_msg = msg.instantiate<sensor_msgs::CompressedImage>();
-
-                    QPixmap backBuffer;
-                    if (comp_img_msg->format.find("jpeg") != std::string::npos || comp_img_msg->format.find("jpg") != std::string::npos)
-                        backBuffer.loadFromData(&comp_img_msg->data[0], comp_img_msg->data.size(), "JPG");
-                    else if (comp_img_msg->format.find("png") != std::string::npos)
-                        backBuffer.loadFromData(&comp_img_msg->data[0], comp_img_msg->data.size(), "PNG");
-                    else continue;
-
-                    rosbagImage->setPixmap(backBuffer.scaled(rosbagImage->size(), Qt::KeepAspectRatio));
-                    rosbagImage->update();
-
-                    unique_lock<mutex> lk(playCondVarMtx);
-                    playCondVar.wait(lk, [&]()
-                    {
-                        timeval tv; gettimeofday(&tv, nullptr);
-                        double systime = tv.tv_sec + 0.000001*tv.tv_usec;
-                        return  (systime - systimestart) > (msg.getTime().toSec() - rostimestart);
-                    });
-                }
-            }
-        });
-        t3.detach();
     });
 
     QPushButton *stopButton = new QPushButton(playDock);

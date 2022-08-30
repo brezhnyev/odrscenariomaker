@@ -7,6 +7,8 @@
 
 #include <eigen3/Eigen/Eigen>
 
+#include <XodrBuilder/XodrBuilder.h>
+
 #include <string>
 #include <vector>
 #include <map>
@@ -15,6 +17,15 @@
 class CanvasXODR : public Selectable
 {
 public:
+    typedef struct
+    {
+        odr_1_5::t_road_planView_geometry * psubroad{nullptr};
+        odr_1_5::t_road_lanes_laneSection * psection{nullptr};
+        int gindex{0};
+        double gs{0}; // geometry s
+        int sindex{0};
+    } SValue;
+
     CanvasXODR(std::string xodrfile);
     ~CanvasXODR();
     void init();
@@ -25,9 +36,11 @@ public:
     static int getLaneID(Eigen::Vector3d p);
 
 private:
+    std::multimap<double, SValue> collectSValues(const odr_1_5::t_road &);
+
+private:
     // key1: roadID, key2: sectionID, key3: laneID
-    std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector3d>>>> vizBoundary;
-    std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector3d>>>> vizCenter;
+    XodrBuilder m_xodrBuilder;
     uint listRoad, listBounadries, listCenterlines;
     float mXodrResolution {0.1};
 };

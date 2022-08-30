@@ -80,11 +80,6 @@ static map <string, cg::Location> town2InitLocation
 
 void play(Scenario & scenario)
 {
-    if (scenario.getTownName().empty())
-    {
-        cout << "Empty Town name! Skipping..." << endl;
-        return;
-    }
     playStatus = 2; // 0 stop, 1 pause, 2 play
     camTrf.setIdentity();
 
@@ -94,7 +89,7 @@ void play(Scenario & scenario)
     cout << "Client API version : " << client.GetClientVersion() << '\n';
     cout << "Server API version : " << client.GetServerVersion() << '\n';
 
-    auto world = client.LoadWorld(scenario.getTownName());
+    auto world = scenario.getTownName().empty() ? client.GetWorld() : client.LoadWorld(scenario.getTownName());
 
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
@@ -263,12 +258,12 @@ void play(Scenario & scenario)
                 auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
                 auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
 
-                float steer = sign * arc.Length()*0.5f;
+                float wdir = sign * arc.Length();
                 // The stronger is the curvature the lower speed:
-                float R = abs(3 * tan(M_PI_2 - steer)); // 3 is the ~length between axes
-                float accLat = speed*speed/R;
+                float curvature = abs(sin(0.5f*wdir))/vehicle->GetBoundingBox().extent.x;
+                float accLat = speed*speed*curvature;
                 float accLon = (targetSpeed - speed);
-                applyControl(accLat, accLon, vehicle, targetSpeed, steer);
+                applyControl(accLat, accLon, vehicle, targetSpeed, 0.2*wdir*900/70); // 900/70 is typical ratio steer-wheels
                 Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
                 if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
 

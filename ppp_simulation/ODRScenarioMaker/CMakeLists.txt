@@ -12,8 +12,6 @@ set(CARLA_PATH "/home/carla" CACHE STRING "carla (git) path")
 
 find_package(yaml-cpp)
 find_package(Qt5 COMPONENTS Core Gui Widgets Xml OpenGL REQUIRED)
-find_package(catkin REQUIRED COMPONENTS rosbag )
-include_directories("${rosbag_INCLUDE_DIRS}")
 
 include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser/include)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser)
@@ -47,9 +45,6 @@ include_directories(${Qt5OpenGL_INCLUDE_DIRS})
 add_executable(${PROJECT_NAME}
     main.cpp
     carlaClient.cpp
-    thirdparty/odrparser/odr_1_5.cc
-    thirdparty/odrparser/loadFile.cc
-    thirdparty/tinyxml2/tinyxml2.cpp
     CanvasXODR.cpp
     thirdparty/cpp-spline/CatmullRom.cpp
     thirdparty/cpp-spline/Vector.cpp
@@ -94,7 +89,6 @@ target_link_libraries(${PROJECT_NAME}
     rt
     pthread
     ${CARLA_LIB}
-    ${catkin_LIBRARIES}
     libboost_filesystem.so
     -lrpc
     -lGLU
@@ -102,4 +96,6 @@ target_link_libraries(${PROJECT_NAME}
     -lDetour
     -lDetourCrowd
     -lRecast
+    -lodrparser
+    -lXodrBuilder
 )

@@ -6,6 +6,7 @@
 #include <GL/gl.h>
 
 #include <eigen3/Eigen/Eigen>
+#include <XodrBuilder/XodrBuilder.h>
 #include <tinyxml2.h>
 
 #include <string>
@@ -129,6 +130,14 @@ inline std::ostream & operator << (std::ostream & os, const xodrid_t & glid)
 class CanvasXODR
 {
 public:
+    typedef struct
+    {
+        odr_1_5::t_road_planView_geometry * psubroad{nullptr};
+        odr_1_5::t_road_lanes_laneSection * psection{nullptr};
+        int gindex{0};
+        double gs{0}; // geometry s
+        int sindex{0};
+    } SValue;
 
     CanvasXODR(const std::string & xodrfile, float xodrResolution);
     ~CanvasXODR();
@@ -144,19 +153,16 @@ public:
     typedef std::map<int, std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector4d>>>>> LanesContainer;
 
 private:
-    bool parseXodr(const std::string & xodrfile);
     void removeLinks(tinyxml2::XMLNode *, const std::string &);
 
 private:
     const float mXodrResolution{1};
-    // key1: roadID, key2: roadgeoID, key3: laneSection, key4: laneID. Value: {x,y,z,heading}
-    LanesContainer vizBoundary;
-    LanesContainer vizCenter;
+    XodrBuilder m_xodrBuilder;
+    std::string mXodrFile;
     uint listBounadries, listCenterlines;
     Eigen::Vector4d mEgoTrf {0,0,0,0};
     LaneElementBBox<Eigen::Vector3d> mSceneBB;
     uint mSelectedLane{0};
     std::map<uint32_t, LaneElementBBox<Eigen::Vector3d>> mListID2LaneMap;
     std::vector<uint32_t> mSelectedBoxes;
-    std::string mXodrFile;
 };

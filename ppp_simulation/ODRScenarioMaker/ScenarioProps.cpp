@@ -114,6 +114,30 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
         QString name = QFileDialog::getSaveFileName(this, tr("Save Scenario"), "/home/scenario.yaml", tr("Scenarios (*.yaml)"));
         ofstream ofs(name.toStdString());
         ofs << contents << endl;
+        ofstream ofs_waypath(name.toStdString()+"_waypaths.yaml");
+        for (auto && it : m_scenario.children())
+        {
+            Vehicle * v = dynamic_cast<Vehicle*>(it.second);
+            if (v)
+            {
+                ofs_waypath << v->getName() << " ";
+                for (auto && it : v->children())
+                {
+                    Waypath * w = dynamic_cast<Waypath*>(it.second);
+                    if (w)
+                    {
+                        ofs_waypath << "[";
+                        for (auto && it : w->children())
+                        {
+                            Waypoint * p = dynamic_cast<Waypoint*>(it.second);
+                            auto pos = p->getPosition();
+                            ofs_waypath << pos[0] << "," << -pos[1] << "," << pos[2] << ", "; 
+                        }
+                        ofs_waypath << "]" << "\n";
+                    }
+                }
+            }
+        }
         ofs.close();
     });
 }
