@@ -29,6 +29,7 @@ public:
     Eigen::Vector3f getBbox() { return m_bbox; }
     std::string getName() { return m_name; }
     void setName(std::string name) { m_name = name; }
+    void updatePose();
 
 protected:
     std::string m_name;

@@ -13,10 +13,7 @@ public:
     void loadScenario();
 
 public slots:
-    void slot_addVehicle(int);
-    void slot_addWalker(int);
-    void slot_addWaypath(int);
-    void slot_addCamera(int);
+    void slot_addItem(int, std::string);
     void slot_addWaypoint(int);
     void slot_delItem(int);
     void slot_select(int);
@@ -31,4 +28,5 @@ private:
     TreeModel   * m_treeModel;
     Scenario & m_scenario;
     int m_scenarioID{0};
+    int m_selectedItemID{-1};
 };

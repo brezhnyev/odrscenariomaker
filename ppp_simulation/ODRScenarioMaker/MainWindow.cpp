@@ -10,10 +10,15 @@
 
 using namespace std;
 
+int playStatus;
+condition_variable playCondVar;
+mutex playCondVarMtx;
+
+#ifdef USE_CARLA
 extern int play(Scenario & scenario);
-extern int playStatus;
-extern condition_variable playCondVar;
-extern mutex playCondVarMtx;
+#else
+void play(Scenario & scenario) {} // dummy play to link successfully
+#endif
 
 MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent) : QMainWindow(parent)
 {
@@ -25,9 +30,9 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     addDockWidget(Qt::LeftDockWidgetArea, treeDock);
     treeDock->setWidget(m_treeView);
 
-    connect(m_viewer,   SIGNAL(signal_addWaypoint(int)),    m_treeView,     SLOT(slot_addWaypoint(int)));
-    connect(m_viewer,   SIGNAL(signal_select(int)),         m_treeView,     SLOT(slot_select(int)));
-    connect(m_treeView, SIGNAL(signal_select(int)),         m_viewer,       SLOT(slot_select(int)));
+    connect(m_viewer,   &Viewer::signal_addWaypoint,  [this](int id){ m_treeView->slot_addWaypoint(id); });
+    connect(m_viewer,   &Viewer::signal_select,       [this](int id){ m_treeView->slot_select(id); });
+    connect(m_treeView, &TreeView::signal_select,     [this](int id){ m_viewer->slot_select(id); update(); });
 
     QDockWidget * propsDock = new QDockWidget(tr("Properties"), this);
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
@@ -46,7 +51,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
             m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item));
             propsDock->setWidget(m_pointProps);
-            connect(m_pointProps, &WaypointProps::signal_update, [this](){m_viewer->update(); });
+            connect(m_pointProps, &WaypointProps::signal_update, [this](){ update(); });
             connect(m_pointProps, &WaypointProps::signal_delete, [this](int id)
             {
                 m_treeView->slot_delItem(id);
@@ -63,7 +68,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
             m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item));
             propsDock->setWidget(m_pathProps);
-            connect(m_pathProps, &WaypathProps::signal_update, [this](){ m_viewer->update(); });
+            connect(m_pathProps, &WaypathProps::signal_update, [this](){ m_viewer->getScenario().getActiveActor()->updatePose(); update(); });
             connect(m_pathProps, &WaypathProps::signal_delete, [this](int id)
             { 
                 m_treeView->slot_delItem(id);
@@ -98,8 +103,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
                 update();
             });
             connect(m_vehicleProps, &VehicleProps::signal_update, [this](){ update(); }); // color update
-            connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addWaypath(id); update(); });
-            connect(m_vehicleProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addCamera(id);  update(); });
+            connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id, "Waypath"); update(); });
+            connect(m_vehicleProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id, "Camera");  update(); });
         }
         else if (item->getType() == "Scenario")
         {
@@ -110,7 +115,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
             m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
             propsDock->setWidget(m_scenarioProps);
-            connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addVehicle(id); update(); });
+            connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addItem(id, "Vehicle"); update(); });
             connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->loadScenario(); update(); });
         }
         propsDock->setMaximumWidth(200);

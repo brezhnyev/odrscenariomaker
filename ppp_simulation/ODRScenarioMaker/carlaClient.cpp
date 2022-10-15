@@ -43,9 +43,6 @@
 #include <eigen3/Eigen/Eigen>
 #include "MainWindow.h"
 
-#define DEG2RAD M_PI/180
-#define RAD2DEG 180/M_PI
-
 
 namespace cc = carla::client;
 namespace cg = carla::geom;
@@ -58,10 +55,10 @@ using namespace Eigen;
 
 typedef carla::SharedPtr<cc::Actor> ShrdPtrActor;
 
-int playStatus;
-condition_variable playCondVar;
-mutex playCondVarMtx;
-Matrix4f camTrf;
+extern int playStatus;
+extern condition_variable playCondVar;
+extern mutex playCondVarMtx;
+extern Matrix4f camTrf;
 extern MainWindow * mw;
 static int FPS = 30;
 static bool realtime_playback = true;
@@ -135,8 +132,8 @@ void play(Scenario & scenario)
                 if (waypath)
                 {
                     waypath->updateSmoothPath();
-                    Eigen::Vector3f dir = waypath->getInitialDirection();
-                    Eigen::Vector3f pos = waypath->getInitialPosition();
+                    Eigen::Vector3f dir = waypath->getStartingDirection();
+                    Eigen::Vector3f pos = waypath->getStartingPosition();
                     auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
                     cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
                     actor->SetTransform(transform);

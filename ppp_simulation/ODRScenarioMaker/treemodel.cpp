@@ -102,17 +102,25 @@ int TreeModel::rowCount(const QModelIndex &parent) const
 
 void TreeModel::addItem(int parentIndex, int id, std::string type)
 {
+    // Possible race condition in Qt?
+    // For this case check if the id was previously added
+    if (m_itemsMap.find(id) != m_itemsMap.end())
+        return;
     TreeItem * parent = m_itemsMap[parentIndex];
     QVector<QVariant> columnData;
     columnData << type.c_str() << QString::number(id);
     auto item = new TreeItem(columnData, parent, id);
     parent->appendChild(item);
-    m_itemsMap.insert(std::pair<int, TreeItem*>(id, item));
+    m_itemsMap[id] = item;
     emit layoutChanged();
 }
 
 void TreeModel::delItem(int id)
 {
+    // KB: for some reason delItem may be called 2 times!! Race condition in Qt?
+    // For this case check if the id was previously deleted
+    if (m_itemsMap.find(id) == m_itemsMap.end())
+        return;
     TreeItem * parent = m_itemsMap[id]->parentItem();
     parent->removeChild(m_itemsMap[id]);
     m_itemsMap.erase(m_itemsMap.find(id));

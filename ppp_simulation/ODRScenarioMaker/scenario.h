@@ -7,12 +7,16 @@
 
 #include <vector>
 
+#define DEG2RAD M_PI/180
+#define RAD2DEG 180/M_PI
+
 class Scenario : public Selectable
 {
 public:
+    Scenario() = default;
+    Scenario(const Scenario &); // copy c-tor (need to redefine since we can load)
+    Scenario & operator=(const Scenario &);
     std::string getType() const override { return "Scenario"; }
-
-    int addWaypoint(Eigen::Vector3f);
 
     Actor *     getActiveActor();
     Waypath *   getActiveWaypath();

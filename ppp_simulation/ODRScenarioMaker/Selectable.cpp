@@ -10,7 +10,7 @@ Drawable::~Drawable() {}
 
 Selectable::~Selectable() {}
 
-Selectable::Selectable() : m_selected(false), m_activeChild(-1)
+Selectable::Selectable() : m_selected(false)
 { 
     m_id = s_ID; ++s_ID;
 }
@@ -27,40 +27,61 @@ void Selectable::drawWithNames()
 
 int Selectable::addChild(Selectable * object)
 {
+    // Possible race condition in Qt?
+    // For this case check if the id was previously added
+    if (m_children.find(object->getID()) != m_children.end())
+        return object->getID();
     m_children[object->getID()] = object;
-    m_activeChild = object->getID();
-    return m_activeChild;
+    return object->getID();
 }
 
 int Selectable::delChild(int id)
 {
+    // KB: for some reason delItem may be called 2 times!! Race condition in Qt?
+    // For this case check if the id was previously deleted
+    if (m_children.find(id) == m_children.end())
+        return id;
     if (m_children.empty()) return -1;
-
     m_children.erase(id);
-    m_activeChild = -1;
-
     return id;
 }
 
-bool Selectable::select(int id)
+void Selectable::select(int id)
 {
-    m_activeChild = -1;
-    m_selected = false;
+    parse([id](Selectable * object)
+    {
+        if (object->getID() == id)
+            object->m_selected = true;
+        else
+            object->m_selected = false;
+    });
+}
 
-    // if parent is selected select all children:
-    if (id == m_id)
+Selectable * Selectable::getActiveChild(int depth, int cDepth)
+{
+    if (cDepth >= depth && m_selected)
+        return this;
+    for (auto && child : m_children)
     {
-        for (auto && child : m_children) child.second->select(child.second->getID());
-        m_selected = true;
-    }
-    else for (auto && child : m_children)
-    {
-        if (child.second->select(id)) // effects in either select or deselect the children
+        Selectable * sel = child.second->getActiveChild(depth, cDepth+1);
+        if (sel)
         {
-            m_activeChild = child.second->getID();
+            if (cDepth == depth)
+                return this;
+            else
+                return sel;
         }
     }
-    return m_selected || m_activeChild != -1;
+    return nullptr;
+}
+
+void Selectable::parse(function<void(Selectable *)> fun)
+{
+    for (auto && child : m_children)
+    {
+        child.second->parse(fun);
+    }
+    fun(this); // post-order traversal
 }
 
 Selectable * Selectable::findSelectable(int id)

@@ -17,13 +17,12 @@ namespace net
 } 
 #include <unistd.h> 
 #include <string.h>
-#define PORT 12345 
 
 using namespace std;
 using namespace qglviewer;
 using namespace Eigen;
 
-extern Matrix4f camTrf;
+Matrix4f camTrf;
 
 
 Viewer::Viewer(const string & xodrfile, string objfile) : m_canvas(xodrfile), m_world3d(objfile)
@@ -76,12 +75,13 @@ void Viewer::postSelection(const QPoint &point)
 
     if (selectedName() == m_canvas.getID()) // Canvas
     {
-        int id = m_scenario.addWaypoint(Vector3f(sp.x, sp.y, sp.z));
-        if (id == -1)
+        Waypath * waypath = m_scenario.getActiveWaypath();
+        if (nullptr == waypath)
         {
             QMessageBox::warning(this, "Error adding Element", "Add/activate waypath in Actor!");
             return;
         }
+        int id = waypath->addChild(new Waypoint(Vector3f(sp.x, sp.y, sp.z), 0));
         emit signal_addWaypoint(id);
     }
     else

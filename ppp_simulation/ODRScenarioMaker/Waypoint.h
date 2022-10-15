@@ -35,13 +35,10 @@ private:
  * The Smoothed waypoints are not going to be selected (mouse pick up) and listed in the tree view
  * so they also dont have the ID and dont have children.
  */
-class WaypointSmoothed : public Drawable
+class WaypointSmoothed
 {
 public:
-    WaypointSmoothed(Eigen::Vector3f pos, float speed);
-    void draw() override;
-    void drawWithNames() override {};
-
+    WaypointSmoothed(Eigen::Vector3f pos, float speed) : m_pos(pos), m_speed(speed) {}
     Eigen::Vector3f getPosition() { return m_pos; }
     void  setPosition(Eigen::Vector3f val) { m_pos = val; }
     void flipY() { m_pos[1] = -m_pos[1]; }

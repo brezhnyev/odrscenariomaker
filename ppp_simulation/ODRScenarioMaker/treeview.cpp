@@ -2,6 +2,9 @@
 #include "treeitem.h"
 
 #include <QtCore/QItemSelectionModel>
+#include <QtWidgets/QMessageBox>
+
+#include <string>
 
 TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
 {
@@ -9,9 +12,8 @@ TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
     setModel(m_treeModel);
     connect(selectionModel(), &QItemSelectionModel::selectionChanged, 
     [this](const QItemSelection & sel, const QItemSelection & desel){
-        auto sellist = selectionModel()->selection().indexes();
+        auto sellist = sel.indexes();
         if (sellist.empty()) return; // KB: IMHO should not happen. However happens due to slot_select (blockSignals do not help)
-        int s = sellist.size();
         auto treeItem = static_cast<TreeItem*>(sellist[0].internalPointer());
         //auto ti2 = static_cast<TreeItem*>(sellist[1].internalPointer()); // not used
         emit signal_select(treeItem->getID());
@@ -23,6 +25,7 @@ TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
 void TreeView::addItem(int id, Selectable * item)
 {
     m_treeModel->addItem(id, item->getID(), item->getType());
+    // In case the item has children add all its children (this is possible on loading scenario)
     for (auto child : item->children())
         addItem(item->getID(), child.second);
 }
@@ -34,38 +37,29 @@ void TreeView::loadScenario()
     m_scenarioID = m_scenario.getID();
 }
 
-void TreeView::slot_addVehicle(int id)
+void TreeView::slot_addItem(int id, std::string name)
 {
-    m_treeModel->addItem(m_scenario.getID(), id, "Vehicle");
+    m_treeModel->addItem(m_selectedItemID, id, name);
+    emit signal_select(id);
 }
 
-void TreeView::slot_addWalker(int id)
-{
-    m_treeModel->addItem(m_scenario.getID(), id, "Walker");
-}
-
-void TreeView::slot_addWaypath(int id)
-{
-    m_treeModel->addItem(m_scenario.getActiveActorID(), id, "Waypath");
-}
-
-void TreeView::slot_addCamera(int id)
-{
-    m_treeModel->addItem(m_scenario.getActiveActorID(), id, "Camera");
-}
-
+// slot to add waypoint is separately implemented from slot_addItem
 void TreeView::slot_addWaypoint(int id)
 {
     m_treeModel->addItem(m_scenario.getActiveWaypathID(), id, "Waypoint");
+    emit signal_select(id);
 }
 
 void TreeView::slot_delItem(int id)
 {
     m_treeModel->delItem(id);
+    selectionModel()->clearSelection();
 }
 
 void TreeView::slot_select(int id)
 {
+    m_selectedItemID = id;
+    setExpanded(m_treeModel->getIndexById(m_selectedItemID), true);
     selectionModel()->clear();
     blockSignals(true);
     selectionModel()->select(m_treeModel->getIndexById(id), QItemSelectionModel::Rows | QItemSelectionModel::Select);

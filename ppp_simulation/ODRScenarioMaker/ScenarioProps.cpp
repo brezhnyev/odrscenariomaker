@@ -114,13 +114,17 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
         QString name = QFileDialog::getSaveFileName(this, tr("Save Scenario"), "/home/scenario.yaml", tr("Scenarios (*.yaml)"));
         ofstream ofs(name.toStdString());
         ofs << contents << endl;
+        ofs.close();
+
+        // export trajectories (aorta specific code)
         ofstream ofs_waypath(name.toStdString()+"_waypaths.yaml");
+        ofs_waypath << "trajectory:" << endl;
         for (auto && it : m_scenario.children())
         {
             Vehicle * v = dynamic_cast<Vehicle*>(it.second);
             if (v)
             {
-                ofs_waypath << v->getName() << " ";
+                ofs_waypath << "\t" << v->getName() << ": ";
                 for (auto && it : v->children())
                 {
                     Waypath * w = dynamic_cast<Waypath*>(it.second);
@@ -138,6 +142,67 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
                 }
             }
         }
-        ofs.close();
+        ofs_waypath.close();
+
+        // export initial positions (aorta specific code):
+        ofstream ofs_initpos(name.toStdString()+"_init_poses.json");
+        ofs_initpos << "{" << endl;
+        auto writePoses = [&](string infoType)
+        {
+            ofs_initpos << "\t\"" << infoType << "\":{" << endl;
+            size_t counter = 1;
+            for (auto && it : m_scenario.children())
+            {
+                Vehicle * v = dynamic_cast<Vehicle*>(it.second);
+                if (v)
+                {
+                    string name = v->getName();
+                    if (infoType == "car_positions" && name.find("ambulance") != string::npos)
+                        continue;
+                    if (infoType == "emergency_positions" && name.find("ambulance") == string::npos)
+                        continue;
+                    auto fun2 = [&](bool isStart, string indent)
+                    {
+                        if (v->children().empty())
+                            return;
+                        ofs_initpos << indent << "\"" << counter << "\"" << ":";
+                        Waypath * w = dynamic_cast<Waypath*>(v->children().begin()->second);
+                        if (w)
+                        {
+                            if (w->children().empty())
+                                return;
+                            ofs_initpos << "{";
+                            auto pos = isStart ? w->getStartingPosition() : w->getEndingPosition();
+                            ofs_initpos << "\"x\":" << pos[0] << ", ";
+                            ofs_initpos << "\"y\":" << pos[1] << ", ";
+                            ofs_initpos << "\"z\":" << pos[2] << ", ";
+                            auto dir = isStart ? w->getStartingDirection() : w->getEndingDirection();
+                            ofs_initpos << "\"roll\":" << 0 << ", ";
+                            ofs_initpos << "\"pitch\":" << asin(dir[2]/dir.norm())*RAD2DEG << ", ";
+                            ofs_initpos << "\"yaw\":" << atan2(dir[1], dir[0])*RAD2DEG;
+                            ofs_initpos << "}," << "\n";
+                            ++counter;
+                        }
+                    };
+                    if (infoType == "emergency_positions")
+                    {
+                        ofs_initpos << "\t\t" << "\"start:\"" << endl;
+                        fun2(true, "\t\t\t");
+                    }
+                    else
+                        fun2(true, "\t\t");
+                    if (infoType == "emergency_positions")
+                    {
+                        ofs_initpos << "\t\t" << "\"end:\"" << endl;
+                        fun2(false, "\t\t\t");
+                    }
+                }
+            }
+            ofs_initpos << "\t}," << endl;
+        };
+        writePoses("car_positions");
+        writePoses("emergency_positions");
+        ofs_initpos << "}";
+        ofs_initpos.close();
     });
 }

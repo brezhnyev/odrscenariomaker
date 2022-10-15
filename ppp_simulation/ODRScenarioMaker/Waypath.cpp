@@ -13,12 +13,15 @@ void Waypath::drawGeometry()
 {
     float psz;
     glGetFloatv(GL_POINT_SIZE, &psz);
-    glPointSize(2);
+    if (m_selected)
+        glPointSize(4);
+    else
+        glPointSize(2);
     glPushMatrix();
     glTranslatef(0,0,0.1f);
     glBegin(GL_POINTS);
     for (auto && c : m_smoothPath)
-        glVertex3f(c.getPosition().x(), c.getPosition().y(), c.getPosition().z());
+        glVertex3f(c.getPosition().x(), c.getPosition().y(), c.getPosition().z()+0.5);
     glEnd();
     glPopMatrix();
     glPointSize(psz);
@@ -72,7 +75,7 @@ void Waypath::updateSmoothPath()
 	}
 }
 
-Vector3f Waypath::getInitialDirection()
+Vector3f Waypath::getStartingDirection()
 {
     if (m_smoothPath.size() < 2)
         return Vector3f(0,0,0);
@@ -81,11 +84,27 @@ Vector3f Waypath::getInitialDirection()
     return dir;
 }
 
-Vector3f Waypath::getInitialPosition()
+Vector3f Waypath::getEndingDirection()
+{
+    if (m_smoothPath.size() < 2)
+        return Vector3f(0,0,0);
+    Vector3f dir = (m_smoothPath.end()-1)->getPosition() - (m_smoothPath.end()-2)->getPosition();
+    dir.normalize();
+    return dir;
+}
+
+Vector3f Waypath::getStartingPosition()
 {
     if (m_smoothPath.size() < 1)
         return Vector3f(0,0,0);
     return m_smoothPath[0].getPosition();
+}
+
+Vector3f Waypath::getEndingPosition()
+{
+    if (m_smoothPath.size() < 1)
+        return Vector3f(0,0,0);
+    return m_smoothPath.back().getPosition();
 }
 
 bool Waypath::getNext(Vector3f & pos, Vector3f & dir, float & targetSpeed, float currentSpeed, int fps)

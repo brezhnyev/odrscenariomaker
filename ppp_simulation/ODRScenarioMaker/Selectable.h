@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <functional>
 
 /** Drawable is added as Basis for the Selectable.
  * The class is introduced to solve the problem of rendering the CatmullRom computed intermediate points of the Waypoints.
@@ -11,7 +12,7 @@ class Drawable
 public:
     Drawable() {}
     virtual ~Drawable() = 0;
-    // the current design assums that the Drawable does not have children
+    // the current design assumes that the Drawable does not have children
     virtual void draw() = 0;
     virtual void drawWithNames() = 0;
 };
@@ -26,7 +27,7 @@ public:
     virtual ~Selectable() = 0;
     void draw() override;
     void drawWithNames() override;
-    virtual bool select(int);
+    virtual void select(int);
     virtual std::string getType() const = 0;
 
     int addChild(Selectable * child);
@@ -35,23 +36,19 @@ public:
     Selectable * findSelectable(int id);
     int getID() const { return m_id; }
     void setID(int id) { m_id = id; s_ID = std::max(s_ID, m_id); } // relevant when reading from file / deserializing
-    Selectable * getActiveChild(int depth)
-    { 
-        return (m_activeChild == -1 || m_children.empty()) ? nullptr: !depth ? m_children[m_activeChild] : m_children[m_activeChild]->getActiveChild(depth - 1);
-    }
     std::map<int, Selectable*> & children() { return m_children; }
     void clear(){ clear(this); }
+    void parse(std::function<void(Selectable*)> fun);
     
 protected:
     static int                  s_ID;
     int                         m_id;
     bool                        m_selected;
-
-    int                         m_activeChild;
     std::map<int, Selectable*>  m_children;
 
 protected:
     virtual void drawGeometry() {};
+    Selectable * getActiveChild(int depth, int cDepth = 0);
 
 private:
     void clear(Selectable * s);

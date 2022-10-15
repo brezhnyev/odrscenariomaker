@@ -4,39 +4,62 @@
 using namespace std;
 using namespace Eigen;
 
-
-int Scenario::addWaypoint(Vector3f p)
+Scenario::Scenario(const Scenario & other) : Selectable(other)
 {
-    return getActiveChild(1) ? getActiveChild(1)->addChild(new Waypoint(p, 0)) : -1;
+    *this = other;
+}
+
+Scenario & Scenario::operator=(const Scenario & other)
+{
+    Selectable::operator=(other);
+    m_rosbagFile = other.m_rosbagFile;
+    m_rosbagTopics = other.m_rosbagTopics;
+    m_townName = other.m_townName;
+    m_rosbagOffset = other.m_rosbagOffset;
+
+    parse([](Selectable * object)
+    {
+        Waypath * path = dynamic_cast<Waypath*>(object);
+        if (path)
+        {
+            path->updateSmoothPath();
+        }
+        Vehicle * vehicle = dynamic_cast<Vehicle*>(object);
+        if (vehicle)
+        {
+            vehicle->updatePose();
+        }
+    });
+    return *this;
 }
 
 // get active elements -------------
 Actor * Scenario::getActiveActor()
 {
-    return getActiveChild(0) ? dynamic_cast<Actor*>(getActiveChild(0)) : nullptr;
+    return dynamic_cast<Actor*>(getActiveChild(1));
 }
 
 Waypath * Scenario::getActiveWaypath()
 {
-    return getActiveChild(1) ? dynamic_cast<Waypath*>(getActiveChild(1)) : nullptr;
+    return dynamic_cast<Waypath*>(getActiveChild(2));
 }
 
 Waypoint * Scenario::getActiveWaypoint()
 {
-    return getActiveChild(2) ? dynamic_cast<Waypoint*>(getActiveChild(2)) : nullptr;
+    return dynamic_cast<Waypoint*>(getActiveChild(3));
 }
 
 int Scenario::getActiveActorID()
 {
-    return getActiveChild(0) ? getActiveChild(0)->getID() : -1;
+    return getActiveChild(1) ? getActiveChild(1)->getID() : -1;
 }
 
 int Scenario::getActiveWaypathID()
 {
-    return getActiveChild(1) ? getActiveChild(1)->getID() : -1;
+    return getActiveChild(2) ? getActiveChild(2)->getID() : -1;
 }
 
 int Scenario::getActiveWaypointID()
 {
-    return getActiveChild(2) ? getActiveChild(2)->getID() : -1;
+    return getActiveChild(3) ? getActiveChild(3)->getID() : -1;
 }
