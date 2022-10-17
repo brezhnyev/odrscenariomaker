@@ -47,7 +47,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 
     setLayout(mainLayout);
 
-    connect(addVehicle, &QPushButton::pressed, [this]()
+    connect(addVehicle, &QPushButton::clicked, [this]()
     { 
         int id = m_scenario.addChild(new Vehicle());
         if (id == -1)
@@ -90,7 +90,7 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
     rosLayout->addWidget(rosTimeOffset);
     mainLayout->addWidget(rosGroup);
 
-    connect(loadScenario, &QPushButton::pressed, [this, townName, rosBagfile, rosTopics, rosTimeOffset](){
+    connect(loadScenario, &QPushButton::clicked, [this, townName, rosBagfile, rosTopics, rosTimeOffset](){
         QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
         if (name.isEmpty()) return;
         
@@ -109,7 +109,7 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
         ifs.close();
     });
 
-    connect(saveScenario, &QPushButton::pressed, [this](){
+    connect(saveScenario, &QPushButton::clicked, [this](){
         string contents = Serializer::serialize_yaml(&m_scenario);
         QString name = QFileDialog::getSaveFileName(this, tr("Save Scenario"), "/home/scenario.yaml", tr("Scenarios (*.yaml)"));
         ofstream ofs(name.toStdString());

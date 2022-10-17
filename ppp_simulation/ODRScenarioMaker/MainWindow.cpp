@@ -130,7 +130,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     playButton->setText("Play");
     QLabel * rosbagImage = new QLabel(); // need to be created in the parent thread, creating in the thread does not update it
 
-    connect(playButton, &QPushButton::pressed, [&, rosbagImage, playButton]()
+    connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton]()
     {
         if (0 == playStatus)
         {
@@ -183,7 +183,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
     QPushButton *stopButton = new QPushButton(playDock);
     stopButton->setText("Stop");
-    connect(stopButton, &QPushButton::pressed, [&]() { playStatus = 0; playCondVar.notify_all(); });
+    connect(stopButton, &QPushButton::clicked, [&]() { playStatus = 0; playCondVar.notify_all(); });
 
     playLayout->addWidget(playButton);
     playLayout->addWidget(stopButton);

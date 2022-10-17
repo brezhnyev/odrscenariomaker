@@ -54,7 +54,7 @@ WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
 
     QPushButton * delButton = new QPushButton(this);
     delButton->setText("Delete");
-    connect(delButton, &QPushButton::pressed, [this]()
+    connect(delButton, &QPushButton::clicked, [this]()
     {
         int id = m_waypoint.getID();
         if (id == -1)

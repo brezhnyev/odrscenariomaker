@@ -31,7 +31,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 
     setLayout(mainLayout);
 
-    connect(addWaypath, &QPushButton::pressed, [this]()
+    connect(addWaypath, &QPushButton::clicked, [this]()
     { 
         int id = m_actor.addChild(new Waypath());
         if (id == -1)
@@ -41,7 +41,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
         }
         emit signal_addWaypath(id);
     });
-    connect(addCamera, &QPushButton::pressed, [this]()
+    connect(addCamera, &QPushButton::clicked, [this]()
     {
         Camera * camera = new Camera();
         int id = m_actor.addChild(camera);
@@ -105,7 +105,7 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     std::string scolor = m_vehicle.colorToString();
     m_colorPicker->setStyleSheet("background-color: rgb("+QString(m_vehicle.colorToString().c_str()) + ")");
     m_colorPicker->setText("Color");
-    connect(m_colorPicker, &QPushButton::pressed, [this]()
+    connect(m_colorPicker, &QPushButton::clicked, [this]()
     {
         QColor color = QColorDialog::getColor();
         QString scolor(QString::number(color.red()) + "," + QString::number(color.green()) + "," + QString::number(color.blue()));
@@ -124,7 +124,7 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     delButton->setText("Delete");
     mainLayout->addWidget(delButton);
 
-    connect(delButton, &QPushButton::pressed, [this]()
+    connect(delButton, &QPushButton::clicked, [this]()
     { 
         int id = m_actor.getID();
         if (id == -1)

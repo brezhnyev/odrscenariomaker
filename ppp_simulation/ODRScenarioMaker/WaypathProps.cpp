@@ -19,7 +19,7 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
     lh->addWidget(delThis);
 
     setLayout(lh);
-    connect(delThis, &QPushButton::pressed, [this]()
+    connect(delThis, &QPushButton::clicked, [this]()
     {
         int id = m_waypath.getID();
         if (id == -1)
@@ -29,7 +29,7 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
         emit signal_delete(id);
         close();
     });
-    connect(updateWaypath, &QPushButton::pressed, [this]()
+    connect(updateWaypath, &QPushButton::clicked, [this]()
     {
         m_waypath.updateSmoothPath();
         emit signal_update();
