@@ -88,7 +88,7 @@ endif()
 add_executable(${PROJECT_NAME} ${SOURCE})
 
 set(LIBS
-    libQGLViewer-qt5.a
+    -lQGLViewer-qt5
     Qt5::Xml
     Qt5::Core
     Qt5::Gui
