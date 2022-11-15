@@ -108,8 +108,8 @@ public:
 
 private:
     void parseXodr(const std::string & xodrfile);
+    bool fitParamPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
     bool fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
-    bool fitPolyAVL(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
 
 private:
     const float mRadius{20};

@@ -147,7 +147,7 @@ double CanvasXODR::getSceneRadius()
     return 0.5*(Eigen::Vector3d(mSceneBB.minX, mSceneBB.minY, mSceneBB.minZ) - Eigen::Vector3d(mSceneBB.maxX, mSceneBB.maxY, mSceneBB.maxZ)).norm();
 }
 
-bool CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, const Matrix4d trf)
+bool CanvasXODR::fitParamPoly(const vector<Vector4d> & points, PolyFactors & pf, const Matrix4d trf)
 {
     // Processing:
     // Approximation of the points by a polynomial function.
@@ -205,7 +205,7 @@ bool CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
 }
 
 
-bool CanvasXODR::fitPolyAVL(const vector<Vector4d> & points, PolyFactors & pf, const Matrix4d trf)
+bool CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, const Matrix4d trf)
 {
     // Processing:
     // Approximation of the points by a polynomial function.
@@ -237,7 +237,11 @@ bool CanvasXODR::fitPolyAVL(const vector<Vector4d> & points, PolyFactors & pf, c
     for (size_t i = 0; i < S; ++i)
     {
         double t = tfpoints[i].x();
+        A(i, 0) = t*t*t;
         A(i, 1) = t*t;
+        A(i, 2) = t;
+        A(i, 3) = 1.0;
+        b(i, 0) = tfpoints[i][1]; // << using for dependency y = f(x)
     }
     Matrix<double,4,1> x = (A.transpose()*A).inverse()*A.transpose()*b;
     for (size_t i = 0; i < 4; ++i) { pf.xy[i] = x(i,0); }
@@ -302,11 +306,11 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
 #ifndef AVL_STACK
     for (auto && b : mLocallLaneBoxes)
     {
-        auto && baundaries = const_cast<LanesContainer&>(m_xodrBuilder.getBoundaries()) [b.roadID][b.geomID][b.sectID];
-        for (auto && bps : baundaries)
+        auto && boundaries = const_cast<LanesContainer&>(m_xodrBuilder.getBoundaries()) [b.roadID][b.geomID][b.sectID];
+        for (auto && bps : boundaries)
         {
             PolyFactors pf;
-            if (fitPoly(bps.second, pf, egoTrfInv))
+            if (fitParamPoly(bps.second, pf, egoTrfInv))
             {
                 pf.roadID = b.roadID;
                 pf.geomID = b.geomID;
@@ -321,14 +325,14 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
     map<int, vector<Vector4d>> lanes;
     for (auto && b : mLocallLaneBoxes)
     {
-        auto && boundaries = vizBoundary[b.roadID][b.geomID][b.sectID];
+        auto && boundaries = const_cast<LanesContainer&>(m_xodrBuilder.getBoundaries()) [b.roadID][b.geomID][b.sectID];
         for (auto & bsp : boundaries)
             lanes[bsp.first].insert(lanes[bsp.first].end(), bsp.second.begin(), bsp.second.end());
     }
     for (auto && l : lanes) // lane
     {
         PolyFactors pf;
-        if (fitPolyAVL(l.second, pf, egoTrfInv))
+        if (fitPoly(l.second, pf, egoTrfInv))
         {
             pf.roadID = __INT_MAX__;
             pf.geomID = __INT_MAX__;
