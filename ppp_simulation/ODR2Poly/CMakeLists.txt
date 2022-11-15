@@ -18,6 +18,7 @@ include_directories(${Qt5Core_INCLUDE_DIRS})
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
 include_directories(${Qt5Xml_INCLUDE_DIRS})
 include_directories(${Qt5OpenGL_INCLUDE_DIRS})
+link_directories("/usr/local/lib")
 
 add_executable(${PROJECT_NAME} main.cpp Viewer.cpp CanvasXODR.cpp)
 

@@ -7,8 +7,6 @@
 #include <deque>
 #include <omp.h>
 
-using namespace odr_1_5;
-using namespace odr;
 using namespace std;
 using namespace Eigen;
 using namespace tinyxml2;

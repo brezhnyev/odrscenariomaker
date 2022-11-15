@@ -25,18 +25,13 @@ struct LaneElementBBox
     {
         return p[0] >= minX && p[0] <= maxX && p[1] >= minY && p[1] <= maxY && p[2] >= minZ && p[2] <= maxZ;
     }
+    T center()
+    {
+        return T(0.5*(minX + maxX), 0.5*(minY + maxY), 0.5*(minZ + maxZ));
+    }
     bool isPointClose(T p, float distance)
     {
-        return
-            isPointInside(p) ||
-            (T(minX,minY,minZ)-p).norm() < distance ||
-            (T(minX,minY,maxZ)-p).norm() < distance ||
-            (T(minX,maxY,minZ)-p).norm() < distance ||
-            (T(minX,maxY,maxZ)-p).norm() < distance ||
-            (T(maxX,minY,minZ)-p).norm() < distance ||
-            (T(maxX,minY,maxZ)-p).norm() < distance ||
-            (T(maxX,maxY,minZ)-p).norm() < distance ||
-            (T(maxX,maxY,maxZ)-p).norm() < distance;
+        return (center() - p).norm() < (center() - T(minX,minY,minZ)).norm() + distance;
     }
     void draw()
     {
@@ -113,9 +108,8 @@ public:
 
 private:
     void parseXodr(const std::string & xodrfile);
-    void fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
-    void fitPolyAVL(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
-    std::multimap<double, SValue> collectSValues(const odr_1_5::t_road &);
+    bool fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
+    bool fitPolyAVL(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
 
 private:
     const float mRadius{20};

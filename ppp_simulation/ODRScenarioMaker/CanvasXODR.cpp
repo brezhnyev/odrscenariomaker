@@ -7,8 +7,6 @@
 #include <iostream>
 #include <deque>
 
-using namespace odr_1_5;
-using namespace odr;
 using namespace std;
 using namespace Eigen;
 
