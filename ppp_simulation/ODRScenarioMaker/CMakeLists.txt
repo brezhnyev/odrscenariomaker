@@ -12,6 +12,10 @@ set(CMAKE_AUTOMOC ON)
 
 option(USE_CARLA "Will need carla specific client libs if set to true" ON)
 
+if (USE_CARLA)
+  add_definitions(-DUSE_CARLA)
+endif()
+
 set(CARLA_PATH "/home/carla" CACHE STRING "carla (git) path")
 
 find_package(yaml-cpp)
@@ -37,6 +41,8 @@ link_directories(${CARLA_PATH}/Build/rpclib-v2.2.1_c5-c8-libstdcxx-install/lib)
 link_directories(${CARLA_PATH}/Build/recast-0b13b0-c8-install/lib)
 link_directories(${CARLA_PATH}/Build/boost-1.72.0-c8-install/lib)
 endif()
+
+link_directories("/usr/local/lib")
 
 if (USE_CARLA)
 if(CMAKE_BUILD_TYPE MATCHES Debug)

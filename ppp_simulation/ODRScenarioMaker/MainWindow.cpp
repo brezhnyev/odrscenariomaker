@@ -15,7 +15,7 @@ condition_variable playCondVar;
 mutex playCondVarMtx;
 
 #ifdef USE_CARLA
-extern int play(Scenario & scenario);
+extern void play(Scenario & scenario);
 #else
 void play(Scenario & scenario) {} // dummy play to link successfully
 #endif

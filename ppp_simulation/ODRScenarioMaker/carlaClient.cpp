@@ -65,16 +65,6 @@ static bool realtime_playback = true;
 //extern vector<QLabel*> camera_widgets; // need to be extern to be created in the parent thread
 
 
-static map <string, cg::Location> town2InitLocation
-{
-    {"Town01", cg::Location(225.252, -364.109, 0.281942)},
-    {"Town02", cg::Location(-7.53, 142.19, 0.5)},
-    {"Town03", cg::Location(-6.44617, -79.055, 0.275307)},
-    {"Town04", cg::Location(225.252, -364.109, 0.281942)},
-    {"Town05", cg::Location(-162.532, -95.1386, 0.3)},
-};
-
-
 void play(Scenario & scenario)
 {
     playStatus = 2; // 0 stop, 1 pause, 2 play
@@ -101,7 +91,12 @@ void play(Scenario & scenario)
 
     // Spawn Vehicles:
     // Crashes for some towns. Eventually still has to do something with Qt.
-    //auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
+    auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
+    if (spawn_points.empty())
+    {
+        cout << "No valid spawn points found, quitting" << endl;
+        return;
+    }
     vector<ShrdPtrActor> vehicles;
     std::vector<ShrdPtrActor> cameras;
 
@@ -117,7 +112,7 @@ void play(Scenario & scenario)
                 blueprint.SetAttribute("color", scenario_vehicle->colorToString());
             }
             // Spawn the vehicle.
-            auto actor = world.TrySpawnActor(blueprint, cg::Transform(town2InitLocation[scenario.getTownName()], cg::Rotation()));
+            auto actor = world.TrySpawnActor(blueprint, spawn_points[0]);
             if (!actor)
             {
                 cout << "Failed to spawn actor ------" << endl;
