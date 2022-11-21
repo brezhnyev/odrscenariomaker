@@ -88,7 +88,7 @@ public:
         int sindex{0};
     } SValue;
 
-    CanvasXODR(const std::string & xodrfile, float radius, float xodrResolution);
+    CanvasXODR(const std::string & xodrfile, float radius, float xodrResolution, std::string lanesMappingPath);
     ~CanvasXODR();
     void draw();
     void drawSelectable();
@@ -122,4 +122,5 @@ private:
     std::vector<PolyFactors> mPolys;
     LaneElementBBox<Eigen::Vector3d> mSceneBB;
     int mDir{1}; // sets the direction of the poly computation (forward-backward)
+    std::map<std::string, int> m_lanesMapping;
 };

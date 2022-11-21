@@ -11,7 +11,7 @@ class Viewer : public QGLViewer
 {
     Q_OBJECT
 public:
-    Viewer(std::string xodrfile, float radius, float xodrResolution);
+    Viewer(std::string xodrfile, float radius, float xodrResolution, const std::string & lanesMappingPath);
     ~Viewer() override;
     void draw() override;
     void drawWithNames() override;

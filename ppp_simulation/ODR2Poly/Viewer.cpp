@@ -1,4 +1,4 @@
-#include <Viewer.h>
+#include "Viewer.h"
 #include <QGLViewer/vec.h>
 #include <QtWidgets/QMessageBox>
 #include <QKeyEvent>
@@ -25,7 +25,7 @@ using namespace Eigen;
 extern Matrix4f camTrf;
 
 
-Viewer::Viewer(string xodrfile, float radius, float xodrResolution) : m_canvas(xodrfile, radius, xodrResolution)
+Viewer::Viewer(string xodrfile, float radius, float xodrResolution, const string & lanesMappingPath) : m_canvas(xodrfile, radius, xodrResolution, lanesMappingPath)
 {
     using namespace net;
 

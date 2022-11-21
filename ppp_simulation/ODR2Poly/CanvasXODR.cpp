@@ -6,15 +6,31 @@
 #include <iostream>
 #include <deque>
 #include <omp.h>
+#include <fstream>
 
 using namespace std;
 using namespace Eigen;
 
-//#define AVL_STACK
+#define AVL_STACK
 
 
-CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResolution) : mRadius(radius), mXodrResolution(xodrResolution), m_xodrBuilder(xodrfile, mXodrResolution)
+CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResolution, string lanesMappingPath) 
+    : mRadius(radius), mXodrResolution(xodrResolution), m_xodrBuilder(xodrfile, mXodrResolution)
 {
+    ifstream ifs(lanesMappingPath);
+    if (ifs.good())
+    {
+        string line;
+        while (getline(ifs, line))
+        {
+            int roadid, laneid1, laneid2;
+            stringstream ss(line);
+            ss >> roadid;
+            while (ss >> laneid1 >> laneid2)
+                m_lanesMapping[to_string(roadid)+"_"+to_string(laneid1)] = laneid2;
+        }
+    }
+    ifs.close();
 }
 
 CanvasXODR::~CanvasXODR()
@@ -310,7 +326,20 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
         for (auto && bps : boundaries)
         {
             PolyFactors pf;
-            if (fitParamPoly(bps.second, pf, egoTrfInv))
+            std::vector<Eigen::Vector4d> * pL = nullptr;
+            if (m_lanesMapping.empty())
+            {
+                pL = &bps.second;
+            }
+            else
+            {
+                string mapid = to_string(b.roadID)+"_"+to_string(bps.first);
+                if (m_lanesMapping.count(mapid))
+                {
+                    pL = &boundaries[m_lanesMapping[mapid]];
+                }
+            }
+            if (pL && fitParamPoly(*pL, pf, egoTrfInv))
             {
                 pf.roadID = b.roadID;
                 pf.geomID = b.geomID;
@@ -326,8 +355,17 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
     for (auto && b : mLocallLaneBoxes)
     {
         auto && boundaries = const_cast<LanesContainer&>(m_xodrBuilder.getBoundaries()) [b.roadID][b.geomID][b.sectID];
-        for (auto & bsp : boundaries)
-            lanes[bsp.first].insert(lanes[bsp.first].end(), bsp.second.begin(), bsp.second.end());
+        for (auto & bps : boundaries)
+        {
+            if (m_lanesMapping.empty())
+                lanes[bps.first].insert(lanes[bps.first].end(), bps.second.begin(), bps.second.end());
+            else
+            {
+                string mapid = to_string(b.roadID)+"_"+to_string(bps.first);
+                if (m_lanesMapping.count(mapid))
+                    lanes[m_lanesMapping[mapid]].insert(lanes[m_lanesMapping[mapid]].end(), bps.second.begin(), bps.second.end());
+            }
+        }
     }
     for (auto && l : lanes) // lane
     {
