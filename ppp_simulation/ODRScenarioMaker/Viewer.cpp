@@ -11,11 +11,6 @@
 
 #include <stdio.h> 
 
-namespace net
-{
-    #include <sys/socket.h>
-    #include <arpa/inet.h> 
-} 
 #include <unistd.h> 
 #include <string.h>
 
@@ -28,11 +23,6 @@ extern int playStatus;
 
 Viewer::Viewer(const string & xodrfile, string objfile) : m_canvas(xodrfile), m_world3d(objfile)
 {
-    using namespace net;
-
-    // cout << "Version: " << glGetString(GL_VERSION) << endl; // KB: causes cout stop!
-    // cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
-    // cout.flush();
     camera()->setSceneRadius(400);
     camera()->fitSphere(Vec(0, 0, 0), 200);
     camera()->setZNearCoefficient(0.01);

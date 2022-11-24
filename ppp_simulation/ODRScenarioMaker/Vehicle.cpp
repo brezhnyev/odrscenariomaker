@@ -26,20 +26,20 @@ void Vehicle::drawGeometry()
         glPushMatrix();
         glScalef(1.5f, 1.5f, 1.0f);
         glBegin(GL_QUADS);
-        glVertex3f(-2, -1, -0.05);
-        glVertex3f( 2, -1, -0.05);
-        glVertex3f( 2,  1, -0.05);
-        glVertex3f(-2,  1, -0.05);
+        glVertex3f(-m_bbox[0], -m_bbox[1], -0.05);
+        glVertex3f( m_bbox[0], -m_bbox[1], -0.05);
+        glVertex3f( m_bbox[0],  m_bbox[1], -0.05);
+        glVertex3f(-m_bbox[0],  m_bbox[1], -0.05);
         glEnd();
         glPopMatrix();
     }
 
     glColor3f(float(m_color[0])/255, float(m_color[1])/255, float(m_color[2])/255);
     glBegin(GL_QUADS);
-    glVertex3f(-2, -1, 0);
-    glVertex3f( 2, -1, 0);
-    glVertex3f( 2,  1, 0);
-    glVertex3f(-2,  1, 0);
+    glVertex3f(-m_bbox[0], -m_bbox[1], 0);
+    glVertex3f( m_bbox[0], -m_bbox[1], 0);
+    glVertex3f( m_bbox[0],  m_bbox[1], 0);
+    glVertex3f(-m_bbox[0],  m_bbox[1], 0);
     glEnd();
 
     glPopMatrix();

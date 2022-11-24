@@ -116,6 +116,9 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     mainLayout->addWidget(m_colorPicker);
 
     mainLayout->addWidget(typeCombo);
+    int index = typeCombo->findText(QString(m_actor.getName().c_str()));
+    if (index != -1)
+        typeCombo->setCurrentIndex(index);
     connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.setName(name.toStdString()); });
 
     ((QVBoxLayout*)mainLayout)->addStretch(1);

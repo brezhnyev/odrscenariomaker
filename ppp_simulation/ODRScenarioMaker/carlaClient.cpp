@@ -192,29 +192,36 @@ void play(Scenario & scenario)
         vehicle->ApplyControl(control);
     };
 
-    auto camCtrl = [&]()
-    {
-        // set the camera:
-        auto spectator = world.GetSpectator();
-        cg::Transform transform;
-        //for (int i = 0; i < 16; ++i) cout << modelviewmatrix[i] << " "; cout << endl;
-        Matrix4f rotM1; rotM1.setIdentity(); rotM1.block(0,0,3,3) = AngleAxisf( M_PI_2, Vector3f::UnitY()).toRotationMatrix();
-        Matrix4f rotM2; rotM2.setIdentity(); rotM2.block(0,0,3,3) = AngleAxisf(-M_PI_2, Vector3f::UnitZ()).toRotationMatrix();
-        Matrix4f mirror; mirror.setIdentity(); mirror(1,1) = -1;
-        Matrix4f CAM = mirror*camTrf.inverse()*rotM2*rotM1;
-        transform.location = cg::Location(CAM(0,3), CAM(1,3), CAM(2,3));
-        float pitch = asin(CAM(2,0));
-        float yaw = atan2(CAM(1,0), CAM(0,0));
-        Matrix3f rotM = AngleAxisf(-pitch, Vector3f::UnitY())*AngleAxisf(-yaw, Vector3f::UnitZ())*CAM.block(0,0,3,3);
-        float roll = -asin(rotM(2,1));
-        transform.rotation = cg::Rotation(pitch*RAD2DEG, yaw*RAD2DEG, roll*RAD2DEG);
-        spectator->SetTransform(transform);
-    };
-
-    thread t([&]()
+    thread camThread([&]()
     {
         while (playStatus)
         {
+            unique_lock<mutex> lk(playCondVarMtx);
+            playCondVar.wait(lk);
+            // set the camera:
+            auto spectator = world.GetSpectator();
+            cg::Transform transform;
+            Matrix4f rotM1; rotM1.setIdentity(); rotM1.block(0,0,3,3) = AngleAxisf( M_PI_2, Vector3f::UnitY()).toRotationMatrix();
+            Matrix4f rotM2; rotM2.setIdentity(); rotM2.block(0,0,3,3) = AngleAxisf(-M_PI_2, Vector3f::UnitZ()).toRotationMatrix();
+            Matrix4f mirror; mirror.setIdentity(); mirror(1,1) = -1;
+            Matrix4f CAM = mirror*camTrf.inverse()*rotM2*rotM1;
+            transform.location = cg::Location(CAM(0,3), CAM(1,3), CAM(2,3));
+            float pitch = asin(CAM(2,0));
+            float yaw = atan2(CAM(1,0), CAM(0,0));
+            Matrix3f rotM = AngleAxisf(-pitch, Vector3f::UnitY())*AngleAxisf(-yaw, Vector3f::UnitZ())*CAM.block(0,0,3,3);
+            float roll = -asin(rotM(2,1));
+            transform.rotation = cg::Rotation(pitch*RAD2DEG, yaw*RAD2DEG, roll*RAD2DEG);
+            spectator->SetTransform(transform);
+        }
+    });
+
+    thread driveThread([&]()
+    {
+        while (playStatus)
+        {
+            unique_lock<mutex> lk(playCondVarMtx);
+            playCondVar.wait(lk);
+                
             auto * actor = &vehicles[0];
             auto scenario_vehicles = scenario.children();
             for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++actor)
@@ -257,10 +264,11 @@ void play(Scenario & scenario)
                 float accLon = (targetSpeed - speed);
                 applyControl(accLat, accLon, vehicle, targetSpeed, 0.2*wdir*900/70); // 900/70 is typical ratio steer-wheels
                 Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
-                if (visuactor) visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
-
-                unique_lock<mutex> lk(playCondVarMtx);
-                playCondVar.wait(lk);
+                if (visuactor)
+                {
+                    visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
+                    visuactor->setBbox(Vector3f(vehicle->GetBoundingBox().extent.x, vehicle->GetBoundingBox().extent.y, vehicle->GetBoundingBox().extent.z));
+                }
             }
         }
     });
@@ -277,7 +285,6 @@ void play(Scenario & scenario)
             }
             // unfortunately we cannot Tick for Navigation only - in this case the Actors will live "on their onw"
             mw->update();
-            camCtrl();
             playCondVar.notify_all();
             world.Tick(carla::time_duration(1s));
 
@@ -290,7 +297,8 @@ void play(Scenario & scenario)
 
     world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     for (auto v : vehicles) v->Destroy();
-    t.join();
+    camThread.join();
+    driveThread.join();
 
     usleep(1e6);
 }
