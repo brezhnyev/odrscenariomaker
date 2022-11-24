@@ -20,6 +20,7 @@ public:
     void drawWithNames() override;
     void init() override;
     void postSelection(const QPoint &point) override;
+    void mousePressEvent(QMouseEvent *) override;
     void listenForResponse();
     Scenario & getScenario() { return m_scenario; } // should return const reference
 

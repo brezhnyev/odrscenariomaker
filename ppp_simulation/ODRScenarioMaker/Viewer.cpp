@@ -3,6 +3,7 @@
 
 #include <QGLViewer/vec.h>
 #include <QtWidgets/QMessageBox>
+#include <QtGui/QtEvents>
 
 #include <iostream>
 #include <sstream>
@@ -23,7 +24,7 @@ using namespace qglviewer;
 using namespace Eigen;
 
 Matrix4f camTrf;
-
+extern int playStatus;
 
 Viewer::Viewer(const string & xodrfile, string objfile) : m_canvas(xodrfile), m_world3d(objfile)
 {
@@ -91,6 +92,15 @@ void Viewer::postSelection(const QPoint &point)
         emit signal_select(id);
         // KB: no need to call update, since this function is a virtual and the update is called after it from OGLViewer
     }
+}
+
+void Viewer::mousePressEvent(QMouseEvent * e)
+{
+    if (e->button() == Qt::LeftButton && playStatus > 0)
+        setMouseBinding(Qt::NoModifier, Qt::LeftButton, CAMERA, NO_MOUSE_ACTION);
+    else
+        setMouseBinding(Qt::NoModifier, Qt::LeftButton, CAMERA, ROTATE);
+    QGLViewer::mousePressEvent(e);
 }
 
 void Viewer::slot_select(int id)
