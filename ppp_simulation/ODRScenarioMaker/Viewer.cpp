@@ -53,11 +53,6 @@ void Viewer::drawWithNames()
 
 void Viewer::postSelection(const QPoint &point)
 {
-    qglviewer::Vec orig, dir;
-    // Compute orig and dir, used to draw a representation of the intersecting
-    // line
-    camera()->convertClickToLine(point, orig, dir); // orig == camera position
-
     // Find the selectedPoint coordinates, using camera()->pointUnderPixel().
     bool found;
     Vec sp = camera()->pointUnderPixel(point, found);
@@ -107,13 +102,18 @@ void Viewer::mouseReleaseEvent(QMouseEvent * e)
 
 void Viewer::mouseMoveEvent(QMouseEvent * e)
 {
-    if (m_leftMousePressed)
+    if (m_leftMousePressed && e->modifiers() == Qt::ShiftModifier)
     {
         if (x != -1)
         {
+            // bool found;
+            // Vec sp = camera()->pointUnderPixel(QPoint(-e->pos().x(), -e->pos().y()), found);
+            // if (found)
+            //     cout << sp.x << " " << sp.y << " " << sp.z << endl;
+            // cout << selectedName() << endl;
             int dx = int(e->pos().x()) - x;
             int dy = int(e->pos().y()) - y;
-            signal_activeWaypointMovedBy(0.01f*dx, -0.01f*dy);
+            signal_activeWaypointMovedBy(0.01f*dx, -0.01f*dy, 0);
         }
         x = e->pos().x();
         y = e->pos().y();

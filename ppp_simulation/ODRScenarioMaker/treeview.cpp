@@ -21,21 +21,6 @@ TreeView::TreeView(int scenarioID) : QTreeView()
     m_scenarioID = scenarioID;
 }
 
-void TreeView::loadScenario(Selectable * scenario)
-{
-    m_treeModel->delItem(m_scenarioID);
-    addItem(-1, scenario);
-    m_scenarioID = scenario->getID();
-}
-
-// In case the item has children add all its children (this is possible on loading scenario)
-void TreeView::addItem(int id, Selectable * item)
-{
-    m_treeModel->addItem(id, item->getID(), item->getType());
-    for (auto child : item->children())
-        addItem(item->getID(), child.second);
-}
-
 void TreeView::slot_addItem(int id, std::string name, int parentID)
 {
     m_treeModel->addItem(parentID == -1 ? m_selectedItemID : parentID, id, name);

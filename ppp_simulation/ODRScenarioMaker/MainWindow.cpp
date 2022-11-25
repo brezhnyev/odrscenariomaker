@@ -36,6 +36,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         m_treeView->slot_addItem(id, "Waypoint", m_scenario.getActiveWaypath()->getID());
         m_scenario.getActiveWaypath()->updateSmoothPath();
         m_scenario.getActiveActor()->updatePose();
+        update();
     });
     connect(m_viewer,   &Viewer::signal_select,       [this](int id){ m_treeView->slot_select(id); });
     connect(m_treeView, &TreeView::signal_select,     [this](int id){ m_viewer->slot_select(id); update(); });
@@ -57,11 +58,15 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
             m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item));
             propsDock->setWidget(m_pointProps);
-            connect(m_pointProps, &WaypointProps::signal_update, [this](){ update(); });
-            connect(m_viewer, &Viewer::signal_activeWaypointMovedBy, [this](float dx, float dy)
+            connect(m_pointProps, &WaypointProps::signal_update, [this](){ m_scenario.getActiveWaypath()->updateSmoothPath(); update(); });
+            connect(m_viewer, &Viewer::signal_activeWaypointMovedBy, [this](float dx, float dy, float dz)
             {
+                Selectable * s = m_scenario.getActiveWaypoint();
+                if (!s) // we need to check cause Viewer has no information about the currently selected object
+                    return;
                 Vector3f pos = m_scenario.getActiveWaypoint()->getPosition();
-                m_scenario.getActiveWaypoint()->setPosition(Vector3f(pos[0] + dx, pos[1] + dy, pos[2]));
+                m_scenario.getActiveWaypoint()->setPosition(Vector3f(pos[0] + dx, pos[1] + dy, pos[2] + dz));
+                m_scenario.getActiveWaypath()->updateSmoothPath();
                 update();
             });
             connect(m_pointProps, &WaypointProps::signal_delete, [this](int id)
