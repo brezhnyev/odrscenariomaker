@@ -21,7 +21,7 @@ using namespace Eigen;
 Matrix4f camTrf;
 extern int playStatus;
 
-Viewer::Viewer(const string & xodrfile, string objfile) : m_canvas(xodrfile), m_world3d(objfile)
+Viewer::Viewer(Scenario & scenario, const string & xodrfile, string objfile) : m_scenario(scenario), m_canvas(xodrfile), m_world3d(objfile)
 {
     camera()->setSceneRadius(400);
     camera()->fitSphere(Vec(0, 0, 0), 200);
@@ -90,7 +90,36 @@ void Viewer::mousePressEvent(QMouseEvent * e)
         setMouseBinding(Qt::NoModifier, Qt::LeftButton, CAMERA, NO_MOUSE_ACTION);
     else
         setMouseBinding(Qt::NoModifier, Qt::LeftButton, CAMERA, ROTATE);
+
+    if (e->button() == Qt::LeftButton)
+        m_leftMousePressed = true;
+
     QGLViewer::mousePressEvent(e);
+}
+
+void Viewer::mouseReleaseEvent(QMouseEvent * e)
+{
+    m_leftMousePressed = false;
+    x = y = -1;
+
+    QGLViewer::mouseReleaseEvent(e);
+}
+
+void Viewer::mouseMoveEvent(QMouseEvent * e)
+{
+    if (m_leftMousePressed)
+    {
+        if (x != -1)
+        {
+            int dx = int(e->pos().x()) - x;
+            int dy = int(e->pos().y()) - y;
+            signal_activeWaypointMovedBy(0.01f*dx, -0.01f*dy);
+        }
+        x = e->pos().x();
+        y = e->pos().y();
+    }
+
+    QGLViewer::mouseMoveEvent(e);
 }
 
 void Viewer::slot_select(int id)

@@ -29,8 +29,8 @@ public:
     CanvasXODR(std::string xodrfile);
     ~CanvasXODR();
     void init();
-    void draw() override;
-    void drawWithNames() override;
+    void draw() const override;
+    void drawWithNames() const override;
     std::string getType() const override { return "CanvasXODR"; }
 
     static int getLaneID(Eigen::Vector3d p);

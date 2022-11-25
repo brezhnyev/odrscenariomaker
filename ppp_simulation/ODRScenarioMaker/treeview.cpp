@@ -6,7 +6,7 @@
 
 #include <string>
 
-TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
+TreeView::TreeView(int scenarioID) : QTreeView()
 {
     m_treeModel = new TreeModel("", this);
     setModel(m_treeModel);
@@ -15,38 +15,30 @@ TreeView::TreeView(Scenario & scenario) : QTreeView(), m_scenario(scenario)
         auto sellist = sel.indexes();
         if (sellist.empty()) return; // KB: IMHO should not happen. However happens due to slot_select (blockSignals do not help)
         auto treeItem = static_cast<TreeItem*>(sellist[0].internalPointer());
-        //auto ti2 = static_cast<TreeItem*>(sellist[1].internalPointer()); // not used
         emit signal_select(treeItem->getID());
     });
-    m_treeModel->addItem(-1, m_scenario.getID(), "Scenario");
-    m_scenarioID = scenario.getID();
+    m_treeModel->addItem(-1, scenarioID, "Scenario");
+    m_scenarioID = scenarioID;
 }
 
+void TreeView::loadScenario(Selectable * scenario)
+{
+    m_treeModel->delItem(m_scenarioID);
+    addItem(-1, scenario);
+    m_scenarioID = scenario->getID();
+}
+
+// In case the item has children add all its children (this is possible on loading scenario)
 void TreeView::addItem(int id, Selectable * item)
 {
     m_treeModel->addItem(id, item->getID(), item->getType());
-    // In case the item has children add all its children (this is possible on loading scenario)
     for (auto child : item->children())
         addItem(item->getID(), child.second);
 }
 
-void TreeView::loadScenario()
+void TreeView::slot_addItem(int id, std::string name, int parentID)
 {
-    m_treeModel->delItem(m_scenarioID);
-    addItem(-1, &m_scenario);
-    m_scenarioID = m_scenario.getID();
-}
-
-void TreeView::slot_addItem(int id, std::string name)
-{
-    m_treeModel->addItem(m_selectedItemID, id, name);
-    emit signal_select(id);
-}
-
-// slot to add waypoint is separately implemented from slot_addItem
-void TreeView::slot_addWaypoint(int id)
-{
-    m_treeModel->addItem(m_scenario.getActiveWaypathID(), id, "Waypoint");
+    m_treeModel->addItem(parentID == -1 ? m_selectedItemID : parentID, id, name);
     emit signal_select(id);
 }
 

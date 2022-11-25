@@ -16,9 +16,8 @@ public:
     Eigen::Vector3f getStartingPosition();
     Eigen::Vector3f getEndingPosition();
     void updateSmoothPath();
-    void draw() override;
-    void drawWithNames() override {};
-    void drawGeometry() override;
+    void draw() const override;
+    void drawGeometry() const override;
 
 private:
     std::vector<WaypointSmoothed> m_smoothPath;

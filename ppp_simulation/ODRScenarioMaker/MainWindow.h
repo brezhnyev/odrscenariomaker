@@ -24,6 +24,7 @@ public:
     }
 
 private:
+    Scenario        m_scenario;
     Viewer         *m_viewer{nullptr};
     TreeView       *m_treeView{nullptr};
     WaypointProps  *m_pointProps{nullptr};

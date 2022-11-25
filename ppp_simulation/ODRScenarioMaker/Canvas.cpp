@@ -30,7 +30,7 @@ void Canvas::init()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_image.width(), m_image.height(), 0, GL_BGRA, GL_UNSIGNED_BYTE, m_image.bits());
 }
 
-void Canvas::draw()
+void Canvas::draw() const
 {
     glPushMatrix();
     glEnable(GL_TEXTURE_2D);
@@ -46,7 +46,7 @@ void Canvas::draw()
     glPopMatrix();
 }
 
-void Canvas::drawWithNames()
+void Canvas::drawWithNames() const
 {
     glPushName(m_id);
     draw();

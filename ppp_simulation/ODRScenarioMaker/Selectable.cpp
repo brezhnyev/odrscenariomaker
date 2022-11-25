@@ -15,12 +15,12 @@ Selectable::Selectable() : m_selected(false)
     m_id = s_ID; ++s_ID;
 }
 
-void Selectable::draw()
+void Selectable::draw() const
 {
     for (auto && c : m_children) c.second->draw();
 }
 
-void Selectable::drawWithNames()
+void Selectable::drawWithNames() const
 {
     for (auto && c : m_children) c.second->drawWithNames();
 }
@@ -41,7 +41,8 @@ int Selectable::delChild(int id)
     // For this case check if the id was previously deleted
     if (m_children.find(id) == m_children.end())
         return id;
-    if (m_children.empty()) return -1;
+    if (m_children.empty())
+        return -1;
     m_children.erase(id);
     return id;
 }

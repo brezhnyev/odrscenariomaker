@@ -35,5 +35,5 @@ protected:
     std::string m_name;
     Eigen::Vector3f m_pos{0.0f, 0.0f, 0.0f};
     Eigen::Vector3f m_ori{0.0f, 0.0f, 0.0f};
-    Eigen::Vector3f m_bbox{0.0f, 0.0f, 0.0f};
+    Eigen::Vector3f m_bbox{2.0f, 1.0f, 1.0f};
 };

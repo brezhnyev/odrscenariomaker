@@ -14,26 +14,31 @@ class Viewer : public QGLViewer
 {
     Q_OBJECT
 public:
-    Viewer(const std::string & xodrfile, std::string objfile = "");
+    Viewer(Scenario & scenario, const std::string & xodrfile, std::string objfile = "");
     ~Viewer() override {};
     void draw() override;
     void drawWithNames() override;
     void init() override;
     void postSelection(const QPoint &point) override;
     void mousePressEvent(QMouseEvent *) override;
+    void mouseMoveEvent(QMouseEvent *) override;
+    void mouseReleaseEvent(QMouseEvent *) override;
     void listenForResponse();
-    Scenario & getScenario() { return m_scenario; } // should return const reference
 
 signals:
     void signal_addWaypoint(int);
     void signal_select(int);
     void signal_setVehicle(Eigen::Vector3f, float yaw);
+    void signal_activeWaypointMovedBy(float x, float y);
 
 public slots:
     void slot_select(int);
 
 private:
-    Scenario        m_scenario;
+    Scenario &      m_scenario;
     CanvasXODR      m_canvas;
     World3D         m_world3d;
+    bool            m_leftMousePressed{false};
+    int x{-1};
+    int y{-1};
 };

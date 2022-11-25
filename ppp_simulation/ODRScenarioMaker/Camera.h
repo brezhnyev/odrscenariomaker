@@ -10,8 +10,8 @@ class Camera : public Actor
 public:
     Camera() : Actor("") { m_cameraWidget = new QLabel(); }
     Camera(const std::string & name) : Actor(name) {}
-    void draw() override {};
-    void drawWithNames() override {};
+    void draw() const override {};
+    void drawWithNames() const override {};
     void drawGeometry() {};
     std::string getType() const override { return "Camera"; }
     QLabel * getCamWidget() { return m_cameraWidget; }

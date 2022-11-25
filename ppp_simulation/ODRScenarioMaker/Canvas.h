@@ -16,8 +16,8 @@ public:
     Canvas();
     Canvas(std::string texname, QRect rect);
     void init();
-    void draw() override;
-    void drawWithNames() override;
+    void draw() const override;
+    void drawWithNames() const override;
     std::string getType() const override { return "Canvas"; }
 
 private:

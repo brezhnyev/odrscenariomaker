@@ -9,6 +9,7 @@
 #include <condition_variable>
 
 using namespace std;
+using namespace Eigen;
 
 int playStatus;
 condition_variable playCondVar;
@@ -22,15 +23,20 @@ void play(Scenario & scenario) {} // dummy play to link successfully
 
 MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent) : QMainWindow(parent)
 {
-    m_viewer = new Viewer(xodrfile, objfile);
+    m_viewer = new Viewer(m_scenario, xodrfile, objfile);
     setCentralWidget(m_viewer);
 
-    m_treeView = new TreeView(m_viewer->getScenario());
+    m_treeView = new TreeView(m_scenario.getID());
     QDockWidget *treeDock = new QDockWidget(tr("Paths"), this);
     addDockWidget(Qt::LeftDockWidgetArea, treeDock);
     treeDock->setWidget(m_treeView);
 
-    connect(m_viewer,   &Viewer::signal_addWaypoint,  [this](int id){ m_treeView->slot_addWaypoint(id); });
+    connect(m_viewer,   &Viewer::signal_addWaypoint, [this](int id)
+    {
+        m_treeView->slot_addItem(id, "Waypoint", m_scenario.getActiveWaypath()->getID());
+        m_scenario.getActiveWaypath()->updateSmoothPath();
+        m_scenario.getActiveActor()->updatePose();
+    });
     connect(m_viewer,   &Viewer::signal_select,       [this](int id){ m_treeView->slot_select(id); });
     connect(m_treeView, &TreeView::signal_select,     [this](int id){ m_viewer->slot_select(id); update(); });
 
@@ -38,7 +44,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     addDockWidget(Qt::RightDockWidgetArea, propsDock);
     connect(m_viewer, &Viewer::signal_select, 
     [&, this, propsDock](int id){
-        auto item = m_viewer->getScenario().findSelectable(id);
+        auto item = m_scenario.findSelectable(id);
 
         if (!item) return;
 
@@ -52,10 +58,18 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item));
             propsDock->setWidget(m_pointProps);
             connect(m_pointProps, &WaypointProps::signal_update, [this](){ update(); });
+            connect(m_viewer, &Viewer::signal_activeWaypointMovedBy, [this](float dx, float dy)
+            {
+                Vector3f pos = m_scenario.getActiveWaypoint()->getPosition();
+                m_scenario.getActiveWaypoint()->setPosition(Vector3f(pos[0] + dx, pos[1] + dy, pos[2]));
+                update();
+            });
             connect(m_pointProps, &WaypointProps::signal_delete, [this](int id)
             {
+                Waypath * activeWaypath = dynamic_cast<Waypath*>(m_scenario.getActiveWaypath());
                 m_treeView->slot_delItem(id);
-                m_viewer->getScenario().getActiveWaypath()->delChild(id);
+                m_scenario.getActiveWaypath()->delChild(id);
+                activeWaypath->updateSmoothPath();
                 update();
             });
         }
@@ -68,11 +82,11 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
             m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item));
             propsDock->setWidget(m_pathProps);
-            connect(m_pathProps, &WaypathProps::signal_update, [this](){ m_viewer->getScenario().getActiveActor()->updatePose(); update(); });
+            connect(m_pathProps, &WaypathProps::signal_update, [this](){ m_scenario.getActiveActor()->updatePose(); update(); });
             connect(m_pathProps, &WaypathProps::signal_delete, [this](int id)
             { 
                 m_treeView->slot_delItem(id);
-                m_viewer->getScenario().getActiveActor()->delChild(id);
+                m_scenario.getActiveActor()->delChild(id);
                 update();
             });
         }
@@ -99,7 +113,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             connect(m_vehicleProps, &VehicleProps::signal_delete, [this](int id)
             {
                 m_treeView->slot_delItem(id);
-                m_viewer->getScenario().delChild(id);
+                m_scenario.delChild(id);
                 update();
             });
             connect(m_vehicleProps, &VehicleProps::signal_update, [this](){ update(); }); // color update
@@ -116,7 +130,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
             propsDock->setWidget(m_scenarioProps);
             connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addItem(id, "Vehicle"); update(); });
-            connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->loadScenario(); update(); });
+            connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->loadScenario(&m_scenario); update(); });
         }
         propsDock->setMaximumWidth(200);
         propsDock->setMinimumWidth(200);
@@ -151,7 +165,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
         std::thread t1([this]()
         {
-            play(m_viewer->getScenario());
+            play(m_scenario);
         });
         t1.detach();
 

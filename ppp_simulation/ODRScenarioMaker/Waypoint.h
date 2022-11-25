@@ -13,9 +13,9 @@ class Waypoint : public Selectable
 {
 public:
     Waypoint(Eigen::Vector3f pos, float speed);
-    void draw() override;
-    void drawWithNames() override;
-    void drawGeometry() override;
+    void draw() const override;
+    void drawWithNames() const override;
+    void drawGeometry() const override;
     std::string getType() const override { return "Waypoint"; }
 
     Eigen::Vector3f getPosition() { return m_pos; }
@@ -39,7 +39,7 @@ class WaypointSmoothed
 {
 public:
     WaypointSmoothed(Eigen::Vector3f pos, float speed) : m_pos(pos), m_speed(speed) {}
-    Eigen::Vector3f getPosition() { return m_pos; }
+    Eigen::Vector3f getPosition() const { return m_pos; }
     void  setPosition(Eigen::Vector3f val) { m_pos = val; }
     void flipY() { m_pos[1] = -m_pos[1]; }
     float getSpeed() { return m_speed; }

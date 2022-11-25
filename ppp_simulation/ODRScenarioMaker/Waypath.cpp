@@ -9,7 +9,7 @@
 using namespace Eigen;
 using namespace std;
 
-void Waypath::drawGeometry()
+void Waypath::drawGeometry() const
 {
     float psz;
     glGetFloatv(GL_POINT_SIZE, &psz);
@@ -27,7 +27,7 @@ void Waypath::drawGeometry()
     glPointSize(psz);
 }
 
-void Waypath::draw()
+void Waypath::draw() const
 {
     drawGeometry();
     for (auto && c : m_children) c.second->draw();

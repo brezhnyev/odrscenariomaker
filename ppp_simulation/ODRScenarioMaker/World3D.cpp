@@ -24,7 +24,7 @@ void World3D::init()
         cout << mesh.MeshMaterial.map_Kd << endl;
 }
 
-void World3D::draw()
+void World3D::draw() const
 {
     for (auto && mesh : s_objLoader.LoadedMeshes)
     {

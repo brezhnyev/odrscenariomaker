@@ -13,8 +13,8 @@ public:
     Drawable() {}
     virtual ~Drawable() = 0;
     // the current design assumes that the Drawable does not have children
-    virtual void draw() = 0;
-    virtual void drawWithNames() = 0;
+    virtual void draw() const = 0;
+    virtual void drawWithNames() const = 0;
 };
 
 /** Selectable is the base class for all objects that can be selected (with mouse) and is displayed in the scene tree.
@@ -25,8 +25,8 @@ class Selectable : public Drawable
 public:
     Selectable();
     virtual ~Selectable() = 0;
-    void draw() override;
-    void drawWithNames() override;
+    void draw() const override;
+    void drawWithNames() const override;
     virtual void select(int);
     virtual std::string getType() const = 0;
 
@@ -47,7 +47,7 @@ protected:
     std::map<int, Selectable*>  m_children;
 
 protected:
-    virtual void drawGeometry() {};
+    virtual void drawGeometry() const {};
     Selectable * getActiveChild(int depth, int cDepth = 0);
 
 private:

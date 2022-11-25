@@ -11,7 +11,7 @@ public:
     World3D();
     ~World3D();
     World3D(const std::string & objfile);
-    void draw() override;
+    void draw() const override;
     std::string getType() const override { return "World3D"; }
     void init();
 

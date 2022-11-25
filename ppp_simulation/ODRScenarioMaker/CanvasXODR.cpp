@@ -103,7 +103,7 @@ void CanvasXODR::init()
     glEndList();
 }
 
-void CanvasXODR::draw()
+void CanvasXODR::draw() const
 {
     glColor3f(0.5f, 0.5f, 0.5f);
     glCallList(listRoad);
@@ -113,7 +113,7 @@ void CanvasXODR::draw()
     glCallList(listCenterlines);
 }
 
-void CanvasXODR::drawWithNames()
+void CanvasXODR::drawWithNames() const
 {
     glPushName(m_id);
     glCallList(listRoad);

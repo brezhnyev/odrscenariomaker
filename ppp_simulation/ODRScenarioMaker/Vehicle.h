@@ -11,9 +11,9 @@ public:
     Vehicle(std::string name = "vehicle.audi.a2") : Actor(name), m_color(Eigen::Vector3i(50, 100, 150))
     {
     }
-    void draw() override;
-    void drawWithNames() override;
-    void drawGeometry();
+    void draw() const override;
+    void drawWithNames() const override;
+    void drawGeometry() const;
     std::string getType() const override { return "Vehicle"; }
     std::string colorToString();
     Eigen::Vector3i stringToColor();
