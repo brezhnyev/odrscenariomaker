@@ -29,7 +29,7 @@ signals:
     void signal_addWaypoint(int);
     void signal_select(int);
     void signal_setVehicle(Eigen::Vector3f, float yaw);
-    void signal_activeWaypointMovedBy(float x, float y, float z);
+    void signal_activeSelectableMovedBy(float x, float y, float z);
 
 public slots:
     void slot_select(int);

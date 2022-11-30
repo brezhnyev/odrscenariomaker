@@ -22,6 +22,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
     mainLayout->addWidget(new QLabel(QString(actor.getType().c_str()) + " ID: " + QString::number(actor.getID()), this));
+    setLayout(mainLayout);
 
     QPushButton * addWaypath = new QPushButton("Add waypath", this);
     mainLayout->addWidget(addWaypath);
@@ -29,7 +30,6 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
     QPushButton * addCamera = new QPushButton("Add Camera", this);
     mainLayout->addWidget(addCamera);
 
-    setLayout(mainLayout);
 
     connect(addWaypath, &QPushButton::clicked, [this]()
     { 
@@ -47,7 +47,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
         int id = m_actor.addChild(camera);
         if (id == -1)
         {
-            QMessageBox::warning(this, "Error adding Element", "Failed to add Waypath: index not found!");
+            QMessageBox::warning(this, "Error adding Element", "Failed to add Camera: index not found!");
             return;
         }
         emit signal_addCamera(id);

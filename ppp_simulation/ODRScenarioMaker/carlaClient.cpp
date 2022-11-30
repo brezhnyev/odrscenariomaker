@@ -89,16 +89,9 @@ void play(Scenario & scenario)
     weather.cloudiness = 10.0f;
     world.SetWeather(weather);
 
-    // Spawn Vehicles:
-    // Crashes for some towns. Eventually still has to do something with Qt.
-    auto spawn_points = world.GetMap()->GetRecommendedSpawnPoints();
-    if (spawn_points.empty())
-    {
-        cout << "No valid spawn points found, quitting" << endl;
-        return;
-    }
     vector<ShrdPtrActor> vehicles;
     std::vector<ShrdPtrActor> cameras;
+    ShrdPtrActor actor;
 
     for (auto && child : scenario.children())
     {
@@ -111,27 +104,29 @@ void play(Scenario & scenario)
                 auto &attribute = blueprint.GetAttribute("color");
                 blueprint.SetAttribute("color", scenario_vehicle->colorToString());
             }
-            // Spawn the vehicle.
-            auto actor = world.TrySpawnActor(blueprint, spawn_points[0]);
-            if (!actor)
-            {
-                cout << "Failed to spawn actor ------" << endl;
-                continue;
-            }
-            cout << "Spawned " << actor->GetDisplayId() << '\n';
             // Set the scenario start position:
             for (auto && child : scenario_vehicle->children())
             {
                 Waypath * waypath = dynamic_cast<Waypath*>(child.second);
                 // KB: here we need to think if we really need multiple waypaths for a vehicle
-                if (waypath)
+                if (waypath && !waypath->children().empty())
                 {
                     waypath->updateSmoothPath();
                     Eigen::Vector3f dir = waypath->getStartingDirection();
                     Eigen::Vector3f pos = waypath->getStartingPosition();
                     auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
-                    cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
-                    actor->SetTransform(transform);
+                    cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()+0.5), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
+                    // Spawn the vehicle.
+                    actor = world.TrySpawnActor(blueprint, transform);
+                    if (!actor)
+                    {
+                        cout << "Failed to spawn actor ------" << endl;
+                        continue;
+                    }
+                    cout << "Spawned " << actor->GetDisplayId() << '\n';
+                    auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
+                    vehicle->SetSimulatePhysics();
+                    vehicles.push_back(actor);
                 }
                 Camera * camera = dynamic_cast<Camera*>(child.second);
                 if (camera)
@@ -162,9 +157,6 @@ void play(Scenario & scenario)
                     });
                 }
             }
-            auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
-            vehicle->SetSimulatePhysics();
-            vehicles.push_back(actor);
         }
     }
     world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle

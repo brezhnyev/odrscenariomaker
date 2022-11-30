@@ -8,11 +8,11 @@ class QLabel;
 class Camera : public Actor
 {
 public:
-    Camera() : Actor("") { m_cameraWidget = new QLabel(); }
+    Camera() : Actor("") { m_cameraWidget = new QLabel(); m_bbox = Eigen::Vector3f(1,1,1); }
     Camera(const std::string & name) : Actor(name) {}
-    void draw() const override {};
-    void drawWithNames() const override {};
-    void drawGeometry() {};
+    void draw() const override;
+    void drawWithNames() const override;
+    void drawGeometry() const override;
     std::string getType() const override { return "Camera"; }
     QLabel * getCamWidget() { return m_cameraWidget; }
 

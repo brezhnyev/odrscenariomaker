@@ -68,6 +68,7 @@ set(SOURCE
     MainWindow.cpp
     Viewer.cpp
     Canvas.cpp
+    Camera.cpp
     Waypath.cpp
     Waypoint.cpp
     treeitem.cpp

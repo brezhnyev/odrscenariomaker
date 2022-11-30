@@ -1,5 +1,6 @@
 #include "ScenarioProps.h"
 #include "Vehicle.h"
+#include "Camera.h"
 #include "Serializer.h"
 
 #include <QtWidgets/QHBoxLayout>
@@ -40,13 +41,10 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     generalLayout->addWidget(saveScenario);
     general->setLayout(generalLayout);
     mainLayout->addWidget(general);
-
+    setLayout(mainLayout);
 
     QPushButton * addVehicle = new QPushButton("Add vehicle", this);
     mainLayout->addWidget(addVehicle);
-
-    setLayout(mainLayout);
-
     connect(addVehicle, &QPushButton::clicked, [this]()
     { 
         int id = m_scenario.addChild(new Vehicle());
@@ -56,6 +54,20 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             return;
         }
         emit signal_addVehicle(id);
+    });
+
+    QPushButton * addCamera = new QPushButton("Add Camera", this);
+    mainLayout->addWidget(addCamera);
+    connect(addCamera, &QPushButton::clicked, [this]()
+    {
+        Camera * camera = new Camera();
+        int id = m_scenario.addChild(camera);
+        if (id == -1)
+        {
+            QMessageBox::warning(this, "Error adding Element", "Failed to add Camera: index not found!");
+            return;
+        }
+        emit signal_addCamera(id);
     });
 
 
@@ -147,30 +159,38 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
         // export initial positions (aorta specific code):
         ofstream ofs_initpos(name.toStdString()+"_init_poses.json");
         ofs_initpos << "{" << endl;
-        auto writePoses = [&](string infoType)
+        size_t counter = 1;
+        auto writePoses = [&](string infoType, bool isStart = true)
         {
-            ofs_initpos << "\t\"" << infoType << "\":{" << endl;
-            size_t counter = 1;
+            string indent = "\t";
+            if (infoType == "emergency_positions")
+            {
+                indent += "\t";
+                if (isStart)
+                    ofs_initpos << indent << "\"start\":{" << endl;
+                else
+                    ofs_initpos << indent << "\"end\":{" << endl;
+            }
+            indent += "\t";
             for (auto && it : m_scenario.children())
             {
                 Vehicle * v = dynamic_cast<Vehicle*>(it.second);
-                if (v)
+                if (v && (infoType == "car_positions" || infoType == "emergency_positions"))
                 {
                     string name = v->getName();
                     if (infoType == "car_positions" && name.find("ambulance") != string::npos)
                         continue;
                     if (infoType == "emergency_positions" && name.find("ambulance") == string::npos)
                         continue;
-                    auto fun2 = [&](bool isStart, string indent)
+
+                    for (auto && it : v->children())
                     {
-                        if (v->children().empty())
-                            return;
-                        ofs_initpos << indent << "\"" << counter << "\"" << ":";
-                        Waypath * w = dynamic_cast<Waypath*>(v->children().begin()->second);
+                        Waypath * w = dynamic_cast<Waypath*>(it.second);
                         if (w)
                         {
                             if (w->children().empty())
-                                return;
+                                break;
+                            ofs_initpos << indent << "\"" << counter << "\"" << ":";
                             ofs_initpos << "{";
                             auto pos = isStart ? w->getStartingPosition() : w->getEndingPosition();
                             ofs_initpos << "\"x\":" << pos[0] << ", ";
@@ -180,28 +200,39 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
                             ofs_initpos << "\"roll\":" << 0 << ", ";
                             ofs_initpos << "\"pitch\":" << asin(dir[2]/dir.norm())*RAD2DEG << ", ";
                             ofs_initpos << "\"yaw\":" << atan2(dir[1], dir[0])*RAD2DEG;
-                            ofs_initpos << "}," << "\n";
+                            ofs_initpos << "}," << endl;
                             ++counter;
                         }
-                    };
-                    if (infoType == "emergency_positions")
-                    {
-                        ofs_initpos << "\t\t" << "\"start:\"" << endl;
-                        fun2(true, "\t\t\t");
-                    }
-                    else
-                        fun2(true, "\t\t");
-                    if (infoType == "emergency_positions")
-                    {
-                        ofs_initpos << "\t\t" << "\"end:\"" << endl;
-                        fun2(false, "\t\t\t");
                     }
                 }
+                Camera * c = dynamic_cast<Camera*>(it.second);
+                if (infoType == "edge_camera" && c)
+                {
+                    ofs_initpos << indent;
+                    auto pos = c->getPos();
+                    ofs_initpos << "{\"x\":" << pos[0] << ", ";
+                    ofs_initpos << "\"y\":"  << pos[1] << ", ";
+                    ofs_initpos << "\"z\":" <<  pos[2] << "},";
+                    ofs_initpos << endl;
+                }
             }
-            ofs_initpos << "\t}," << endl;
+            if (infoType == "emergency_positions")
+            {
+                indent = indent.substr(0, indent.size()-1);
+                ofs_initpos << indent << "}," << endl;
+            }
         };
+        ofs_initpos << "\t" << "\"car_positions\":{" << endl;
         writePoses("car_positions");
-        writePoses("emergency_positions");
+        ofs_initpos << "\t}," << endl;
+        counter = 1;
+        ofs_initpos << "\t" << "\"emergency_positions\":{" << endl;
+        writePoses("emergency_positions", true);
+        writePoses("emergency_positions", false);
+        ofs_initpos << "\t}," << endl;
+        ofs_initpos << "\t" << "\"edge_camera\":\n\t[" << endl;
+        writePoses("edge_camera");
+        ofs_initpos << "\t]" << endl;
         ofs_initpos << "}";
         ofs_initpos.close();
     });

@@ -59,16 +59,6 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item));
             propsDock->setWidget(m_pointProps);
             connect(m_pointProps, &WaypointProps::signal_update, [this](){ m_scenario.getActiveWaypath()->updateSmoothPath(); update(); });
-            connect(m_viewer, &Viewer::signal_activeWaypointMovedBy, [this](float dx, float dy, float dz)
-            {
-                Selectable * s = m_scenario.getActiveWaypoint();
-                if (!s) // we need to check cause Viewer has no information about the currently selected object
-                    return;
-                Vector3f pos = m_scenario.getActiveWaypoint()->getPosition();
-                m_scenario.getActiveWaypoint()->setPosition(Vector3f(pos[0] + dx, pos[1] + dy, pos[2] + dz));
-                m_scenario.getActiveWaypath()->updateSmoothPath();
-                update();
-            });
             connect(m_pointProps, &WaypointProps::signal_delete, [this](int id)
             {
                 Waypath * activeWaypath = dynamic_cast<Waypath*>(m_scenario.getActiveWaypath());
@@ -136,11 +126,34 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             propsDock->setWidget(m_scenarioProps);
             connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addItem(id, "Vehicle"); update(); });
             connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->loadScenario(&m_scenario); update(); });
+            connect(m_scenarioProps, &ScenarioProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id, "Camera");  update(); });
         }
         propsDock->setMaximumWidth(200);
         propsDock->setMinimumWidth(200);
     }
     );
+
+    connect(m_viewer, &Viewer::signal_activeSelectableMovedBy, [this](float dx, float dy, float dz)
+    {
+        Actor * cam = m_scenario.getActiveActor();
+        if (cam && dynamic_cast<Camera*>(cam))
+        {
+            Vector3f pos = cam->getPos();
+            cam->setPos(Vector3f(pos[0] + dx, pos[1] + dy, pos[2] + dz));
+            update();
+        }
+        else
+        {
+            Waypoint * s = m_scenario.getActiveWaypoint();
+            if (s) // we need to check cause Viewer has no information about the currently selected object
+            {
+                Vector3f pos = s->getPosition();
+                s->setPosition(Vector3f(pos[0] + dx, pos[1] + dy, pos[2] + dz));
+                m_scenario.getActiveWaypath()->updateSmoothPath();
+                update();
+            }
+        }
+    });
 
     QDockWidget *playDock = new QDockWidget("Animation");
     QHBoxLayout * playLayout = new QHBoxLayout();

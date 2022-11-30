@@ -12,6 +12,7 @@ public:
 
 signals:
     void signal_addVehicle(int);
+    void signal_addCamera(int);
     void signal_update();
 
 protected:

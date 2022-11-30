@@ -1,5 +1,6 @@
 #include "Viewer.h"
 #include "Vehicle.h"
+#include "Camera.h"
 
 #include <QGLViewer/vec.h>
 #include <QtWidgets/QMessageBox>
@@ -15,7 +16,7 @@
 #include <string.h>
 
 using namespace std;
-using namespace qglviewer;
+//using namespace qglviewer; // otherwise names clash with Camera
 using namespace Eigen;
 
 Matrix4f camTrf;
@@ -23,6 +24,7 @@ extern int playStatus;
 
 Viewer::Viewer(Scenario & scenario, const string & xodrfile, string objfile) : m_scenario(scenario), m_canvas(xodrfile), m_world3d(objfile)
 {
+    using namespace qglviewer;
     camera()->setSceneRadius(400);
     camera()->fitSphere(Vec(0, 0, 0), 200);
     camera()->setZNearCoefficient(0.01);
@@ -55,20 +57,28 @@ void Viewer::postSelection(const QPoint &point)
 {
     // Find the selectedPoint coordinates, using camera()->pointUnderPixel().
     bool found;
-    Vec sp = camera()->pointUnderPixel(point, found);
+    qglviewer::Vec sp = QGLViewer::camera()->pointUnderPixel(point, found);
 
     if (selectedName() == -1) return;
 
     if (selectedName() == m_canvas.getID()) // Canvas
     {
-        Waypath * waypath = m_scenario.getActiveWaypath();
-        if (nullptr == waypath)
+        Camera * cam = dynamic_cast<Camera*>(m_scenario.getActiveActor());
+        if (cam)
         {
-            QMessageBox::warning(this, "Error adding Element", "Add/activate waypath in Actor!");
-            return;
+            cam->setPos(Vector3f(sp.x, sp.y, sp.z));
         }
-        int id = waypath->addChild(new Waypoint(Vector3f(sp.x, sp.y, sp.z), 0));
-        emit signal_addWaypoint(id);
+        else
+        {
+            Waypath * waypath = m_scenario.getActiveWaypath();
+            if (nullptr == waypath)
+            {
+                QMessageBox::warning(this, "Error adding Element", "Add/activate waypath in Actor!");
+                return;
+            }
+            int id = waypath->addChild(new Waypoint(Vector3f(sp.x, sp.y, sp.z), 0));
+            emit signal_addWaypoint(id);
+        }
     }
     else
     {
@@ -113,7 +123,7 @@ void Viewer::mouseMoveEvent(QMouseEvent * e)
             // cout << selectedName() << endl;
             int dx = int(e->pos().x()) - x;
             int dy = int(e->pos().y()) - y;
-            signal_activeWaypointMovedBy(0.01f*dx, -0.01f*dy, 0);
+            signal_activeSelectableMovedBy(0.01f*dx, -0.01f*dy, 0);
         }
         x = e->pos().x();
         y = e->pos().y();

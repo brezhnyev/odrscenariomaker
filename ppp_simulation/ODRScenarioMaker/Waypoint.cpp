@@ -22,20 +22,20 @@ void Waypoint::drawGeometry() const
     if (m_selected)
     {
         glBegin(GL_QUADS);
-        glVertex3f(- w, - w, m_pos.z()-0.05);
-        glVertex3f(+ w, - w, m_pos.z()-0.05);
-        glVertex3f(+ w, + w, m_pos.z()-0.05);
-        glVertex3f(- w, + w, m_pos.z()-0.05);
+        glVertex3f(- w, - w, -0.05);
+        glVertex3f(+ w, - w, -0.05);
+        glVertex3f(+ w, + w, -0.05);
+        glVertex3f(- w, + w, -0.05);
         glEnd();
     }
 
     w = 0.5f;
     glColor3f(cc[0], cc[1], cc[2]);
     glBegin(GL_QUADS);
-    glVertex3f(- w, - w, m_pos.z());
-    glVertex3f(+ w, - w, m_pos.z());
-    glVertex3f(+ w, + w, m_pos.z());
-    glVertex3f(- w, + w, m_pos.z());
+    glVertex3f(- w, - w, 0);
+    glVertex3f(+ w, - w, 0);
+    glVertex3f(+ w, + w, 0);
+    glVertex3f(- w, + w, 0);
     glEnd();
     glPopMatrix();
 }
