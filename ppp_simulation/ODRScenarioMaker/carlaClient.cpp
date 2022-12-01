@@ -91,7 +91,34 @@ void play(Scenario & scenario)
 
     vector<ShrdPtrActor> vehicles;
     std::vector<ShrdPtrActor> cameras;
-    ShrdPtrActor actor;
+
+    auto addCam = [&](Camera * camera, ShrdPtrActor actor)
+    {
+        auto blueprint_library = world.GetBlueprintLibrary();
+        // Find a camera blueprint.
+        auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.camera.rgb"));
+
+        camera_bp->SetAttribute("image_size_x", "400");
+        camera_bp->SetAttribute("image_size_y", "300");
+        camera_bp->SetAttribute("fov", to_string(camera->getFOV()));
+
+        auto camera_transform = cg::Transform{
+            cg::Location{camera->getPos().x(), -camera->getPos().y(), camera->getPos().z()},        // x, y, z.
+            cg::Rotation{-camera->getOri().y(), camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
+
+        cameras.push_back(world.SpawnActor(*camera_bp, camera_transform, actor.get()));
+        camera->getCamWidget()->resize(400, 300);
+        camera->getCamWidget()->show();
+
+        // Register a callback to save images to disk.
+        ((cc::Sensor*)cameras.back().get())->Listen([camera](auto data)
+        {
+            auto image = boost::static_pointer_cast<csd::Image>(data);
+            QPixmap backBuffer = QPixmap::fromImage(QImage((unsigned char*)image->data(), image->GetWidth(), image->GetHeight(), QImage::Format_RGBX8888).rgbSwapped());
+            camera->getCamWidget()->setPixmap(backBuffer.scaled(camera->getCamWidget()->size(), Qt::KeepAspectRatio));
+            camera->getCamWidget()->update();
+        });
+    };
 
     for (auto && child : scenario.children())
     {
@@ -104,6 +131,7 @@ void play(Scenario & scenario)
                 auto &attribute = blueprint.GetAttribute("color");
                 blueprint.SetAttribute("color", scenario_vehicle->colorToString());
             }
+            ShrdPtrActor actor = nullptr;
             // Set the scenario start position:
             for (auto && child : scenario_vehicle->children())
             {
@@ -117,11 +145,12 @@ void play(Scenario & scenario)
                     auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
                     cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()+0.5), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
                     // Spawn the vehicle.
-                    actor = world.TrySpawnActor(blueprint, transform);
+                    if (!actor)
+                        actor = world.TrySpawnActor(blueprint, transform);
                     if (!actor)
                     {
                         cout << "Failed to spawn actor ------" << endl;
-                        continue;
+                        break;
                     }
                     cout << "Spawned " << actor->GetDisplayId() << '\n';
                     auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
@@ -129,34 +158,16 @@ void play(Scenario & scenario)
                     vehicles.push_back(actor);
                 }
                 Camera * camera = dynamic_cast<Camera*>(child.second);
-                if (camera)
+                if (camera && actor)
                 {
-                    auto blueprint_library = world.GetBlueprintLibrary();
-                    // Find a camera blueprint.
-                    auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.camera.rgb"));
-
-                    camera_bp->SetAttribute("image_size_x", "1280");
-                    camera_bp->SetAttribute("image_size_y", "720");
-                    camera_bp->SetAttribute("fov", to_string(camera->getFOV()));
-
-                    auto camera_transform = cg::Transform{
-                        cg::Location{camera->getPos().x(), camera->getPos().y(), camera->getPos().z()},        // x, y, z.
-                        cg::Rotation{camera->getOri().y(), camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
-
-                    cameras.push_back(world.SpawnActor(*camera_bp, camera_transform, actor.get()));
-                    camera->getCamWidget()->resize(1280, 720);
-                    camera->getCamWidget()->show();
-
-                    // Register a callback to save images to disk.
-                    ((cc::Sensor*)cameras.back().get())->Listen([camera](auto data)
-                    {
-                        auto image = boost::static_pointer_cast<csd::Image>(data);
-                        QPixmap backBuffer = QPixmap::fromImage(QImage((unsigned char*)image->data(), image->GetWidth(), image->GetHeight(), QImage::Format_RGBX8888).rgbSwapped());
-                        camera->getCamWidget()->setPixmap(backBuffer.scaled(camera->getCamWidget()->size(), Qt::KeepAspectRatio));
-                        camera->getCamWidget()->update();
-                    });
+                    addCam(camera, actor);
                 }
             }
+        }
+        Camera * scenario_camera = dynamic_cast<Camera*>(child.second);
+        if (scenario_camera)
+        {
+            addCam(scenario_camera, nullptr);
         }
     }
     world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle
@@ -220,6 +231,9 @@ void play(Scenario & scenario)
             {
                 if (!playStatus)
                     break;
+
+                if (it->second->getType() != "Vehicle")
+                    continue;
 
                 auto vehicle = static_cast<cc::Vehicle*>(actor->get());
 

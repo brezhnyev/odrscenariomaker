@@ -195,7 +195,7 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
                             auto pos = isStart ? w->getStartingPosition() : w->getEndingPosition();
                             ofs_initpos << "\"x\":" << pos[0] << ", ";
                             ofs_initpos << "\"y\":" << pos[1] << ", ";
-                            ofs_initpos << "\"z\":" << pos[2] << ", ";
+                            ofs_initpos << "\"z\":" << (pos[2] + 0.5*v->getBbox()[2]) << ", ";
                             auto dir = isStart ? w->getStartingDirection() : w->getEndingDirection();
                             ofs_initpos << "\"roll\":" << 0 << ", ";
                             ofs_initpos << "\"pitch\":" << asin(dir[2]/dir.norm())*RAD2DEG << ", ";
@@ -212,7 +212,11 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
                     auto pos = c->getPos();
                     ofs_initpos << "{\"x\":" << pos[0] << ", ";
                     ofs_initpos << "\"y\":"  << pos[1] << ", ";
-                    ofs_initpos << "\"z\":" <<  pos[2] << "},";
+                    ofs_initpos << "\"z\":" <<  pos[2] << ", ";
+                    auto ori = c->getOri();
+                    ofs_initpos << "\"roll\":" << ori[0] << ", ";
+                    ofs_initpos << "\"pitch\":" << ori[1] << ", ";
+                    ofs_initpos << "\"yaw\":" << ori[2] << "},";
                     ofs_initpos << endl;
                 }
             }
