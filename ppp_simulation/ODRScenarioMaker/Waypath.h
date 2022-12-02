@@ -8,6 +8,7 @@
 class Waypath : public Selectable
 {
 public:
+    Waypath(Selectable * parent) : Selectable(parent) {}
     std::string serialize() const;
     std::string getType() const override { return "Waypath"; }
     bool getNext(Eigen::Vector3f & pos, Eigen::Vector3f & dir, float & targetSpeed, float currentSpeed, int fps);

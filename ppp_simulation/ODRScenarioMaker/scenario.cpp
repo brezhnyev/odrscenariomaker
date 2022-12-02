@@ -17,6 +17,9 @@ Scenario & Scenario::operator=(const Scenario & other)
     m_townName = other.m_townName;
     m_rosbagOffset = other.m_rosbagOffset;
 
+    for (auto && child : m_children)
+        child.second->setParent(other.m_parent);
+
     parse([](Selectable * object)
     {
         Waypath * path = dynamic_cast<Waypath*>(object);
@@ -47,19 +50,4 @@ Waypath * Scenario::getActiveWaypath()
 Waypoint * Scenario::getActiveWaypoint()
 {
     return dynamic_cast<Waypoint*>(getActiveChild(3));
-}
-
-int Scenario::getActiveActorID()
-{
-    return getActiveChild(1) ? getActiveChild(1)->getID() : -1;
-}
-
-int Scenario::getActiveWaypathID()
-{
-    return getActiveChild(2) ? getActiveChild(2)->getID() : -1;
-}
-
-int Scenario::getActiveWaypointID()
-{
-    return getActiveChild(3) ? getActiveChild(3)->getID() : -1;
 }

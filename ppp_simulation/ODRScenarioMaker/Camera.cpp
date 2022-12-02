@@ -6,10 +6,20 @@ void Camera::drawGeometry() const
 {
     glDisable(GL_TEXTURE_2D);
 
-    glPushMatrix();
-    glTranslatef(m_pos.x(), m_pos.y(), m_pos.z() + 0.5);
+    glPushMatrix(); // parent
+    Actor * parent = dynamic_cast<Actor*>(m_parent);
+    if (parent)
+    {
+        Eigen::Vector3f pos = parent->getPos();
+        glTranslatef(pos[0], pos[1], pos[2]);
+        Eigen::Vector3f ori = parent->getOri();
+        glRotatef(ori[2],0,0,1);
+        glRotatef(0,ori[1],0,1);
+        glRotatef(0,0,ori[0],1);
+    }
 
     glPushMatrix();
+    glTranslatef(m_pos.x(), m_pos.y(), m_pos.z() + 0.5);
     glRotatef(m_ori[2],0,0,1);
 
     Eigen::Vector3i color(0, 255, 0);
@@ -39,7 +49,7 @@ void Camera::drawGeometry() const
     glEnd();
 
     glPopMatrix();
-    glPopMatrix();
+    glPopMatrix(); // parent transform (if any)
 }
 
 void Camera::draw() const

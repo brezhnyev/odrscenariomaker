@@ -20,7 +20,14 @@ public:
     MainWindow(const std::string & xodrfile, std::string obj = "", QWidget * parent = nullptr);
     void update()
     {
+        m_treeView->update();
         m_viewer->update();
+    }
+    void deleteItem(int id)
+    {
+        m_scenario.deleteSelectable(id);
+        m_treeView->slot_delItem(id);
+        update();
     }
 
 private:

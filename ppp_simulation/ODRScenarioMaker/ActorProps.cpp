@@ -33,7 +33,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 
     connect(addWaypath, &QPushButton::clicked, [this]()
     { 
-        int id = m_actor.addChild(new Waypath());
+        int id = m_actor.addChild(new Waypath(&m_actor));
         if (id == -1)
         {
             QMessageBox::warning(this, "Error adding Element", "Failed to add Waypath: index not found!");
@@ -43,7 +43,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
     });
     connect(addCamera, &QPushButton::clicked, [this]()
     {
-        Camera * camera = new Camera();
+        Camera * camera = new Camera(&m_actor);
         int id = m_actor.addChild(camera);
         if (id == -1)
         {
@@ -130,7 +130,7 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
         int id = m_actor.getID();
         if (id == -1)
         {
-            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Waypath: index not found!");
+            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Vehicle: index not found!");
             return;
         }
         emit signal_delete(id);

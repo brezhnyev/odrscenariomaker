@@ -12,7 +12,7 @@ public:
     CameraProps(Camera & actor);
 
 signals:
-    void signal_update();
+    void signal_delete(int);
 
 protected:
     Camera & m_camera;

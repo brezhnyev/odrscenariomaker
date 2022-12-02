@@ -12,7 +12,7 @@
 class Waypoint : public Selectable
 {
 public:
-    Waypoint(Eigen::Vector3f pos, float speed);
+    Waypoint(Eigen::Vector3f pos, float speed, Selectable * parent);
     void draw() const override;
     void drawWithNames() const override;
     void drawGeometry() const override;

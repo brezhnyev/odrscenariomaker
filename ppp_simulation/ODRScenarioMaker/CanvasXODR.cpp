@@ -10,7 +10,7 @@
 using namespace std;
 using namespace Eigen;
 
-CanvasXODR::CanvasXODR(string xodrfile) : m_xodrBuilder(xodrfile, 1.0f)
+CanvasXODR::CanvasXODR(string xodrfile) : Selectable(nullptr), m_xodrBuilder(xodrfile, 1.0f)
 {
 }
 

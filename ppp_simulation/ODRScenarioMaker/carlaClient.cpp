@@ -90,10 +90,12 @@ void play(Scenario & scenario)
     world.SetWeather(weather);
 
     vector<ShrdPtrActor> vehicles;
-    std::vector<ShrdPtrActor> cameras;
+    std::vector<ShrdPtrActor> cameras; // carla cameras
+    std::vector<Camera*> scene_cameras;
 
     auto addCam = [&](Camera * camera, ShrdPtrActor actor)
     {
+        scene_cameras.push_back(camera);
         auto blueprint_library = world.GetBlueprintLibrary();
         // Find a camera blueprint.
         auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.camera.rgb"));
@@ -132,7 +134,7 @@ void play(Scenario & scenario)
                 blueprint.SetAttribute("color", scenario_vehicle->colorToString());
             }
             ShrdPtrActor actor = nullptr;
-            // Set the scenario start position:
+            // Initialize Actor with first position of the first Waypath:
             for (auto && child : scenario_vehicle->children())
             {
                 Waypath * waypath = dynamic_cast<Waypath*>(child.second);
@@ -145,22 +147,28 @@ void play(Scenario & scenario)
                     auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
                     cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()+0.5), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
                     // Spawn the vehicle.
-                    if (!actor)
-                        actor = world.TrySpawnActor(blueprint, transform);
+                    actor = world.TrySpawnActor(blueprint, transform);
                     if (!actor)
                     {
                         cout << "Failed to spawn actor ------" << endl;
-                        break;
+                        break; // alternatively we can keep on searching for spawning point in following Waypaths
                     }
                     cout << "Spawned " << actor->GetDisplayId() << '\n';
                     auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
                     vehicle->SetSimulatePhysics();
                     vehicles.push_back(actor);
+                    break;
                 }
-                Camera * camera = dynamic_cast<Camera*>(child.second);
-                if (camera && actor)
+            }
+            if (actor)
+            {
+                for (auto && child : scenario_vehicle->children())
                 {
-                    addCam(camera, actor);
+                    Camera * camera = dynamic_cast<Camera*>(child.second);
+                    if (camera)
+                    {
+                        addCam(camera, actor);
+                    }
                 }
             }
         }
@@ -225,23 +233,24 @@ void play(Scenario & scenario)
             unique_lock<mutex> lk(playCondVarMtx);
             playCondVar.wait(lk);
                 
-            auto * actor = &vehicles[0];
-            auto scenario_vehicles = scenario.children();
-            for (auto it = scenario_vehicles.begin(); it != scenario_vehicles.end(); ++it, ++actor)
+            auto carla_actor = &vehicles[0];
+            for (auto && scenario_actor : scenario.children())
             {
                 if (!playStatus)
                     break;
 
-                if (it->second->getType() != "Vehicle")
+                if (scenario_actor.second->getType() != "Vehicle")
                     continue;
 
-                auto vehicle = static_cast<cc::Vehicle*>(actor->get());
+                cc::Vehicle * carla_vehicle = dynamic_cast<cc::Vehicle*>(carla_actor->get());
 
-                auto trf = vehicle->GetTransform();
-                auto heading = (vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
-                auto speed =  vehicle->GetVelocity().Length();
+                ++carla_actor;
 
-                Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(it->second);
+                auto trf = carla_vehicle->GetTransform();
+                auto heading = (carla_vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
+                auto speed =  carla_vehicle->GetVelocity().Length();
+
+                Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(scenario_actor.second);
                 Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
 
                 // Get the next waypoints in some distance away:
@@ -253,10 +262,10 @@ void play(Scenario & scenario)
                     cc::Vehicle::Control control;
                     control.brake = 1.0f;
                     control.throttle = 0.0f;
-                    auto ls = vehicle->GetLightState();
+                    auto ls = carla_vehicle->GetLightState();
                     ls = crpc::VehicleLightState::LightState::Brake;
-                    vehicle->SetLightState(ls);
-                    vehicle->ApplyControl(control);
+                    carla_vehicle->SetLightState(ls);
+                    carla_vehicle->ApplyControl(control);
                     continue;
                 }
                 cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
@@ -265,15 +274,15 @@ void play(Scenario & scenario)
 
                 float wdir = sign * arc.Length();
                 // The stronger is the curvature the lower speed:
-                float curvature = abs(sin(0.5f*wdir))/vehicle->GetBoundingBox().extent.x;
+                float curvature = abs(sin(0.5f*wdir))/carla_vehicle->GetBoundingBox().extent.x;
                 float accLat = speed*speed*curvature;
                 float accLon = (targetSpeed - speed);
-                applyControl(accLat, accLon, vehicle, targetSpeed, 0.2*wdir*900/70); // 900/70 is typical ratio steer-wheels
+                applyControl(accLat, accLon, carla_vehicle, targetSpeed, 0.2*wdir*900/70); // 900/70 is typical ratio steer-wheels
                 Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
                 if (visuactor)
                 {
                     visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
-                    visuactor->setBbox(Vector3f(vehicle->GetBoundingBox().extent.x, vehicle->GetBoundingBox().extent.y, vehicle->GetBoundingBox().extent.z));
+                    visuactor->setBbox(Vector3f(carla_vehicle->GetBoundingBox().extent.x, carla_vehicle->GetBoundingBox().extent.y, carla_vehicle->GetBoundingBox().extent.z));
                 }
             }
         }
@@ -302,6 +311,9 @@ void play(Scenario & scenario)
     }
 
     world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
+    // close the qt widgets
+    for (auto c : scene_cameras) c->getCamWidget()->close();
+    for (auto c : cameras) c->Destroy();
     for (auto v : vehicles) v->Destroy();
     camThread.join();
     driveThread.join();

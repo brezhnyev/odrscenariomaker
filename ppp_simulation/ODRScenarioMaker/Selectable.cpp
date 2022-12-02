@@ -1,6 +1,7 @@
 #include "Selectable.h"
 
 #include <string>
+#include <algorithm>
 
 using namespace std;
 
@@ -10,7 +11,7 @@ Drawable::~Drawable() {}
 
 Selectable::~Selectable() {}
 
-Selectable::Selectable() : m_selected(false)
+Selectable::Selectable(Selectable * parent) : m_selected(false), m_parent(parent)
 { 
     m_id = s_ID; ++s_ID;
 }
@@ -27,24 +28,24 @@ void Selectable::drawWithNames() const
 
 int Selectable::addChild(Selectable * object)
 {
-    // Possible race condition in Qt?
-    // For this case check if the id was previously added
-    if (m_children.find(object->getID()) != m_children.end())
-        return object->getID();
     m_children[object->getID()] = object;
     return object->getID();
 }
 
-int Selectable::delChild(int id)
+void Selectable::deleteSelectable(int id)
 {
-    // KB: for some reason delItem may be called 2 times!! Race condition in Qt?
-    // For this case check if the id was previously deleted
-    if (m_children.find(id) == m_children.end())
-        return id;
-    if (m_children.empty())
-        return -1;
-    m_children.erase(id);
-    return id;
+    Selectable * s = findSelectable(id);
+    Selectable * p = s->m_parent;
+    s->clear();
+    p->m_children.erase(id);
+}
+
+void Selectable::deleteSelectable(Selectable * s)
+{
+    int id = s->getID();
+    Selectable * p = s->m_parent;
+    s->clear();
+    s->m_children.erase(id);
 }
 
 void Selectable::select(int id)
@@ -82,7 +83,7 @@ void Selectable::parse(function<void(Selectable *)> fun)
     {
         child.second->parse(fun);
     }
-    fun(this); // post-order traversal
+    fun(this);
 }
 
 Selectable * Selectable::findSelectable(int id)
@@ -98,12 +99,13 @@ Selectable * Selectable::findSelectable(int id)
     return selection;
 }
 
-void Selectable::clear(Selectable * s)
+void Selectable::clear()
 {
-    for (auto && c : s->children())
+    parse([](Selectable * object)
     {
-        if (c.second->children().empty()) delete c.second;
-        else clear(c.second);
-    }
-    s->children().clear();
+        object->children().clear();
+        // exception: we cannot delete Scenario, its a stack varialbe, referenced in classes
+        if (object->getType() != "Scenario")
+            delete object;
+    });
 }

@@ -5,6 +5,7 @@
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QLabel>
+#include <QtWidgets/QMessageBox>
 
 #include <eigen3/Eigen/Eigen>
 
@@ -93,6 +94,17 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     QPushButton * delButton = new QPushButton("Delete", this);
     mainLayout->addStretch(1);
     mainLayout->addWidget(delButton);
+    connect(delButton, &QPushButton::clicked, [this]()
+    { 
+        int id = m_camera.getID();
+        if (id == -1)
+        {
+            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Camera: index not found!");
+            return;
+        }
+        emit signal_delete(id);
+        close();
+    });
 
     setLayout(mainLayout);
 }

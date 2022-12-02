@@ -9,7 +9,7 @@ class Waypath;
 class Actor : public Selectable
 {
 public:
-    Actor(const std::string & name) : m_name(name) {}
+    Actor(const std::string & name, Selectable * parent) : Selectable(parent), m_name(name) {}
     virtual ~Actor() = 0;
     void setTrf(Eigen::Vector3f pos, Eigen::Vector3f ori)
     {

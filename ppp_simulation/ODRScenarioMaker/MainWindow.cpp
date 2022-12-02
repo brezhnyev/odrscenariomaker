@@ -62,8 +62,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             connect(m_pointProps, &WaypointProps::signal_delete, [this](int id)
             {
                 Waypath * activeWaypath = dynamic_cast<Waypath*>(m_scenario.getActiveWaypath());
-                m_treeView->slot_delItem(id);
-                m_scenario.getActiveWaypath()->delChild(id);
+                deleteItem(id);
                 activeWaypath->updateSmoothPath();
                 update();
             });
@@ -80,9 +79,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             connect(m_pathProps, &WaypathProps::signal_update, [this](){ m_scenario.getActiveActor()->updatePose(); update(); });
             connect(m_pathProps, &WaypathProps::signal_delete, [this](int id)
             { 
-                m_treeView->slot_delItem(id);
-                m_scenario.getActiveActor()->delChild(id);
-                update();
+                deleteItem(id);
             });
         }
         else if (item->getType() == "Camera")
@@ -94,7 +91,10 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }
             m_camProps = new CameraProps(*dynamic_cast<Camera*>(item));
             propsDock->setWidget(m_camProps);
-            //connect(m_camProps, &CameraProps::update, [this](){ m_viewer->update(); });
+            connect(m_camProps, &CameraProps::signal_delete, [this](int id)
+            {
+                deleteItem(id);
+            });
         }
         else if (item->getType() == "Vehicle")
         {
@@ -107,9 +107,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             propsDock->setWidget(m_vehicleProps);
             connect(m_vehicleProps, &VehicleProps::signal_delete, [this](int id)
             {
-                m_treeView->slot_delItem(id);
-                m_scenario.delChild(id);
-                update();
+                deleteItem(id);
             });
             connect(m_vehicleProps, &VehicleProps::signal_update, [this](){ update(); }); // color update
             connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id, "Waypath"); update(); });

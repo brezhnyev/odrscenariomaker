@@ -8,7 +8,7 @@
 class Vehicle : public Actor
 {
 public:
-    Vehicle(std::string name = "vehicle.audi.a2") : Actor(name), m_color(Eigen::Vector3i(50, 100, 150))
+    Vehicle(Selectable * parent, std::string name = "vehicle.audi.a2") : Actor(name, parent), m_color(Eigen::Vector3i(50, 100, 150))
     {
     }
     void draw() const override;

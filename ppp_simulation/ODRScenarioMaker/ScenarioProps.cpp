@@ -47,7 +47,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     mainLayout->addWidget(addVehicle);
     connect(addVehicle, &QPushButton::clicked, [this]()
     { 
-        int id = m_scenario.addChild(new Vehicle());
+        int id = m_scenario.addChild(new Vehicle(&m_scenario));
         if (id == -1)
         {
             QMessageBox::warning(this, "Error adding Element", "Failed to add Vehicle: index not found!");
@@ -60,7 +60,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     mainLayout->addWidget(addCamera);
     connect(addCamera, &QPushButton::clicked, [this]()
     {
-        Camera * camera = new Camera();
+        Camera * camera = new Camera(&m_scenario);
         int id = m_scenario.addChild(camera);
         if (id == -1)
         {
@@ -147,7 +147,7 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
                         {
                             Waypoint * p = dynamic_cast<Waypoint*>(it.second);
                             auto pos = p->getPosition();
-                            ofs_waypath << pos[0] << "," << -pos[1] << "," << pos[2] << ", "; 
+                            ofs_waypath << pos[0] << "," << -pos[1] << "," << (pos[2] + 0.5*v->getBbox()[2]) << ", "; 
                         }
                         ofs_waypath << "]" << "\n";
                     }

@@ -23,7 +23,7 @@ public:
 class Selectable : public Drawable
 {
 public:
-    Selectable();
+    Selectable(Selectable * parent);
     virtual ~Selectable() = 0;
     void draw() const override;
     void drawWithNames() const override;
@@ -31,25 +31,25 @@ public:
     virtual std::string getType() const = 0;
 
     int addChild(Selectable * child);
-    int delChild(int id);
+    void deleteSelectable(int);
+    void deleteSelectable(Selectable *);
 
     Selectable * findSelectable(int id);
     int getID() const { return m_id; }
     void setID(int id) { m_id = id; s_ID = std::max(s_ID, m_id); } // relevant when reading from file / deserializing
     std::map<int, Selectable*> & children() { return m_children; }
-    void clear(){ clear(this); }
+    void clear();
     void parse(std::function<void(Selectable*)> fun);
+    void setParent(Selectable * parent) { m_parent = parent; } // used only once in copy c-tor of Scenario (loading scenario)
     
 protected:
     static int                  s_ID;
     int                         m_id;
     bool                        m_selected;
     std::map<int, Selectable*>  m_children;
+    Selectable *                m_parent;
 
 protected:
     virtual void drawGeometry() const {};
     Selectable * getActiveChild(int depth, int cDepth = 0);
-
-private:
-    void clear(Selectable * s);
 };

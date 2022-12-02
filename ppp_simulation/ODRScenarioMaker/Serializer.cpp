@@ -96,28 +96,24 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
 Scenario Serializer::deserialize_yaml(const std::string & data)
 {
     YAML::Node root = YAML::Load(data);
-    Scenario object;
-
-    Scenario * scenario = dynamic_cast<Scenario*>(&object);
+    Scenario scenario;
 
     if (root["type"].as<string>() == "Scenario")
     {
-        Scenario * scenario = dynamic_cast<Scenario*>(&object);
-        scenario->setTownName(root["townname"].as<string>());
-        scenario->setRosbagFile(root["rosbagfile"].as<string>());
+        scenario.setTownName(root["townname"].as<string>());
+        scenario.setRosbagFile(root["rosbagfile"].as<string>());
         auto topics = root["rosbagtopics"];
         vector<string> rostopics;
         for (auto && topic : topics)
         {
             rostopics.push_back(topic["topic"].as<string>());
         }
-        scenario->setRosbagTopics(rostopics);
-        scenario->setRosbagOffset(root["rosbagoffset"].as<float>());
+        scenario.setRosbagTopics(rostopics);
+        scenario.setRosbagOffset(root["rosbagoffset"].as<float>());
+        deserialize_yaml(root["actors"], scenario);
     }
 
-    deserialize_yaml(root["actors"], object);
-
-    return object;
+    return scenario;
 }
 
 void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
@@ -127,7 +123,7 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
         auto child = *it;
         if (child["type"].as<string>() == "Vehicle")
         {
-            Vehicle * vehicle = new Vehicle();
+            Vehicle * vehicle = new Vehicle(&object);
             object.addChild(vehicle);
             vehicle->setName(child["name"].as<string>());
             auto color = child["color"];
@@ -140,14 +136,14 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
         }
         if (child["type"].as<string>() == "Waypath")
         {
-            Waypath * waypath = new Waypath();
+            Waypath * waypath = new Waypath(&object);
             object.addChild(waypath);
             if (!child["waypoints"].IsNull())
                 deserialize_yaml(child["waypoints"], *waypath);
         }
         if (child["type"].as<string>() == "Camera")
         {
-            Camera * camera = new Camera();
+            Camera * camera = new Camera(&object);
             auto location = child["location"];
             float x = location["x"].as<float>();
             float y = location["y"].as<float>();
@@ -167,7 +163,7 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             float y = location["y"].as<float>();
             float z = location["z"].as<float>();
             auto speed = child["speed"];
-            Waypoint * waypoint = new Waypoint(Eigen::Vector3f(x,y,z), speed.as<float>());
+            Waypoint * waypoint = new Waypoint(Eigen::Vector3f(x,y,z), speed.as<float>(), &object);
             object.addChild(waypoint);
         }
     }

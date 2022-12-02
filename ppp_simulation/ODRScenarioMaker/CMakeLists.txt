@@ -67,7 +67,6 @@ set(SOURCE
     thirdparty/cpp-spline/BSpline.cpp
     MainWindow.cpp
     Viewer.cpp
-    Canvas.cpp
     Camera.cpp
     Waypath.cpp
     Waypoint.cpp

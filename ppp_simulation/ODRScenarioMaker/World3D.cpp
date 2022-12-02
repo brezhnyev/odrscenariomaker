@@ -7,7 +7,7 @@ using namespace std;
 
 static objl::Loader s_objLoader;
 
-World3D::World3D(const string & objfile)
+World3D::World3D(const string & objfile) : Selectable(nullptr)
 {
     if (!objfile.empty())
         s_objLoader.LoadFile(objfile);
