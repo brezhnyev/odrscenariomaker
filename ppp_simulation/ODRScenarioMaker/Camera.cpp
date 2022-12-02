@@ -2,6 +2,15 @@
 
 #include <GL/gl.h>
 
+static const float box[][12] = {
+    0,0,0, +1,-1,-1, +1,+1,-1, 0,0,0,
+    0,0,0, +1,-1,+1, +1,+1,+1, 0,0,0,
+    0,0,0, +1,-1,-1, +1,-1,+1, 0,0,0,
+    0,0,0, +1,+1,-1, +1,+1,+1, 0,0,0,
+    0,0,0, 0,0,0, 0,0,0, 0,0,0,
+    +1,-1,-1, +1,-1,+1, +1,+1,+1, +1,+1,-1
+};
+
 void Camera::drawGeometry() const
 {
     glDisable(GL_TEXTURE_2D);
@@ -21,6 +30,8 @@ void Camera::drawGeometry() const
     glPushMatrix();
     glTranslatef(m_pos.x(), m_pos.y(), m_pos.z() + 0.5);
     glRotatef(m_ori[2],0,0,1);
+    glRotatef(0,m_ori[1],0,1);
+    glRotatef(0,0,m_ori[0],1);
 
     Eigen::Vector3i color(0, 255, 0);
 
@@ -28,25 +39,29 @@ void Camera::drawGeometry() const
     {
         glColor3f(float(255-color[0])/255, float(255-color[1])/255, float(255-color[2])/255);
         glPushMatrix();
-        glScalef(1.5f, 1.5f, 1.0f);
-        glBegin(GL_QUADS);
-        // we mame a tapering reducing Y
-        glVertex3f(-m_bbox[0], -m_bbox[1]*0.2, -0.05);
-        glVertex3f( m_bbox[0], -m_bbox[1], -0.05);
-        glVertex3f( m_bbox[0],  m_bbox[1], -0.05);
-        glVertex3f(-m_bbox[0],  m_bbox[1]*0.2, -0.05);
-        glEnd();
+        glScalef(1.5f, 1.5f, 1.5f);
+        for (auto && c : box)
+        {
+            glBegin(GL_QUADS);
+            glVertex3f(c[0]*m_bbox[0], c[1]*m_bbox[1], c[2]*m_bbox[2]);
+            glVertex3f(c[3]*m_bbox[0], c[4]*m_bbox[1], c[5]*m_bbox[2]);
+            glVertex3f(c[6]*m_bbox[0], c[7]*m_bbox[1], c[8]*m_bbox[2]);
+            glVertex3f(c[9]*m_bbox[0], c[10]*m_bbox[1], c[11]*m_bbox[2]);
+            glEnd();
+        }
         glPopMatrix();
     }
 
     glColor3f(float(color[0])/255, float(color[1])/255, float(color[2])/255);
-    glBegin(GL_QUADS);
-    // we mame a tapering reducing Y
-    glVertex3f(-m_bbox[0], -m_bbox[1]*0.2, 0);
-    glVertex3f( m_bbox[0], -m_bbox[1], 0);
-    glVertex3f( m_bbox[0],  m_bbox[1], 0);
-    glVertex3f(-m_bbox[0],  m_bbox[1]*0.2, 0);
-    glEnd();
+    for (auto && c : box)
+    {
+        glBegin(GL_QUADS);
+        glVertex3f(c[0]*m_bbox[0], c[1]*m_bbox[1], c[2]*m_bbox[2]);
+        glVertex3f(c[3]*m_bbox[0], c[4]*m_bbox[1], c[5]*m_bbox[2]);
+        glVertex3f(c[6]*m_bbox[0], c[7]*m_bbox[1], c[8]*m_bbox[2]);
+        glVertex3f(c[9]*m_bbox[0], c[10]*m_bbox[1], c[11]*m_bbox[2]);
+        glEnd();
+    }
 
     glPopMatrix();
     glPopMatrix(); // parent transform (if any)
