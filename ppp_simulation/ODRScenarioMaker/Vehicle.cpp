@@ -23,7 +23,7 @@ void Vehicle::drawGeometry() const
     glDisable(GL_TEXTURE_2D);
 
     glPushMatrix();
-    glTranslatef(m_pos.x(), m_pos.y(), m_pos.z() + 0.5);
+    glTranslatef(m_pos.x(), m_pos.y(), m_pos.z() + m_bbox[2]);
 
     glPushMatrix();
     glRotatef(m_ori[2],0,0,1);
@@ -39,7 +39,7 @@ void Vehicle::drawGeometry() const
             glVertex3f(c[0]*m_bbox[0], c[1]*m_bbox[1], c[2]*m_bbox[2]);
             glVertex3f(c[3]*m_bbox[0], c[4]*m_bbox[1], c[5]*m_bbox[2]);
             glVertex3f(c[6]*m_bbox[0], c[7]*m_bbox[1], c[8]*m_bbox[2]);
-            glVertex3f(c[9]*m_bbox[0], c[10]*m_bbox[1], c[11]*m_bbox[2]);
+            glVertex3f(c[9]*m_bbox[0], c[10]*m_bbox[1],c[11]*m_bbox[2]);
             glEnd();
         }
         glPopMatrix();

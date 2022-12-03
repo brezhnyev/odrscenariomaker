@@ -2,6 +2,10 @@
 
 #include <GL/gl.h>
 
+using namespace Eigen;
+
+#define DEG2RAD M_PI/180
+
 static const float box[][12] = {
     0,0,0, +1,-1,-1, +1,+1,-1, 0,0,0,
     0,0,0, +1,-1,+1, +1,+1,+1, 0,0,0,
@@ -9,6 +13,13 @@ static const float box[][12] = {
     0,0,0, +1,+1,-1, +1,+1,+1, 0,0,0,
     0,0,0, 0,0,0, 0,0,0, 0,0,0,
     +1,-1,-1, +1,-1,+1, +1,+1,+1, +1,+1,-1
+};
+
+static const float frustum[][6] = {
+    0,0,0, +1,-1,-1,
+    0,0,0, +1,-1,+1,
+    0,0,0, +1,+1,-1,
+    0,0,0, +1,+1,+1,
 };
 
 void Camera::drawGeometry() const
@@ -28,38 +39,48 @@ void Camera::drawGeometry() const
     }
 
     glPushMatrix();
-    glTranslatef(m_pos.x(), m_pos.y(), m_pos.z() + 0.5);
-    glRotatef(m_ori[2],0,0,1);
-    glRotatef(0,m_ori[1],0,1);
-    glRotatef(0,0,m_ori[0],1);
+    Eigen::Matrix4f m; m.setIdentity();
+    m.block(0,0,3,3) = AngleAxisf(m_ori[2]*DEG2RAD, Vector3f::UnitZ())*AngleAxisf(m_ori[1]*DEG2RAD, Vector3f::UnitY())*AngleAxisf(m_ori[0]*DEG2RAD, Vector3f::UnitX()).toRotationMatrix();
+    m.block(0,3,3,1) = Vector3f(m_pos.x(), m_pos.y(), m_pos.z());
+    glMultMatrixf(m.data());
 
-    Eigen::Vector3i color(0, 255, 0);
+    glColor3f(0,1,0);
+
+    // a bit too complicated method to re-compute the frustum depending on width, height and FOV:
+    // our frustum (see box and frustum arrays) rays are built at 45 degrees (corresponds to FOV=90 degree)
+    Vector3f v = AngleAxisf(0.5f*m_FOV*DEG2RAD - M_PI_4, Vector3f::UnitZ()).toRotationMatrix()*Vector3f(1,1,1);
+    float fx = v[0];
+    float fy = v[1];
+    float fz = fy*m_h/m_w; // also take the aspect into consideration
+
 
     if (m_selected)
     {
-        glColor3f(float(255-color[0])/255, float(255-color[1])/255, float(255-color[2])/255);
         glPushMatrix();
-        glScalef(1.5f, 1.5f, 1.5f);
-        for (auto && c : box)
+        glScalef(30.0f, 30.0f, 30.0f);
+        for (auto && c : frustum)
         {
-            glBegin(GL_QUADS);
-            glVertex3f(c[0]*m_bbox[0], c[1]*m_bbox[1], c[2]*m_bbox[2]);
-            glVertex3f(c[3]*m_bbox[0], c[4]*m_bbox[1], c[5]*m_bbox[2]);
-            glVertex3f(c[6]*m_bbox[0], c[7]*m_bbox[1], c[8]*m_bbox[2]);
-            glVertex3f(c[9]*m_bbox[0], c[10]*m_bbox[1], c[11]*m_bbox[2]);
+            glBegin(GL_LINES);
+            glVertex3f(c[0]*fx, c[1]*fy, c[2]*fz);
+            glVertex3f(c[3]*fx, c[4]*fy, c[5]*fz);
             glEnd();
         }
+        glBegin(GL_LINE_LOOP);
+        glVertex3f(box[5][0]*fx, box[5][1]*fy, box[5][2]*fz);
+        glVertex3f(box[5][3]*fx, box[5][4]*fy, box[5][5]*fz);
+        glVertex3f(box[5][6]*fx, box[5][7]*fy, box[5][8]*fz);
+        glVertex3f(box[5][9]*fx, box[5][10]*fy,box[5][11]*fz);
+        glEnd();
         glPopMatrix();
     }
 
-    glColor3f(float(color[0])/255, float(color[1])/255, float(color[2])/255);
     for (auto && c : box)
     {
         glBegin(GL_QUADS);
-        glVertex3f(c[0]*m_bbox[0], c[1]*m_bbox[1], c[2]*m_bbox[2]);
-        glVertex3f(c[3]*m_bbox[0], c[4]*m_bbox[1], c[5]*m_bbox[2]);
-        glVertex3f(c[6]*m_bbox[0], c[7]*m_bbox[1], c[8]*m_bbox[2]);
-        glVertex3f(c[9]*m_bbox[0], c[10]*m_bbox[1], c[11]*m_bbox[2]);
+        glVertex3f(c[0]*fx, c[1]*fy, c[2]*fz);
+        glVertex3f(c[3]*fx, c[4]*fy, c[5]*fz);
+        glVertex3f(c[6]*fx, c[7]*fy, c[8]*fz);
+        glVertex3f(c[9]*fx, c[10]*fy, c[11]*fz);
         glEnd();
     }
 

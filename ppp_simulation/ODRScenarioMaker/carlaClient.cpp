@@ -100,8 +100,8 @@ void play(Scenario & scenario)
         // Find a camera blueprint.
         auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.camera.rgb"));
 
-        camera_bp->SetAttribute("image_size_x", "400");
-        camera_bp->SetAttribute("image_size_y", "300");
+        camera_bp->SetAttribute("image_size_x", to_string(camera->getWidth()));
+        camera_bp->SetAttribute("image_size_y", to_string(camera->getHeight()));
         camera_bp->SetAttribute("fov", to_string(camera->getFOV()));
 
         auto camera_transform = cg::Transform{
@@ -109,7 +109,7 @@ void play(Scenario & scenario)
             cg::Rotation{-camera->getOri().y(), camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
 
         cameras.push_back(world.SpawnActor(*camera_bp, camera_transform, actor.get()));
-        camera->getCamWidget()->resize(400, 300);
+        camera->getCamWidget()->resize(camera->getWidth(), camera->getHeight());
         camera->getCamWidget()->show();
 
         // Register a callback to save images to disk.

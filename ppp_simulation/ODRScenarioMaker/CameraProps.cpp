@@ -1,4 +1,5 @@
 #include "CameraProps.h"
+#include "LDoubleSpinBox.h"
 
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QHBoxLayout>
@@ -79,17 +80,20 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     connect(yaw,   static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [roll,pitch,this](double val){ m_camera.setOri(Eigen::Vector3f(roll->value(), pitch->value(), val)); emit update(); });
 
     QVBoxLayout * l3 = new QVBoxLayout();
-    QDoubleSpinBox * FOV = new QDoubleSpinBox(this);
-    FOV->setRange(-180, 180);
-    FOV->setSingleStep(0.01);
-    FOV->setValue(camera.getFOV());
+    LDoubleSpinBox * FOV = new LDoubleSpinBox(m_camera.getFOV(), 0, 180, 0.1, "FOV");
     l3->addWidget(FOV);
+    LDoubleSpinBox * width = new LDoubleSpinBox(m_camera.getWidth(), 0, 100000, 0.1, "Width");
+    l3->addWidget(width);
+    LDoubleSpinBox * height = new LDoubleSpinBox(m_camera.getHeight(), 0, 100000, 0.1, "Height");
+    l3->addWidget(height);
     QGroupBox * intrinsics = new QGroupBox(this);
     intrinsics->setTitle("Cam props");
     intrinsics->setLayout(l3);
     mainLayout->addWidget(intrinsics);
 
-    connect(FOV, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [this](double val){ m_camera.setFOV(val); emit update(); });
+    connect(FOV, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setFOV(val); emit update(); });
+    connect(width, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setWidth(val); emit update(); });
+    connect(height, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setHeight(val); emit update(); });
 
     QPushButton * delButton = new QPushButton("Delete", this);
     mainLayout->addStretch(1);

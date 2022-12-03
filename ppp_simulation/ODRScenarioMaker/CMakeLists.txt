@@ -66,6 +66,7 @@ set(SOURCE
     thirdparty/cpp-spline/Curve.cpp
     thirdparty/cpp-spline/BSpline.cpp
     MainWindow.cpp
+    LDoubleSpinBox.cpp
     Viewer.cpp
     Camera.cpp
     Waypath.cpp
