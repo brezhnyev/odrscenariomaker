@@ -14,6 +14,7 @@ signals:
     void signal_addVehicle(int);
     void signal_addCamera(int);
     void signal_update();
+    void signal_clear();
 
 protected:
     Scenario & m_scenario;

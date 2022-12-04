@@ -13,6 +13,7 @@
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QTextEdit>
+#include <QMessageBox>
 
 #include <fstream>
 #include <string>
@@ -68,6 +69,15 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             return;
         }
         emit signal_addCamera(id);
+    });
+
+    QPushButton * clearScenario = new QPushButton("Clear Scenario", this);
+    mainLayout->addWidget(clearScenario);
+    connect(clearScenario, &QPushButton::clicked, [this]()
+    {
+        QMessageBox::StandardButton reply = QMessageBox::question(this, "No undo option", "The scenario will be lost. Proceed?");
+        if (reply == QMessageBox::Yes)
+            signal_clear();
     });
 
 

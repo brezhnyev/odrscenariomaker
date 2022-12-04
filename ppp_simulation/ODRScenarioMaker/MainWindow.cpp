@@ -157,6 +157,12 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addItem(id, "Vehicle"); update(); });
             connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->loadScenario(&m_scenario); update(); });
             connect(m_scenarioProps, &ScenarioProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id, "Camera");  update(); });
+            connect(m_scenarioProps, &ScenarioProps::signal_clear, [this]()
+            {
+                m_scenario.clear();
+                m_treeView->loadScenario(&m_scenario);
+                update();
+            });
         }
         propsDock->setMaximumWidth(200);
         propsDock->setMinimumWidth(200);
