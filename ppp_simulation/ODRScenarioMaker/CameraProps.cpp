@@ -19,25 +19,13 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
 
-    QDoubleSpinBox * x = new QDoubleSpinBox(this);
-    x->setRange(-MINMAXPOS, MINMAXPOS);
-    x->setSingleStep(0.01);
-    x->setValue(camera.getPos().x());
-    QDoubleSpinBox * y = new QDoubleSpinBox(this);
-    y->setRange(-MINMAXPOS, MINMAXPOS);
-    y->setSingleStep(0.01);
-    y->setValue(camera.getPos().y());
-    QDoubleSpinBox * z = new QDoubleSpinBox(this);
-    z->setRange(-MINMAXPOS, MINMAXPOS);
-    z->setSingleStep(0.01);
-    z->setValue(camera.getPos().z());
+    x = new LDoubleSpinBox(this, camera.getPos().x(), -MINMAXPOS, MINMAXPOS, 0.1, "X");
+    y = new LDoubleSpinBox(this, camera.getPos().y(), -MINMAXPOS, MINMAXPOS, 0.1, "Y");
+    z = new LDoubleSpinBox(this, camera.getPos().z(), -MINMAXPOS, MINMAXPOS, 0.1, "Z");
 
     QVBoxLayout * l1 = new QVBoxLayout();
-    l1->addWidget(new QLabel("X", this));
     l1->addWidget(x);
-    l1->addWidget(new QLabel("Y", this));
     l1->addWidget(y);
-    l1->addWidget(new QLabel("Z", this));
     l1->addWidget(z);
 
     QGroupBox * posInfo = new QGroupBox(this);
@@ -45,29 +33,17 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     posInfo->setLayout(l1);
     mainLayout->addWidget(posInfo);
 
-    connect(x, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [y,z,this](double val){ m_camera.setPos(Eigen::Vector3f(val, y->value(), z->value())); emit update(); });
-    connect(y, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [x,z,this](double val){ m_camera.setPos(Eigen::Vector3f(x->value(), val, z->value())); emit update(); });
-    connect(z, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [x,y,this](double val){ m_camera.setPos(Eigen::Vector3f(x->value(), y->value(), val)); emit update(); });
+    connect(x, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setPos(Eigen::Vector3f(val, y->value(), z->value())); emit signal_update(); });
+    connect(y, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setPos(Eigen::Vector3f(x->value(), val, z->value())); emit signal_update(); });
+    connect(z, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setPos(Eigen::Vector3f(x->value(), y->value(), val)); emit signal_update(); });
 
     QVBoxLayout * l2 = new QVBoxLayout();
-    QDoubleSpinBox * roll = new QDoubleSpinBox(this);
-    roll->setRange(-MINMAXPOS, MINMAXPOS);
-    roll->setSingleStep(0.01);
-    roll->setValue(camera.getOri().x());
-    QDoubleSpinBox * pitch = new QDoubleSpinBox(this);
-    pitch->setRange(-MINMAXPOS, MINMAXPOS);
-    pitch->setSingleStep(0.01);
-    pitch->setValue(camera.getOri().y());
-    QDoubleSpinBox * yaw = new QDoubleSpinBox(this);
-    yaw->setRange(-MINMAXPOS, MINMAXPOS);
-    yaw->setSingleStep(0.01);
-    yaw->setValue(camera.getOri().z());
+    LDoubleSpinBox * roll = new LDoubleSpinBox(this, camera.getOri().x(), -360, 360, 0.1, "roll");
+    LDoubleSpinBox * pitch = new LDoubleSpinBox(this, camera.getOri().y(), -360, 360, 0.1, "pitch");
+    LDoubleSpinBox * yaw = new LDoubleSpinBox(this, camera.getOri().z(), -360, 360, 0.1, "yaw");
 
-    l2->addWidget(new QLabel("Roll", this));
     l2->addWidget(roll);
-    l2->addWidget(new QLabel("Pitch", this));
     l2->addWidget(pitch);
-    l2->addWidget(new QLabel("Yaw", this));
     l2->addWidget(yaw);
 
     QGroupBox * oriInfo = new QGroupBox(this);
@@ -75,25 +51,25 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     oriInfo->setLayout(l2);
     mainLayout->addWidget(oriInfo);
 
-    connect(roll,  static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [pitch,yaw,this ](double val){ m_camera.setOri(Eigen::Vector3f(val, pitch->value(), yaw->value()));  emit update(); });
-    connect(pitch, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [roll,yaw, this ](double val){ m_camera.setOri(Eigen::Vector3f(roll->value(), val,  yaw->value()));  emit update(); });
-    connect(yaw,   static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [roll,pitch,this](double val){ m_camera.setOri(Eigen::Vector3f(roll->value(), pitch->value(), val)); emit update(); });
+    connect(roll,  &LDoubleSpinBox::valueChanged, [pitch,yaw,this ](double val){ m_camera.setOri(Eigen::Vector3f(val, pitch->value(), yaw->value()));  emit signal_update(); });
+    connect(pitch, &LDoubleSpinBox::valueChanged, [roll,yaw, this ](double val){ m_camera.setOri(Eigen::Vector3f(roll->value(), val,  yaw->value()));  emit signal_update(); });
+    connect(yaw,   &LDoubleSpinBox::valueChanged, [roll,pitch,this](double val){ m_camera.setOri(Eigen::Vector3f(roll->value(), pitch->value(), val)); emit signal_update(); });
 
     QVBoxLayout * l3 = new QVBoxLayout();
-    LDoubleSpinBox * FOV = new LDoubleSpinBox(m_camera.getFOV(), 0, 180, 0.1, "FOV");
+    LDoubleSpinBox * FOV = new LDoubleSpinBox(this, m_camera.getFOV(), 0, 180, 1, "FOV");
     l3->addWidget(FOV);
-    LDoubleSpinBox * width = new LDoubleSpinBox(m_camera.getWidth(), 0, 100000, 0.1, "Width");
+    LDoubleSpinBox * width = new LDoubleSpinBox(this, m_camera.getWidth(), 0, 100000, 1, "Width");
     l3->addWidget(width);
-    LDoubleSpinBox * height = new LDoubleSpinBox(m_camera.getHeight(), 0, 100000, 0.1, "Height");
+    LDoubleSpinBox * height = new LDoubleSpinBox(this, m_camera.getHeight(), 0, 100000, 1, "Height");
     l3->addWidget(height);
     QGroupBox * intrinsics = new QGroupBox(this);
     intrinsics->setTitle("Cam props");
     intrinsics->setLayout(l3);
     mainLayout->addWidget(intrinsics);
 
-    connect(FOV, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setFOV(val); emit update(); });
-    connect(width, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setWidth(val); emit update(); });
-    connect(height, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setHeight(val); emit update(); });
+    connect(FOV, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setFOV(val); emit signal_update(); });
+    connect(width, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setWidth(val); emit signal_update(); });
+    connect(height, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.setHeight(val); emit signal_update(); });
 
     QPushButton * delButton = new QPushButton("Delete", this);
     mainLayout->addStretch(1);
@@ -111,4 +87,11 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     });
 
     setLayout(mainLayout);
+}
+
+void CameraProps::update(float valx, float valy, float valz)
+{
+    x->setValue(valx);
+    y->setValue(valy);
+    z->setValue(valz);
 }

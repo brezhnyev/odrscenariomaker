@@ -1,4 +1,5 @@
 #include "WaypointProps.h"
+#include "LDoubleSpinBox.h"
 
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QHBoxLayout>
@@ -13,42 +14,23 @@
 WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
 {
     QVBoxLayout * l1 = new QVBoxLayout();
-    QDoubleSpinBox * x = new QDoubleSpinBox(this);
-    x->setRange(-MINMAXPOS, MINMAXPOS);
-    x->setSingleStep(0.1);
-    x->setValue(p.getPosition().x());
-    QDoubleSpinBox * y = new QDoubleSpinBox(this);
-    y->setRange(-MINMAXPOS, MINMAXPOS);
-    y->setSingleStep(0.1);
-    y->setValue(p.getPosition().y());
-    QDoubleSpinBox * z = new QDoubleSpinBox(this);
-    z->setRange(-MINMAXPOS, MINMAXPOS);
-    z->setSingleStep(0.1);
-    z->setValue(p.getPosition().z());
-
-    l1->addWidget(new QLabel("X", this));
+    x = new LDoubleSpinBox(this, p.getPosition().x(), -MINMAXPOS, MINMAXPOS, 0.1, "X");
+    y = new LDoubleSpinBox(this, p.getPosition().y(), -MINMAXPOS, MINMAXPOS, 0.1, "Y");
+    z = new LDoubleSpinBox(this, p.getPosition().z(), -MINMAXPOS, MINMAXPOS, 0.1, "Z");
+    LDoubleSpinBox * speed = new LDoubleSpinBox(this, p.getSpeed(), -1000, 1000, 0.1, "Speed");
     l1->addWidget(x);
-    l1->addWidget(new QLabel("Y", this));
     l1->addWidget(y);
-    l1->addWidget(new QLabel("Z", this));
     l1->addWidget(z);
+    l1->addWidget(speed);
 
     QGroupBox * posInfo = new QGroupBox("Positions", this);
     posInfo->setLayout(l1);
-
-    QDoubleSpinBox * speed = new QDoubleSpinBox(this);
-    speed->setValue(p.getSpeed());
-    QGroupBox * speedInfo = new QGroupBox("Speed", this);
-    QHBoxLayout * l2 = new QHBoxLayout();
-    l2->addWidget(speed);
-    speedInfo->setLayout(l2);
 
     QVBoxLayout * lh = new QVBoxLayout();
     QLabel * idInfo = new QLabel(this);
     idInfo->setText("Waypoint " + QString::number(p.getID()));
     lh->addWidget(idInfo);
     lh->addWidget(posInfo);
-    lh->addWidget(speedInfo);
 
     lh->addStretch(1);
 
@@ -66,10 +48,17 @@ WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
     });
     lh->addWidget(delButton);
 
-    connect(x, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [y,z,this](double val){ m_waypoint.setPosition(Eigen::Vector3f(val, y->value(), z->value())); emit signal_update(); });
-    connect(y, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [x,z,this](double val){ m_waypoint.setPosition(Eigen::Vector3f(x->value(), val, z->value())); emit signal_update(); });
-    connect(z, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [x,y,this](double val){ m_waypoint.setPosition(Eigen::Vector3f(x->value(), y->value(), val)); emit signal_update(); });
-    connect(speed, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [this](double val){ m_waypoint.setSpeed(val); emit signal_update(); });
+    connect(x, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.setPosition(Eigen::Vector3f(val, y->value(), z->value())); emit signal_update(); });
+    connect(y, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.setPosition(Eigen::Vector3f(x->value(), val, z->value())); emit signal_update(); });
+    connect(z, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.setPosition(Eigen::Vector3f(x->value(), y->value(), val)); emit signal_update(); });
+    connect(speed, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.setSpeed(val); emit signal_update(); });
     
     setLayout(lh);
+}
+
+void WaypointProps::update(float valx, float valy, float valz)
+{
+    x->setValue(valx);
+    y->setValue(valy);
+    z->setValue(valz);
 }

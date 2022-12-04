@@ -109,3 +109,14 @@ void Selectable::clear()
             delete object;
     });
 }
+
+Selectable * Selectable::getSelected()
+{
+    Selectable * selected = nullptr;
+    parse([&](Selectable * s)
+    {
+        if (s->m_selected)
+            selected = s;
+    });
+    return selected;
+}

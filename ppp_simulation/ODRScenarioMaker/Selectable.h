@@ -35,12 +35,14 @@ public:
     void deleteSelectable(Selectable *);
 
     Selectable * findSelectable(int id);
-    int getID() const { return m_id; }
-    void setID(int id) { m_id = id; s_ID = std::max(s_ID, m_id); } // relevant when reading from file / deserializing
+    int getID() const                       { return m_id; }
+    void setID(int id)                      { m_id = id; s_ID = std::max(s_ID, m_id); } // relevant when reading from file / deserializing
     std::map<int, Selectable*> & children() { return m_children; }
     void clear();
     void parse(std::function<void(Selectable*)> fun);
-    void setParent(Selectable * parent) { m_parent = parent; } // used only once in copy c-tor of Scenario (loading scenario)
+    Selectable * getParent()                { return m_parent; }
+    void setParent(Selectable * parent)     { m_parent = parent; } // used only once in copy c-tor of Scenario (loading scenario)
+    Selectable * getSelected();
     
 protected:
     static int                  s_ID;
