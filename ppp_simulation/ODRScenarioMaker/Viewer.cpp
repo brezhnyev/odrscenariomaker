@@ -66,7 +66,8 @@ void Viewer::postSelection(const QPoint &point)
         Camera * cam = dynamic_cast<Camera*>(m_scenario.getActiveActor());
         if (cam)
         {
-            cam->setPos(Vector3f(sp.x, sp.y, sp.z));
+            cam->setPos(Vector3f(0,0,0));
+            signal_activeSelectableMovedBy(sp.x, sp.y, sp.z);
         }
         else
         {
@@ -91,11 +92,6 @@ void Viewer::postSelection(const QPoint &point)
 
 void Viewer::mousePressEvent(QMouseEvent * e)
 {
-    if (e->button() == Qt::LeftButton && playStatus > 0)
-        setMouseBinding(Qt::NoModifier, Qt::LeftButton, CAMERA, NO_MOUSE_ACTION);
-    else
-        setMouseBinding(Qt::NoModifier, Qt::LeftButton, CAMERA, ROTATE);
-
     if (e->button() == Qt::LeftButton)
         m_leftMousePressed = true;
 
@@ -112,7 +108,7 @@ void Viewer::mouseReleaseEvent(QMouseEvent * e)
 
 void Viewer::mouseMoveEvent(QMouseEvent * e)
 {
-    if (m_leftMousePressed && e->modifiers() == Qt::ShiftModifier)
+    if (m_leftMousePressed)
     {
         if (x != -1)
         {
@@ -123,13 +119,40 @@ void Viewer::mouseMoveEvent(QMouseEvent * e)
             // cout << selectedName() << endl;
             int dx = int(e->pos().x()) - x;
             int dy = int(e->pos().y()) - y;
-            signal_activeSelectableMovedBy(0.01f*dx, -0.01f*dy, 0);
+            if (e->modifiers() == Qt::ShiftModifier)
+                signal_activeSelectableMovedBy(0.01f*dx, -0.01f*dy, 0);
+            else
+            {
+                // lets implement the orbiting navigation since not present in QGLViewer:
+                // orientation:
+                double R [3][3];
+                camera()->orientation().getRotationMatrix(R);
+                double betta = atan2(R[1][0], R[0][0]);
+                Eigen::Matrix3d M;
+                memcpy(M.data(), R, sizeof(double)*9);
+                M.transposeInPlace();
+                Eigen::Matrix3d rot = AngleAxisd(betta-0.25*dx*DEG2RAD, Vector3d::UnitZ())*AngleAxisd(-0.25*dy*DEG2RAD, Vector3d::UnitX())*AngleAxisd(-betta, Vector3d::UnitZ()).toRotationMatrix();
+                M = rot*M;
+                M.transposeInPlace();
+                memcpy(R, M.data(), sizeof(double)*9);
+                qglviewer::Quaternion d; d.setFromRotationMatrix(R);
+                camera()->setOrientation(d);
+                // position:
+                qglviewer::Vec p = camera()->position();
+                qglviewer::Vec pivot = camera()->pivotPoint();
+                Eigen::Vector3d pos(p.x, p.y, p.z);
+                Eigen::Vector3d piv(pivot.x, pivot.y, pivot.z);
+                pos = piv + rot*(pos-piv);
+                p.x = pos[0]; p.y = pos[1]; p.z = pos[2];
+                camera()->setPosition(p);
+                update();
+            }
         }
         x = e->pos().x();
         y = e->pos().y();
     }
-
-    QGLViewer::mouseMoveEvent(e);
+    else
+        QGLViewer::mouseMoveEvent(e);
 }
 
 void Viewer::slot_select(int id)

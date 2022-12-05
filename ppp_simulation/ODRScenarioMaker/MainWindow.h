@@ -12,6 +12,8 @@
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QLabel>
 
+#include <list>
+
 
 class MainWindow : public QMainWindow
 {
@@ -29,6 +31,12 @@ public:
         m_treeView->slot_delItem(id);
         update();
     }
+    void clearConnections()
+    {
+        for (auto && c : m_c)
+            disconnect(c);
+        m_c.clear();
+    }
 
 private:
     Scenario        m_scenario;
@@ -39,4 +47,5 @@ private:
     CameraProps    *m_camProps{nullptr};
     VehicleProps   *m_vehicleProps{nullptr};
     ScenarioProps  *m_scenarioProps{nullptr};
+    std::list<QMetaObject::Connection> m_c;
 };

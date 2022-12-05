@@ -106,7 +106,7 @@ void play(Scenario & scenario)
 
         auto camera_transform = cg::Transform{
             cg::Location{camera->getPos().x(), -camera->getPos().y(), camera->getPos().z()},        // x, y, z.
-            cg::Rotation{-camera->getOri().y(), camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
+            cg::Rotation{-camera->getOri().y(), -camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
 
         cameras.push_back(world.SpawnActor(*camera_bp, camera_transform, actor.get()));
         camera->getCamWidget()->resize(camera->getWidth(), camera->getHeight());

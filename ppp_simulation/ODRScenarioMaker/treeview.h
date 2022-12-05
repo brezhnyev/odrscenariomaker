@@ -16,6 +16,7 @@ public:
         m_treeModel->delItem(m_scenarioID);
         addItem(-1, el);
         m_scenarioID = el->getID();
+        m_selectedItemID = m_scenarioID;
     }
 
 public slots:

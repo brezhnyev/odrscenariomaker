@@ -18,7 +18,7 @@ Scenario & Scenario::operator=(const Scenario & other)
     m_rosbagOffset = other.m_rosbagOffset;
 
     for (auto && child : m_children)
-        child.second->setParent(other.m_parent);
+        child.second->setParent(this);
 
     parse([](Selectable * object)
     {
