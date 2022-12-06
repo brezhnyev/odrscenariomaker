@@ -89,7 +89,7 @@ public:
         int sindex{0};
     } SValue;
 
-    CanvasXODR(const std::string & xodrfile, float radius, float xodrResolution, std::string lanesMappingPath);
+    CanvasXODR(const std::string & xodrfile, float radius, float xodrResolution, std::string lanesMappingPath, float frustum_angle, float frustum_offset);
     ~CanvasXODR();
     void draw();
     void drawSelectable();
@@ -125,4 +125,6 @@ private:
     int mDir{1}; // sets the direction of the poly computation (forward-backward)
     std::map<std::string, int> m_lanesMapping;
     std::set<int> m_validRoads;
+    float m_frustumAngle{30};
+    float m_frustumOffset{5};
 };

@@ -12,11 +12,10 @@ using namespace std;
 using namespace Eigen;
 
 #define AVL_STACK
-#define SEGMENT 0.1*M_PI
-#define SEGMOFF 5
+#define DEG2RAD M_PI/180
 
-CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResolution, string lanesMappingPath) 
-    : mRadius(radius), mXodrResolution(xodrResolution), m_xodrBuilder(xodrfile, mXodrResolution)
+CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResolution, string lanesMappingPath, float frustum_angle, float frustum_offset) 
+    : mRadius(radius), mXodrResolution(xodrResolution), m_xodrBuilder(xodrfile, mXodrResolution), m_frustumAngle(frustum_angle*DEG2RAD), m_frustumOffset(frustum_offset)
 {
     ifstream ifs(lanesMappingPath);
     if (ifs.good())
@@ -241,7 +240,7 @@ bool CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     for (auto && p : points)
     {
         Vector4d tfp = trf*(Vector4d(p.x(), p.y(), p.z(), 1.0)); // beware p[3] is storing heading info (not the 1)!
-        if (tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2 && (atan2(abs(tfp[1])-SEGMOFF, tfp[0]) < 0.5*SEGMENT))
+        if (tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2 && (atan2(abs(tfp[1])-m_frustumOffset, tfp[0]) < 0.5*m_frustumAngle))
             tfpoints.push_back(tfp);
     }
 
@@ -468,12 +467,12 @@ void CanvasXODR::drawUnSelectable()
     glLineWidth(1);
     glColor3f(0,1,0);
     glBegin(GL_LINES);
-    glVertex3f(0,-SEGMOFF,0);
-    glVertex3f(cos(0.5*SEGMENT)*mRadius, -sin(0.5*SEGMENT)*mRadius-SEGMOFF, 0.0);
-    glVertex3f(0,+SEGMOFF,0);
-    glVertex3f(cos(0.5*SEGMENT)*mRadius,  sin(0.5*SEGMENT)*mRadius+SEGMOFF, 0.0);
-    glVertex3f(0,-SEGMOFF,0);
-    glVertex3f(0,+SEGMOFF,0);
+    glVertex3f(0,-m_frustumOffset,0);
+    glVertex3f(cos(0.5*m_frustumAngle)*mRadius, -sin(0.5*m_frustumAngle)*mRadius-m_frustumOffset, 0.0);
+    glVertex3f(0,+m_frustumOffset,0);
+    glVertex3f(cos(0.5*m_frustumAngle)*mRadius,  sin(0.5*m_frustumAngle)*mRadius+m_frustumOffset, 0.0);
+    glVertex3f(0,-m_frustumOffset,0);
+    glVertex3f(0,+m_frustumOffset,0);
     glEnd();
 
     glPopMatrix();

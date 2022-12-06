@@ -25,7 +25,8 @@ using namespace Eigen;
 extern Matrix4f camTrf;
 
 
-Viewer::Viewer(string xodrfile, float radius, float xodrResolution, const string & lanesMappingPath) : m_canvas(xodrfile, radius, xodrResolution, lanesMappingPath)
+Viewer::Viewer(string xodrfile, float radius, float xodrResolution, const string & lanesMappingPath, float frustum_angle, float frustum_offset) 
+    : m_canvas(xodrfile, radius, xodrResolution, lanesMappingPath, frustum_angle, frustum_offset)
 {
     using namespace net;
 
