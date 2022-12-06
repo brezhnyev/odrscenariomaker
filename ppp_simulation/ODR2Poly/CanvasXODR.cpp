@@ -12,7 +12,8 @@ using namespace std;
 using namespace Eigen;
 
 #define AVL_STACK
-
+#define SEGMENT 0.1*M_PI
+#define SEGMOFF 5
 
 CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResolution, string lanesMappingPath) 
     : mRadius(radius), mXodrResolution(xodrResolution), m_xodrBuilder(xodrfile, mXodrResolution)
@@ -26,6 +27,7 @@ CanvasXODR::CanvasXODR(const string & xodrfile, float radius, float xodrResoluti
             int roadid, laneid1, laneid2;
             stringstream ss(line);
             ss >> roadid;
+            m_validRoads.insert(m_validRoads.begin(), roadid);
             while (ss >> laneid1 >> laneid2)
                 m_lanesMapping[to_string(roadid)+"_"+to_string(laneid1)] = laneid2;
         }
@@ -181,7 +183,7 @@ bool CanvasXODR::fitParamPoly(const vector<Vector4d> & points, PolyFactors & pf,
     for (auto && p : points)
     {
         Vector4d tfp = trf*(Vector4d(p.x(), p.y(), p.z(), 1.0)); // beware p[3] is storing heading info (not the 1)!
-        if (mDir*tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2)
+        if (tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2)
             tfpoints.push_back(tfp);
     }
 
@@ -231,7 +233,7 @@ bool CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     // Ax = b, where A is the matrix with N lines of form [t3 t2 t 1], where N is number of measurements
     // x is the unknown vector [c0,c1,c2,c3]T, T stands for transposed
     // and b is w
-    // The final solutiong is x = (ATA)-1ATb  where T is transposed and -1 is inverted
+    // The final solution is x = (ATA)-1ATb  where T is transposed and -1 is inverted
     // We make a copy of the points, since they should be filtered by distance:
     const float radius2 = mRadius*mRadius;
     vector<Vector4d> tfpoints;
@@ -239,7 +241,7 @@ bool CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, cons
     for (auto && p : points)
     {
         Vector4d tfp = trf*(Vector4d(p.x(), p.y(), p.z(), 1.0)); // beware p[3] is storing heading info (not the 1)!
-        if (mDir*tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2)
+        if (tfp[0] >= 0 && tfp.block(0,0,3,1).squaredNorm() < radius2 && (atan2(abs(tfp[1])-SEGMOFF, tfp[0]) < 0.5*SEGMENT))
             tfpoints.push_back(tfp);
     }
 
@@ -278,7 +280,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
 
     for (auto && b : mLaneBoxes)
     {
-        if (b.isPointClose(p, mRadius))
+        if (m_validRoads.count(b.roadID) && b.isPointClose(p, mRadius))
             mLocallLaneBoxes.push_back(b);
     }
     // set the Ego position:
@@ -301,7 +303,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
                         if (dist2 < minDist2)
                         {
                             minDist2 = dist2;
-                            mEgoTrf(3,0) = cps.second[i](3,0); // set the direction
+                            mEgoTrf(3,0) = atan2(sin(cps.second[i](3,0))*mDir, cos(cps.second[i](3,0))*mDir); // set the direction
                         }
                     }
                 }
@@ -309,7 +311,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
         }
     }
     // otherwise set from provided dir:
-    else mEgoTrf(3,0) = atan2(dir.y(), dir.x());
+    else mEgoTrf(3,0) = atan2(dir.y()*mDir, dir.x()*mDir);
 
     // fit polys:
     mPolys.clear();
@@ -421,18 +423,17 @@ void CanvasXODR::drawUnSelectable()
     // }
     glLineWidth(5);
     glPointSize(10);
-    // visualize the Ego positino and direction;
+    // visualize the Ego position and direction;
     glColor3f(1.0f, 1.0f, 0.0f);
     glPushMatrix();
     glTranslated(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2] + 0.2);
+    glRotatef(mEgoTrf[3]*180/M_PI, 0, 0, 1);
     glBegin(GL_POINTS);
     glVertex3f(0,0,0);
     glEnd();
-    glRotatef(mEgoTrf[3]*180/M_PI, 0, 0, 1);
     glBegin(GL_LINES);
     glVertex3f(-2.0f,0.0f,0.0f); glVertex3f(2.0f,0.0f,0.0f);
     glEnd();
-    glPopMatrix();
     // visualize all boundaries:
     const float radius2 = mRadius*mRadius;
     Vector3d egoTrl = Vector3d(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2]);
@@ -440,12 +441,10 @@ void CanvasXODR::drawUnSelectable()
     // visualize the fitted Polys:
     for (auto && poly : mPolys)
     {
-        glPushMatrix();
         glPointSize(2);
         //glColor3f((float)rand()/__INT_MAX__, (float)rand()/__INT_MAX__, (float)rand()/__INT_MAX__);
         glColor3f(1.0f, 0.0f, 0.0f);
-        glTranslated(mEgoTrf[0], mEgoTrf[1], mEgoTrf[2] + 0.3);
-        glRotatef(mEgoTrf[3]*180/M_PI, 0, 0, 1);
+        glTranslated(0,0,0.1);
         glBegin(GL_LINE_STRIP);
 #ifndef AVL_STACK
         for (double t = 0.0; t <= poly.length; t += 0.1) // step in meters if used non-unitless solution in poly fitting
@@ -465,8 +464,19 @@ void CanvasXODR::drawUnSelectable()
         }
 #endif
         glEnd();
-        glPopMatrix();
     }
+    glLineWidth(1);
+    glColor3f(0,1,0);
+    glBegin(GL_LINES);
+    glVertex3f(0,-SEGMOFF,0);
+    glVertex3f(cos(0.5*SEGMENT)*mRadius, -sin(0.5*SEGMENT)*mRadius-SEGMOFF, 0.0);
+    glVertex3f(0,+SEGMOFF,0);
+    glVertex3f(cos(0.5*SEGMENT)*mRadius,  sin(0.5*SEGMENT)*mRadius+SEGMOFF, 0.0);
+    glVertex3f(0,-SEGMOFF,0);
+    glVertex3f(0,+SEGMOFF,0);
+    glEnd();
+
+    glPopMatrix();
 }
 
 void CanvasXODR::draw()

@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <limits>
 
 template <typename T>
@@ -123,4 +124,5 @@ private:
     LaneElementBBox<Eigen::Vector3d> mSceneBB;
     int mDir{1}; // sets the direction of the poly computation (forward-backward)
     std::map<std::string, int> m_lanesMapping;
+    std::set<int> m_validRoads;
 };
