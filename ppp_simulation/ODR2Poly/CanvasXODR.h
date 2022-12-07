@@ -32,7 +32,8 @@ struct LaneElementBBox
     }
     bool isPointClose(T p, float distance)
     {
-        return (center() - p).norm() < (center() - T(minX,minY,minZ)).norm() + distance;
+        auto C = center();
+        return isPointInside(p) || (C - p).norm() < (C - T(minX,minY,minZ)).norm() + distance && p[2] < maxZ + 2 && p[2] > minZ - 2;
     }
     void draw()
     {
