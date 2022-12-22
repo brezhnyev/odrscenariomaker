@@ -2,7 +2,6 @@
 
 #include "scenario.h"
 #include <string>
-#include <boost/next_prior.hpp>
 #include <yaml-cpp/yaml.h>
 
 class Serializer
