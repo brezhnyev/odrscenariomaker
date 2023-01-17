@@ -100,8 +100,6 @@ public:
     void computePolys(Eigen::Vector3d p, Eigen::Vector2f dir = Eigen::Vector2f(0.0f, 0.0f));
     std::vector<PolyFactors> getPolys() { return mPolys; }
     double getSceneRadius();
-    // key1: roadID, key2: roadGEometry, key3: laneSection, key4: laneID, Value: {x,y,z,heading}
-    typedef std::map<int, std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector4d>>>>> LanesContainer;
     void toggleDirection()
     {
         mDir *= -1;
@@ -110,8 +108,8 @@ public:
 
 private:
     void parseXodr(const std::string & xodrfile);
-    bool fitParamPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
-    bool fitPoly(const std::vector<Eigen::Vector4d> & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
+    bool fitParamPoly(const XodrBuilder::Lane & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
+    bool fitPoly(const XodrBuilder::Lane & points, PolyFactors & pf, const Eigen::Matrix4d trf = Eigen::Matrix4d().setIdentity());
 
 private:
     const float mRadius{20};

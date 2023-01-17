@@ -24,4 +24,4 @@ add_executable(${PROJECT_NAME} main.cpp Viewer.cpp CanvasXODR.cpp)
 
 target_link_libraries(
   ${PROJECT_NAME} -lQGLViewer-qt5 -lOpenGL -lGLU Qt5::Core Qt5::Gui Qt5::Xml Qt5::Widgets
-  ${QGLVIEWER_LIBRARY} -fopenmp -lodrparser -lXodrBuilder)
+  ${QGLVIEWER_LIBRARY} -fopenmp -lXodrBuilder)

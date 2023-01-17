@@ -164,7 +164,7 @@ double CanvasXODR::getSceneRadius()
     return 0.5*(Eigen::Vector3d(mSceneBB.minX, mSceneBB.minY, mSceneBB.minZ) - Eigen::Vector3d(mSceneBB.maxX, mSceneBB.maxY, mSceneBB.maxZ)).norm();
 }
 
-bool CanvasXODR::fitParamPoly(const vector<Vector4d> & points, PolyFactors & pf, const Matrix4d trf)
+bool CanvasXODR::fitParamPoly(const XodrBuilder::Lane & points, PolyFactors & pf, const Matrix4d trf)
 {
     // Processing:
     // Approximation of the points by a polynomial function.
@@ -222,7 +222,7 @@ bool CanvasXODR::fitParamPoly(const vector<Vector4d> & points, PolyFactors & pf,
 }
 
 
-bool CanvasXODR::fitPoly(const vector<Vector4d> & points, PolyFactors & pf, const Matrix4d trf)
+bool CanvasXODR::fitPoly(const XodrBuilder::Lane & points, PolyFactors & pf, const Matrix4d trf)
 {
     // Processing:
     // Approximation of the points by a polynomial function.
@@ -279,7 +279,7 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
 
     for (auto && b : mLaneBoxes)
     {
-        if (m_validRoads.count(b.roadID) && b.isPointClose(p, mRadius))
+        if (b.isPointClose(p, mRadius))
             mLocallLaneBoxes.push_back(b);
     }
     // set the Ego position:
@@ -293,16 +293,16 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
         {
             if (b.isPointInside(p))
             {
-                auto && sections =  const_cast<LanesContainer&>(m_xodrBuilder.getCenters()) [b.roadID][b.geomID][b.sectID];
-                for (auto && cps : sections)
+                auto && lanes =  const_cast<XodrBuilder::LanesContainer&>(m_xodrBuilder.getCenters()) [b.roadID][b.geomID][b.sectID];
+                for (auto && lane : lanes)
                 {
-                    for (size_t i = 0; i < cps.second.size(); ++i)
+                    for (size_t i = 0; i < lane.second.size(); ++i)
                     {
-                        auto dist2 = (Vector3d(cps.second[i].x(), cps.second[i].y(), cps.second[i].z()) - p).squaredNorm();
+                        auto dist2 = (Vector3d(lane.second[i].x(), lane.second[i].y(), lane.second[i].z()) - p).squaredNorm();
                         if (dist2 < minDist2)
                         {
                             minDist2 = dist2;
-                            mEgoTrf(3,0) = atan2(sin(cps.second[i](3,0))*mDir, cos(cps.second[i](3,0))*mDir); // set the direction
+                            mEgoTrf(3,0) = atan2(sin(lane.second[i].heading)*mDir, cos(lane.second[i].heading)*mDir); // set the direction
                         }
                     }
                 }
@@ -323,21 +323,21 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
 #ifndef AVL_STACK
     for (auto && b : mLocallLaneBoxes)
     {
-        auto && boundaries = const_cast<LanesContainer&>(m_xodrBuilder.getBoundaries()) [b.roadID][b.geomID][b.sectID];
-        for (auto && bps : boundaries)
+        auto && lanes = const_cast<XodrBuilder::LanesContainer&>(m_xodrBuilder.getBoundaries()) [b.roadID][b.geomID][b.sectID];
+        for (auto && lane : lanes)
         {
             PolyFactors pf;
-            std::vector<Eigen::Vector4d> * pL = nullptr;
+            XodrBuilder::Lane * pL = nullptr;
             if (m_lanesMapping.empty())
             {
-                pL = &bps.second;
+                pL = &lane.second;
             }
             else
             {
-                string mapid = to_string(b.roadID)+"_"+to_string(bps.first);
+                string mapid = to_string(b.roadID)+"_"+to_string(lane.first);
                 if (m_lanesMapping.count(mapid))
                 {
-                    pL = &boundaries[m_lanesMapping[mapid]];
+                    pL = &lanes[m_lanesMapping[mapid]];
                 }
             }
             if (pL && fitParamPoly(*pL, pf, egoTrfInv))
@@ -345,30 +345,30 @@ void CanvasXODR::computePolys(Vector3d p, Vector2f dir)
                 pf.roadID = b.roadID;
                 pf.geomID = b.geomID;
                 pf.sectID = b.sectID;
-                pf.laneID = bps.first;
+                pf.laneID = lane.first;
                 mPolys.push_back(pf);
             }
         }
     }
 #else
     // for AVL stack the SINGLE road will have unique lanes each for the length of the road:
-    map<int, vector<Vector4d>> lanes;
+    map<int, XodrBuilder::Lane> alllanes;
     for (auto && b : mLocallLaneBoxes)
     {
-        auto && boundaries = const_cast<LanesContainer&>(m_xodrBuilder.getBoundaries()) [b.roadID][b.geomID][b.sectID];
-        for (auto & bps : boundaries)
+        auto && lanes = const_cast<XodrBuilder::LanesContainer&>(m_xodrBuilder.getBoundaries()) [b.roadID][b.geomID][b.sectID];
+        for (auto & lane : lanes)
         {
             if (m_lanesMapping.empty())
-                lanes[bps.first].insert(lanes[bps.first].end(), bps.second.begin(), bps.second.end());
+                lanes[lane.first].insert(lanes[lane.first].end(), lane.second.begin(), lane.second.end());
             else
             {
-                string mapid = to_string(b.roadID)+"_"+to_string(bps.first);
+                string mapid = to_string(b.roadID)+"_"+to_string(lane.first);
                 if (m_lanesMapping.count(mapid))
-                    lanes[m_lanesMapping[mapid]].insert(lanes[m_lanesMapping[mapid]].end(), bps.second.begin(), bps.second.end());
+                    alllanes[m_lanesMapping[mapid]].insert(alllanes[m_lanesMapping[mapid]].end(), lane.second.begin(), lane.second.end());
             }
         }
     }
-    for (auto && l : lanes) // lane
+    for (auto && l : alllanes) // lane
     {
         PolyFactors pf;
         if (fitPoly(l.second, pf, egoTrfInv))
@@ -443,7 +443,6 @@ void CanvasXODR::drawUnSelectable()
         glPointSize(2);
         //glColor3f((float)rand()/__INT_MAX__, (float)rand()/__INT_MAX__, (float)rand()/__INT_MAX__);
         glColor3f(1.0f, 0.0f, 0.0f);
-        glTranslated(0,0,0.1);
         glBegin(GL_LINE_STRIP);
 #ifndef AVL_STACK
         for (double t = 0.0; t <= poly.length; t += 0.1) // step in meters if used non-unitless solution in poly fitting
@@ -464,6 +463,7 @@ void CanvasXODR::drawUnSelectable()
 #endif
         glEnd();
     }
+#ifdef AVL_STACK
     glLineWidth(1);
     glColor3f(0,1,0);
     glBegin(GL_LINES);
@@ -474,7 +474,7 @@ void CanvasXODR::drawUnSelectable()
     glVertex3f(0,-m_frustumOffset,0);
     glVertex3f(0,+m_frustumOffset,0);
     glEnd();
-
+#endif
     glPopMatrix();
 }
 

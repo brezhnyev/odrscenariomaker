@@ -122,7 +122,6 @@ set(LIBS ${LIBS}
     -lDetour
     -lDetourCrowd
     -lRecast
-    -lodrparser
 )
 endif()
 

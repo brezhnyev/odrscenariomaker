@@ -150,7 +150,6 @@ public:
     void highlightRibbonSelection(const Eigen::Vector3d & , const Eigen::Vector3d &);
     void init(); // init OpenGL related stuff
     double getSceneRadius();
-    typedef std::map<int, std::map<int, std::map<int, std::map<int, std::vector<Eigen::Vector4d>>>>> LanesContainer;
 
 private:
     void removeLinks(tinyxml2::XMLNode *, const std::string &);
