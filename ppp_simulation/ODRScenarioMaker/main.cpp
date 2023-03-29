@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <unistd.h>
 
 #include <QtWidgets/QApplication>
 #include "MainWindow.h"

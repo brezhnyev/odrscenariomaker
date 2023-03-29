@@ -7,6 +7,7 @@
 #include <iostream>
 #include <thread>
 #include <condition_variable>
+#include <unistd.h>
 
 using namespace std;
 using namespace Eigen;

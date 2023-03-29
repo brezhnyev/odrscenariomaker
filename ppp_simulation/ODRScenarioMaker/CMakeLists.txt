@@ -100,7 +100,6 @@ set(LIBS
     Qt5::Core
     Qt5::Gui
     Qt5::Widgets
-    libOpenGL.so
     Qt5::OpenGL
     libpthread.so
     yaml-cpp
