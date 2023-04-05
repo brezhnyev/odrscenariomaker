@@ -60,8 +60,9 @@ extern condition_variable playCondVar;
 extern mutex playCondVarMtx;
 extern Matrix4f camTrf;
 extern MainWindow * mw;
-static int FPS = 30;
-static bool realtime_playback = true;
+int FPS = 30;
+bool realtime_playback = true;
+bool is_synchronous = true;
 //extern vector<QLabel*> camera_widgets; // need to be extern to be created in the parent thread
 
 
@@ -80,7 +81,7 @@ void play(Scenario & scenario)
 
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
-    crpc::EpisodeSettings wsettings(true, false, 1.0 / FPS); // (synchrone, noRender, interval)
+    crpc::EpisodeSettings wsettings(is_synchronous, false, 1.0 / FPS); // (synchrone, noRender, interval)
     world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     auto weather = world.GetWeather();
     weather.fog_density = 0.0f; // higher saturation
@@ -269,15 +270,20 @@ void play(Scenario & scenario)
                     continue;
                 }
                 cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
-                auto arc = dir - heading; // actually this is a chord, but it is close to arc for small angles
                 auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
-
-                float wdir = sign * arc.Length();
-                // The stronger is the curvature the lower speed:
-                float curvature = abs(sin(0.5f*wdir))/carla_vehicle->GetBoundingBox().extent.x;
-                float accLat = speed*speed*curvature;
+                float alpha = acos(dir.x*heading.x + dir.y*heading.y + dir.z*heading.z);
+                float wheelsAngle = 0;
+                if (alpha > 0.00001)
+                {
+                    float R = speed/sin(alpha); // i.e. speed*1 = length of arc the vehicle will pass while steering during 1 second
+                    R = max(R, 2*carla_vehicle->GetBoundingBox().extent.x); // assuming min radius is 1 length of car
+                    float s = 2.0f*(1.0f/(1.0f+exp(-speed*100.0f))-0.5f);
+                    wheelsAngle = asin(2*carla_vehicle->GetBoundingBox().extent.x/R)*s;
+                }
+                // assuming max weelAngle is 70 degrees # for each car is individual, need to be looked up
+                wheelsAngle = min<float>(1.0f, wheelsAngle/1.22173);
                 float accLon = (targetSpeed - speed);
-                applyControl(accLat, accLon, carla_vehicle, targetSpeed, 0.2*wdir*900/70); // 900/70 is typical ratio steer-wheels
+                applyControl(0, accLon, carla_vehicle, targetSpeed, sign*wheelsAngle);
                 Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
                 if (visuactor)
                 {

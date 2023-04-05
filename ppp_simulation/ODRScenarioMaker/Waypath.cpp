@@ -133,7 +133,9 @@ bool Waypath::getNext(Vector3f & pos, Vector3f & dir, float & targetSpeed, float
 
     targetSpeed = m_smoothPath[index].getSpeed();
 
-    dir = (m_smoothPath[index+1].getPosition() - m_smoothPath[index].getPosition()).normalized();
+    // We also need to force the vehicle move into the trajectory in case the dir is parallel to it
+    dir = (m_smoothPath[index+1].getPosition() - m_smoothPath[index].getPosition()).normalized() + 0.5f*(m_smoothPath[index].getPosition() - pos);
+    dir.normalize();
 
     return true;
 }

@@ -3,6 +3,8 @@
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QCheckBox>
+#include <QtWidgets/QGroupBox>
 
 #include <iostream>
 #include <thread>
@@ -15,6 +17,10 @@ using namespace Eigen;
 int playStatus;
 condition_variable playCondVar;
 mutex playCondVarMtx;
+
+extern int FPS;
+extern bool realtime_playback;
+extern bool is_synchronous;
 
 #ifdef USE_CARLA
 extern void play(Scenario & scenario);
@@ -181,11 +187,31 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     playButton->setText("Play");
     QLabel * rosbagImage = new QLabel(); // need to be created in the parent thread, creating in the thread does not update it
 
-    connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton]()
+    QHBoxLayout * settingsLayout = new QHBoxLayout(this);
+    QGroupBox * settings = new QGroupBox();
+    QCheckBox * isSync = new QCheckBox("synch mode", settings);
+    QCheckBox * isRealtime = new QCheckBox("real time", settings);
+    QSpinBox * freq = new QSpinBox(settings);
+    isSync->setChecked(true);
+    isRealtime->setChecked(true);
+    settingsLayout->addWidget(isSync);
+    settingsLayout->addWidget(isRealtime);
+    settings->setLayout(settingsLayout);
+    freq->setRange(1,100);
+    freq->setSingleStep(1);
+    freq->setValue(30);
+    settingsLayout->addWidget(new QLabel("simulation FPS:", settings));
+    settingsLayout->addWidget(freq);
+    playLayout->addWidget(settings);
+
+    connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton, isSync, isRealtime, freq]()
     {
         if (0 == playStatus)
         {
             playStatus = 2;
+            isSync->setEnabled(false);
+            isRealtime->setEnabled(false);
+            freq->setEnabled(false);
         }
         else if (1 == playStatus)
         {
@@ -234,7 +260,19 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
     QPushButton *stopButton = new QPushButton(playDock);
     stopButton->setText("Stop");
-    connect(stopButton, &QPushButton::clicked, [&]() { playStatus = 0; playCondVar.notify_all(); });
+    connect(stopButton, &QPushButton::clicked, [&, isSync, isRealtime, freq]()
+    {
+        playStatus = 0;
+        isSync->setEnabled(true);
+        isRealtime->setEnabled(true);
+        freq->setEnabled(true);
+        playCondVar.notify_all();
+        }
+    );
+
+    connect(isSync, &QCheckBox::stateChanged, [&](int state){ is_synchronous = state; });
+    connect(isRealtime, &QCheckBox::stateChanged, [&](int state){ realtime_playback = state; });
+    connect(freq, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [&](int val){ FPS = val; });
 
     playLayout->addWidget(playButton);
     playLayout->addWidget(stopButton);
