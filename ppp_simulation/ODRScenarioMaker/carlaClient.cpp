@@ -101,25 +101,25 @@ void play(Scenario & scenario)
         // Find a camera blueprint.
         auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.camera.rgb"));
 
-        camera_bp->SetAttribute("image_size_x", to_string(camera->getWidth()));
-        camera_bp->SetAttribute("image_size_y", to_string(camera->getHeight()));
-        camera_bp->SetAttribute("fov", to_string(camera->getFOV()));
+        camera_bp->SetAttribute("image_size_x", to_string(camera->get_width()));
+        camera_bp->SetAttribute("image_size_y", to_string(camera->get_height()));
+        camera_bp->SetAttribute("fov", to_string(camera->get_FOV()));
 
         auto camera_transform = cg::Transform{
             cg::Location{camera->getPos().x(), -camera->getPos().y(), camera->getPos().z()},        // x, y, z.
             cg::Rotation{-camera->getOri().y(), -camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
 
         cameras.push_back(world.SpawnActor(*camera_bp, camera_transform, actor.get()));
-        camera->getCamWidget()->resize(camera->getWidth(), camera->getHeight());
-        camera->getCamWidget()->show();
+        camera->get_camWidget()->resize(camera->get_width(), camera->get_height());
+        camera->get_camWidget()->show();
 
         // Register a callback to save images to disk.
         ((cc::Sensor*)cameras.back().get())->Listen([camera](auto data)
         {
             auto image = boost::static_pointer_cast<csd::Image>(data);
             QPixmap backBuffer = QPixmap::fromImage(QImage((unsigned char*)image->data(), image->GetWidth(), image->GetHeight(), QImage::Format_RGBX8888).rgbSwapped());
-            camera->getCamWidget()->setPixmap(backBuffer.scaled(camera->getCamWidget()->size(), Qt::KeepAspectRatio));
-            camera->getCamWidget()->update();
+            camera->get_camWidget()->setPixmap(backBuffer.scaled(camera->get_camWidget()->size(), Qt::KeepAspectRatio));
+            camera->get_camWidget()->update();
         });
     };
 
@@ -318,7 +318,7 @@ void play(Scenario & scenario)
 
     world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     // close the qt widgets
-    for (auto c : scene_cameras) c->getCamWidget()->close();
+    for (auto c : scene_cameras) c->get_camWidget()->close();
     for (auto c : cameras) c->Destroy();
     for (auto v : vehicles) v->Destroy();
     camThread.join();

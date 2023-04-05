@@ -51,7 +51,7 @@ void Camera::drawGeometry() const
     Vector3f v = AngleAxisf(0.5f*m_FOV*DEG2RAD - M_PI_4, Vector3f::UnitZ()).toRotationMatrix()*Vector3f(1,1,1);
     float fx = v[0];
     float fy = v[1];
-    float fz = fy*m_h/m_w; // also take the aspect into consideration
+    float fz = fy*m_height/m_width; // also take the aspect into consideration
 
 
     if (m_selected)

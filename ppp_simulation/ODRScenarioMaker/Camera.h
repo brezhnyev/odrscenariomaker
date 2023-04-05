@@ -3,29 +3,27 @@
 #include "Actor.h"
 #include <QtWidgets/QLabel> // need to think about Qt here
 
+#define ADDVAR(type, var, initVal)\
+    private: type m_##var{initVal};\
+    public:\
+    void set_##var(type val) { m_##var = val; }\
+    type get_##var() { return m_##var; }
+
 class QLabel;
 
 class Camera : public Actor
 {
 public:
-    Camera(Selectable * parent) : Actor("", parent) { m_cameraWidget = new QLabel(); m_bbox = Eigen::Vector3f(1,1,1); }
+    Camera(Selectable * parent) : Actor("", parent) { m_camWidget = new QLabel(); m_bbox = Eigen::Vector3f(1,1,1); }
     Camera(const std::string & name, Selectable * parent) : Actor(name, parent) {}
     void draw() const override;
     void drawWithNames() const override;
     void drawGeometry() const override;
     std::string getType() const override { return "Camera"; }
-    QLabel * getCamWidget() { return m_cameraWidget; }
 
-    float getFOV() { return m_FOV; }
-    float getWidth() { return m_w; }
-    float getHeight() { return m_h; }
-    void setFOV(double val) { m_FOV = (float)val; }
-    void setWidth(double val) { m_w = (float)val; }
-    void setHeight(double val) { m_h = (float)val; }
- 
-private:
-    QLabel * m_cameraWidget{nullptr};
-    float m_FOV{60.0f};
-    float m_w{400};
-    float m_h{300};
+    ADDVAR(double, FOV, 60.0f);
+    ADDVAR(double, height, 300.0f);
+    ADDVAR(double, width, 400.0f);
+    ADDVAR(bool, enabled, true);
+    ADDVAR(QLabel *, camWidget, nullptr);
 };
