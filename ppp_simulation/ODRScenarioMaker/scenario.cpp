@@ -1,4 +1,8 @@
 #include "scenario.h"
+#include "Actor.h"
+#include "Waypoint.h"
+#include "Waypath.h"
+
 #include <vector>
 
 using namespace std;
@@ -27,10 +31,10 @@ Scenario & Scenario::operator=(const Scenario & other)
         {
             path->updateSmoothPath();
         }
-        Vehicle * vehicle = dynamic_cast<Vehicle*>(object);
-        if (vehicle)
+        Actor * actor = dynamic_cast<Actor*>(object);
+        if (actor)
         {
-            vehicle->updatePose();
+            actor->updatePose();
         }
     });
     return *this;

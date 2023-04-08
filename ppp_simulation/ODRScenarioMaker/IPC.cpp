@@ -1,5 +1,6 @@
 #include "IPC.h"
 #include "scenario.h"
+#include "Actor.h"
 
 #include <QtWidgets/QMessageBox>
 

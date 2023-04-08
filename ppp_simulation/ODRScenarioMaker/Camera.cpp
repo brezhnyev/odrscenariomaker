@@ -30,9 +30,9 @@ void Camera::drawGeometry() const
     Actor * parent = dynamic_cast<Actor*>(m_parent);
     if (parent)
     {
-        Eigen::Vector3f pos = parent->getPos();
+        Eigen::Vector3f pos = parent->get_pos();
         glTranslatef(pos[0], pos[1], pos[2]);
-        Eigen::Vector3f ori = parent->getOri();
+        Eigen::Vector3f ori = parent->get_ori();
         glRotatef(ori[2],0,0,1);
         glRotatef(0,ori[1],0,1);
         glRotatef(0,0,ori[0],1);

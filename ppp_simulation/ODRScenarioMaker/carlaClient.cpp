@@ -91,6 +91,7 @@ void play(Scenario & scenario)
     world.SetWeather(weather);
 
     vector<ShrdPtrActor> vehicles;
+    vector<ShrdPtrActor> walkers;
     std::vector<ShrdPtrActor> cameras; // carla cameras
     std::vector<Camera*> scene_cameras;
 
@@ -106,8 +107,8 @@ void play(Scenario & scenario)
         camera_bp->SetAttribute("fov", to_string(camera->get_FOV()));
 
         auto camera_transform = cg::Transform{
-            cg::Location{camera->getPos().x(), -camera->getPos().y(), camera->getPos().z()},        // x, y, z.
-            cg::Rotation{-camera->getOri().y(), -camera->getOri().z(), camera->getOri().x()}}; // pitch, yaw, roll.
+            cg::Location{camera->get_pos().x(), -camera->get_pos().y(), camera->get_pos().z()},        // x, y, z.
+            cg::Rotation{-camera->get_ori().y(), -camera->get_ori().z(), camera->get_ori().x()}}; // pitch, yaw, roll.
 
         cameras.push_back(world.SpawnActor(*camera_bp, camera_transform, actor.get()));
         camera->get_camWidget()->resize(camera->get_width(), camera->get_height());
@@ -125,18 +126,18 @@ void play(Scenario & scenario)
 
     for (auto && child : scenario.children())
     {
-        Vehicle * scenario_vehicle = dynamic_cast<Vehicle*>(child.second);
-        if (scenario_vehicle) // can be also ex. Sensor (Camera or Lidar) or Walker 
+        Actor * scenario_actor = dynamic_cast<Actor*>(child.second);
+        if (scenario_actor) // can be also ex. Sensor (Camera or Lidar) or Walker 
         {
-            auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_vehicle->getName()))[0];
+            auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_actor->get_name()))[0];
             if (blueprint.ContainsAttribute("color"))
             {
                 auto &attribute = blueprint.GetAttribute("color");
-                blueprint.SetAttribute("color", scenario_vehicle->colorToString());
+                blueprint.SetAttribute("color", scenario_actor->colorToString());
             }
             ShrdPtrActor actor = nullptr;
             // Initialize Actor with first position of the first Waypath:
-            for (auto && child : scenario_vehicle->children())
+            for (auto && child : scenario_actor->children())
             {
                 Waypath * waypath = dynamic_cast<Waypath*>(child.second);
                 // KB: here we need to think if we really need multiple waypaths for a vehicle
@@ -156,14 +157,21 @@ void play(Scenario & scenario)
                     }
                     cout << "Spawned " << actor->GetDisplayId() << '\n';
                     auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
-                    vehicle->SetSimulatePhysics();
-                    vehicles.push_back(actor);
+                    if (vehicle)
+                    {
+                        vehicle->SetSimulatePhysics();
+                        vehicles.push_back(actor);
+                    }
+                    if (dynamic_cast<cc::Walker*>(actor.get()))
+                    {
+                        walkers.push_back(actor);
+                    }
                     break;
                 }
             }
             if (actor)
             {
-                for (auto && child : scenario_vehicle->children())
+                for (auto && child : scenario_actor->children())
                 {
                     Camera * camera = dynamic_cast<Camera*>(child.second);
                     if (camera)
@@ -288,7 +296,7 @@ void play(Scenario & scenario)
                 if (visuactor)
                 {
                     visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
-                    visuactor->setBbox(Vector3f(carla_vehicle->GetBoundingBox().extent.x, carla_vehicle->GetBoundingBox().extent.y, carla_vehicle->GetBoundingBox().extent.z));
+                    visuactor->set_bbox(Vector3f(carla_vehicle->GetBoundingBox().extent.x, carla_vehicle->GetBoundingBox().extent.y, carla_vehicle->GetBoundingBox().extent.z));
                 }
             }
         }
@@ -321,6 +329,7 @@ void play(Scenario & scenario)
     for (auto c : scene_cameras) c->get_camWidget()->close();
     for (auto c : cameras) c->Destroy();
     for (auto v : vehicles) v->Destroy();
+    for (auto w : walkers) w->Destroy();
     camThread.join();
     driveThread.join();
 

@@ -58,13 +58,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
         if (item->getType() == "Waypoint")
         {
-            if (m_pointProps)
-            {
-                m_pointProps->close();
-                clearConnections();
-                delete m_pointProps;
-            }
-            m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item));
+            closeActive();
+            m_activeDlg = m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item));
             propsDock->setWidget(m_pointProps);
             m_c.push_back(connect(m_pointProps, &WaypointProps::signal_update, [this](){ m_scenario.getActiveWaypath()->updateSmoothPath(); update(); }));
             m_c.push_back(connect(m_pointProps, &WaypointProps::signal_delete, [this](int id)
@@ -79,7 +74,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
                 Selectable * s = m_scenario.getSelected();
                 if (s && dynamic_cast<Waypoint*>(s))
                 {
-                    Vector3f pos = dynamic_cast<Waypoint*>(s)->getPosition();
+                    Vector3f pos = dynamic_cast<Waypoint*>(s)->get_pos();
                     m_pointProps->update(pos[0] + dx, pos[1] + dy, pos[2] + dz);
                     m_scenario.getActiveWaypath()->updateSmoothPath();
                     update();
@@ -88,13 +83,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         }
         else if (item->getType() == "Waypath")
         {
-            if (m_pathProps)
-            {
-                m_pathProps->close();
-                clearConnections();
-                delete m_pathProps;
-            }
-            m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item));
+            closeActive();
+            m_activeDlg = m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item));
             propsDock->setWidget(m_pathProps);
             m_c.push_back(connect(m_pathProps, &WaypathProps::signal_update, [this](){ m_scenario.getActiveActor()->updatePose(); update(); }));
             m_c.push_back(connect(m_pathProps, &WaypathProps::signal_delete, [this](int id)
@@ -104,13 +94,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         }
         else if (item->getType() == "Camera")
         {
-            if (m_camProps)
-            {
-                m_camProps->close();
-                clearConnections();
-                delete m_camProps;
-            }
-            m_camProps = new CameraProps(*dynamic_cast<Camera*>(item));
+            closeActive();
+            m_activeDlg = m_camProps = new CameraProps(*dynamic_cast<Camera*>(item));
             propsDock->setWidget(m_camProps);
             m_c.push_back(connect(m_camProps, &CameraProps::signal_update, [this](){ update(); }));
             m_c.push_back(connect(m_camProps, &CameraProps::signal_delete, [this](int id)
@@ -128,11 +113,11 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
                     if (parent && parent->getType() == "Vehicle")
                     {
                         Vehicle * pv = dynamic_cast<Vehicle*>(parent);
-                        Vector3f ori = pv->getOri();
+                        Vector3f ori = pv->get_ori();
                         Matrix3f m = AngleAxisf(ori[2]*DEG2RAD, Vector3f::UnitZ())*AngleAxisf(ori[1]*DEG2RAD, Vector3f::UnitY())*AngleAxisf(ori[0]*DEG2RAD, Vector3f::UnitX()).toRotationMatrix();
                         v = m.transpose()*v;
                     }
-                    Vector3f pos = cam->getPos();
+                    Vector3f pos = cam->get_pos();
                     m_camProps->update(pos[0] + v[0], pos[1] + v[1], pos[2] + v[2]);
                     update();
                 }
@@ -140,13 +125,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         }
         else if (item->getType() == "Vehicle")
         {
-            if (m_vehicleProps)
-            {
-                m_vehicleProps->close();
-                clearConnections();
-                delete m_vehicleProps;
-            }
-            m_vehicleProps = new VehicleProps(*dynamic_cast<Vehicle*>(item));
+            closeActive();
+            m_activeDlg = m_vehicleProps = new VehicleProps(*dynamic_cast<Vehicle*>(item));
             propsDock->setWidget(m_vehicleProps);
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_delete, [this](int id)
             {
@@ -156,19 +136,28 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id, "Waypath"); update(); }));
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id, "Camera");  update(); }));
         }
+        else if (item->getType() == "Walker")
+        {
+            closeActive();
+            m_activeDlg = m_walkerProps = new WalkerProps(*dynamic_cast<Walker*>(item));
+            propsDock->setWidget(m_walkerProps);
+            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_delete, [this](int id)
+            {
+                deleteItem(id);
+            }));
+            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_update, [this](){ update(); })); // color update
+            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id, "Waypath"); update(); }));
+            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id, "Camera");  update(); }));
+        }
         else if (item->getType() == "Scenario")
         {
-            if (m_scenarioProps)
-            {
-                m_scenarioProps->close();
-                clearConnections();
-                delete m_scenarioProps;
-            }
-            m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
+            closeActive();
+            m_activeDlg = m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
             propsDock->setWidget(m_scenarioProps);
             m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addItem(id, "Vehicle"); update(); }));
-            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->loadScenario(&m_scenario); update(); }));
+            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addWalker, [this](int id){ m_treeView->slot_addItem(id, "Walker"); update(); }));
             m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id, "Camera");  update(); }));
+            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->loadScenario(&m_scenario); update(); }));
             m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_clear, [this]()
             {
                 m_scenario.clear();

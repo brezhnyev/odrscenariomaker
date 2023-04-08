@@ -1,5 +1,9 @@
 #include "Serializer.h"
 #include "Camera.h"
+#include "Waypoint.h"
+#include "Waypath.h"
+#include "Vehicle.h"
+#include "Walker.h"
 
 #include <eigen3/Eigen/Eigen>
 
@@ -46,10 +50,10 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
         {
             Vehicle * vehicle = dynamic_cast<Vehicle*>(object);
             YAML::Node color;
-            node["name"] = vehicle->getName();
-            color["r"] = vehicle->m_color[0];
-            color["g"] = vehicle->m_color[1];
-            color["b"] = vehicle->m_color[2];
+            node["name"] = vehicle->get_name();
+            color["r"] = vehicle->get_color()[0];
+            color["g"] = vehicle->get_color()[1];
+            color["b"] = vehicle->get_color()[2];
             node["color"] = color;
             YAML::Node waypaths;
             node["facilities"] = waypaths;
@@ -68,14 +72,14 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
         {
             Camera * camera = dynamic_cast<Camera*>(object);
             YAML::Node location;
-            location["x"] = camera->getPos().x();
-            location["y"] = camera->getPos().y();
-            location["z"] = camera->getPos().z();
+            location["x"] = camera->get_pos().x();
+            location["y"] = camera->get_pos().y();
+            location["z"] = camera->get_pos().z();
             node["location"] = location;
             YAML::Node orientation;
-            orientation["roll"] = camera->getOri().x();
-            orientation["pitch"] = camera->getOri().y();
-            orientation["yaw"] = camera->getOri().z();
+            orientation["roll"] = camera->get_ori().x();
+            orientation["pitch"] = camera->get_ori().y();
+            orientation["yaw"] = camera->get_ori().z();
             node["orientation"] = orientation;
             parent.push_back(node);
         }
@@ -83,11 +87,11 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
         {
             Waypoint * waypoint = dynamic_cast<Waypoint*>(object);
             YAML::Node location;
-            location["x"] = waypoint->getPosition().x();
-            location["y"] = waypoint->getPosition().y();
-            location["z"] = waypoint->getPosition().z();
+            location["x"] = waypoint->get_pos().x();
+            location["y"] = waypoint->get_pos().y();
+            location["z"] = waypoint->get_pos().z();
             node["location"] = location;
-            node["speed"] = waypoint->getSpeed();
+            node["speed"] = waypoint->get_speed();
             parent.push_back(node);
         }
     }
@@ -125,12 +129,12 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
         {
             Vehicle * vehicle = new Vehicle(&object);
             object.addChild(vehicle);
-            vehicle->setName(child["name"].as<string>());
+            vehicle->set_name(child["name"].as<string>());
             auto color = child["color"];
             int r = color["r"].as<int>();
             int g = color["g"].as<int>();
             int b = color["b"].as<int>();
-            vehicle->m_color = Eigen::Vector3i(r,g,b);
+            vehicle->set_color(Eigen::Vector3i(r,g,b));
             if (!child["facilities"].IsNull())
                 deserialize_yaml(child["facilities"], *vehicle);
         }
@@ -148,12 +152,12 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             float x = location["x"].as<float>();
             float y = location["y"].as<float>();
             float z = location["z"].as<float>();
-            camera->setPos(Eigen::Vector3f(x,y,z));
+            camera->set_pos(Eigen::Vector3f(x,y,z));
             auto orientation = child["orientation"];
             float roll = orientation["roll"].as<float>();
             float pitch = orientation["pitch"].as<float>();
             float yaw = orientation["yaw"].as<float>();
-            camera->setOri(Eigen::Vector3f(roll,pitch,yaw));
+            camera->set_ori(Eigen::Vector3f(roll,pitch,yaw));
             object.addChild(camera);
         }
         if (child["type"].as<string>() == "Waypoint")

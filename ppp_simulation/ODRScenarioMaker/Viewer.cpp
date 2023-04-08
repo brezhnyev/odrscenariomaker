@@ -27,7 +27,7 @@ Viewer::Viewer(Scenario & scenario, const string & xodrfile, string objfile) : m
     using namespace qglviewer;
     camera()->setSceneRadius(400);
     camera()->fitSphere(Vec(0, 0, 0), 200);
-    camera()->setZNearCoefficient(0.01);
+    camera()->setZNearCoefficient(0.001);
     camera()->setFieldOfView(M_PI_2);
 }
 
@@ -66,7 +66,7 @@ void Viewer::postSelection(const QPoint &point)
         Camera * cam = dynamic_cast<Camera*>(m_scenario.getActiveActor());
         if (cam)
         {
-            cam->setPos(Vector3f(0,0,0));
+            cam->set_pos(Vector3f(0,0,0));
             signal_activeSelectableMovedBy(sp.x, sp.y, sp.z);
         }
         else

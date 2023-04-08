@@ -77,6 +77,7 @@ set(SOURCE
     scenario.cpp
     WaypointProps.cpp
     Vehicle.cpp
+    Walker.cpp
     Selectable.cpp
     WaypathProps.cpp
     Actor.cpp

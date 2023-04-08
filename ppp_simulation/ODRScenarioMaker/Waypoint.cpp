@@ -4,7 +4,9 @@
 
 using namespace std;
 
-Waypoint::Waypoint(Eigen::Vector3f pos, float speed, Selectable * parent) : Selectable(parent), m_pos(pos), m_speed(speed) {}
+Waypoint::Waypoint(Eigen::Vector3f pos, float speed, Selectable * parent) : Selectable(parent), WaypointNonSelectable(pos, speed)
+{
+}
 
 void Waypoint::drawGeometry() const
 {

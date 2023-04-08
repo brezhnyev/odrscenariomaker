@@ -18,10 +18,13 @@ void Waypath::drawGeometry() const
     else
         glPointSize(2);
     glPushMatrix();
-    glTranslatef(0,0,0.1f);
+    glTranslatef(0,0,0.5f);
     glBegin(GL_POINTS);
     for (auto && c : m_smoothPath)
-        glVertex3f(c.getPosition().x(), c.getPosition().y(), c.getPosition().z()+0.5);
+    {
+        auto pos = c.get_pos();
+        glVertex3f(pos.x(), pos.y(), pos.z());
+    }
     glEnd();
     glPopMatrix();
     glPointSize(psz);
@@ -47,14 +50,14 @@ void Waypath::updateSmoothPath()
 
     // specifics of the cpp-spline library: we need to add the first and last waypoints twice:
     Waypoint * firstWP = static_cast<Waypoint*>(m_children.begin()->second);
-    curve.add_way_point(Vector(firstWP->getPosition().x(), firstWP->getPosition().y(), firstWP->getPosition().z()));
+    curve.add_way_point(Vector(firstWP->get_pos().x(), firstWP->get_pos().y(), firstWP->get_pos().z()));
     for (auto && c : m_children)
     {
         Waypoint * wp = static_cast<Waypoint*>(c.second);
-        curve.add_way_point(Vector(wp->getPosition().x(), wp->getPosition().y(), wp->getPosition().z()));
+        curve.add_way_point(Vector(wp->get_pos().x(), wp->get_pos().y(), wp->get_pos().z()));
     }
     Waypoint * lastWP = static_cast<Waypoint*>(m_children.rbegin()->second);
-    curve.add_way_point(Vector(lastWP->getPosition().x(), lastWP->getPosition().y(), lastWP->getPosition().z()));
+    curve.add_way_point(Vector(lastWP->get_pos().x(), lastWP->get_pos().y(), lastWP->get_pos().z()));
 
     auto it1 = m_children.begin();
     auto it2 = m_children.begin(); advance(it2, 1);
@@ -69,8 +72,8 @@ void Waypath::updateSmoothPath()
         }
         Waypoint * wp1 = static_cast<Waypoint*>(it1->second);
         Waypoint * wp2 = static_cast<Waypoint*>(it2->second);
-        float speed = (1.0f - (float)s/STEPS)*wp1->getSpeed() + (float)s/STEPS*wp2->getSpeed();
-        WaypointSmoothed wp(Vector3f(curve.node(i).x, curve.node(i).y, curve.node(i).z), speed);
+        float speed = (1.0f - (float)s/STEPS)*wp1->get_speed() + (float)s/STEPS*wp2->get_speed();
+        WaypointNonSelectable wp(Vector3f(curve.node(i).x, curve.node(i).y, curve.node(i).z), speed);
 		m_smoothPath.push_back(wp);
 	}
 }
@@ -79,7 +82,7 @@ Vector3f Waypath::getStartingDirection()
 {
     if (m_smoothPath.size() < 2)
         return Vector3f(0,0,0);
-    Vector3f dir = m_smoothPath[1].getPosition() - m_smoothPath[0].getPosition();
+    Vector3f dir = m_smoothPath[1].get_pos() - m_smoothPath[0].get_pos();
     dir.normalize();
     return dir;
 }
@@ -88,7 +91,7 @@ Vector3f Waypath::getEndingDirection()
 {
     if (m_smoothPath.size() < 2)
         return Vector3f(0,0,0);
-    Vector3f dir = (m_smoothPath.end()-1)->getPosition() - (m_smoothPath.end()-2)->getPosition();
+    Vector3f dir = (m_smoothPath.end()-1)->get_pos() - (m_smoothPath.end()-2)->get_pos();
     dir.normalize();
     return dir;
 }
@@ -97,14 +100,14 @@ Vector3f Waypath::getStartingPosition()
 {
     if (m_smoothPath.size() < 1)
         return Vector3f(0,0,0);
-    return m_smoothPath[0].getPosition();
+    return m_smoothPath[0].get_pos();
 }
 
 Vector3f Waypath::getEndingPosition()
 {
     if (m_smoothPath.size() < 1)
         return Vector3f(0,0,0);
-    return m_smoothPath.back().getPosition();
+    return m_smoothPath.back().get_pos();
 }
 
 bool Waypath::getNext(Vector3f & pos, Vector3f & dir, float & targetSpeed, float currentSpeed, int fps)
@@ -114,13 +117,13 @@ bool Waypath::getNext(Vector3f & pos, Vector3f & dir, float & targetSpeed, float
     int index = 0;
 
     // check if we are in the nearabouts of the final waypoint:
-    if ((pos - m_smoothPath.back().getPosition()).norm() <= currentSpeed/fps)
+    if ((pos - m_smoothPath.back().get_pos()).norm() <= currentSpeed/fps)
         return false;
 
     // find the closest point to the pos:
     for (int i = 0; i < m_smoothPath.size(); ++i)
     {
-        auto d = (pos - m_smoothPath[i].getPosition()).norm();
+        auto d = (pos - m_smoothPath[i].get_pos()).norm();
         if (d < dist)
         {
             index = i;
@@ -131,10 +134,10 @@ bool Waypath::getNext(Vector3f & pos, Vector3f & dir, float & targetSpeed, float
     if (index >= m_smoothPath.size() - 2)
         return false;
 
-    targetSpeed = m_smoothPath[index].getSpeed();
+    targetSpeed = m_smoothPath[index].get_speed();
 
     // We also need to force the vehicle move into the trajectory in case the dir is parallel to it
-    dir = (m_smoothPath[index+1].getPosition() - m_smoothPath[index].getPosition()).normalized() + 0.5f*(m_smoothPath[index].getPosition() - pos);
+    dir = (m_smoothPath[index+1].get_pos() - m_smoothPath[index].get_pos()).normalized() + 0.5f*(m_smoothPath[index].get_pos() - pos);
     dir.normalize();
 
     return true;
@@ -146,7 +149,7 @@ string Waypath::serialize() const
     stringstream ss;
     for (auto && child : m_children)
     {
-        auto p = dynamic_cast<Waypoint*>(child.second)->getPosition();
+        auto p = dynamic_cast<Waypoint*>(child.second)->get_pos();
         ss << p.x() << " " << p.y() << " " << p.z() << " ";
     }
     return ss.str();

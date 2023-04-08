@@ -2,6 +2,9 @@
 #include "Vehicle.h"
 #include "Camera.h"
 #include "Serializer.h"
+#include "Walker.h"
+#include "Waypoint.h"
+#include "Waypath.h"
 
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QVBoxLayout>
@@ -55,6 +58,19 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             return;
         }
         emit signal_addVehicle(id);
+    });
+
+    QPushButton * addWalker = new QPushButton("Add walker", this);
+    mainLayout->addWidget(addWalker);
+    connect(addWalker, &QPushButton::clicked, [this]()
+    { 
+        int id = m_scenario.addChild(new Walker(&m_scenario));
+        if (id == -1)
+        {
+            QMessageBox::warning(this, "Error adding Element", "Failed to add Walker: index not found!");
+            return;
+        }
+        emit signal_addWalker(id);
     });
 
     QPushButton * addCamera = new QPushButton("Add Camera", this);
@@ -146,7 +162,7 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
             Vehicle * v = dynamic_cast<Vehicle*>(it.second);
             if (v)
             {
-                ofs_waypath << "\t" << v->getName() << ": ";
+                ofs_waypath << "\t" << v->get_name() << ": ";
                 for (auto && it : v->children())
                 {
                     Waypath * w = dynamic_cast<Waypath*>(it.second);
@@ -156,8 +172,8 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
                         for (auto && it : w->children())
                         {
                             Waypoint * p = dynamic_cast<Waypoint*>(it.second);
-                            auto pos = p->getPosition();
-                            ofs_waypath << pos[0] << "," << -pos[1] << "," << (pos[2] + 0.5*v->getBbox()[2]) << ", "; 
+                            auto pos = p->get_pos();
+                            ofs_waypath << pos[0] << "," << -pos[1] << "," << (pos[2] + 0.5*v->get_bbox()[2]) << ", "; 
                         }
                         ofs_waypath << "]" << "\n";
                     }
@@ -187,7 +203,7 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
                 Vehicle * v = dynamic_cast<Vehicle*>(it.second);
                 if (v && (infoType == "car_positions" || infoType == "emergency_positions"))
                 {
-                    string name = v->getName();
+                    string name = v->get_name();
                     if (infoType == "car_positions" && name.find("ambulance") != string::npos)
                         continue;
                     if (infoType == "emergency_positions" && name.find("ambulance") == string::npos)
@@ -205,7 +221,7 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
                             auto pos = isStart ? w->getStartingPosition() : w->getEndingPosition();
                             ofs_initpos << "\"x\":" << pos[0] << ", ";
                             ofs_initpos << "\"y\":" << pos[1] << ", ";
-                            ofs_initpos << "\"z\":" << (pos[2] + 0.5*v->getBbox()[2]) << ", ";
+                            ofs_initpos << "\"z\":" << (pos[2] + 0.5*v->get_bbox()[2]) << ", ";
                             auto dir = isStart ? w->getStartingDirection() : w->getEndingDirection();
                             ofs_initpos << "\"roll\":" << 0 << ", ";
                             ofs_initpos << "\"pitch\":" << asin(dir[2]/dir.norm())*RAD2DEG << ", ";
@@ -219,11 +235,11 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
                 if (infoType == "edge_camera" && c)
                 {
                     ofs_initpos << indent;
-                    auto pos = c->getPos();
+                    auto pos = c->get_pos();
                     ofs_initpos << "{\"x\":" << pos[0] << ", ";
                     ofs_initpos << "\"y\":"  << pos[1] << ", ";
                     ofs_initpos << "\"z\":" <<  pos[2] << ", ";
-                    auto ori = c->getOri();
+                    auto ori = c->get_ori();
                     ofs_initpos << "\"roll\":" << ori[0] << ", ";
                     ofs_initpos << "\"pitch\":" << ori[1] << ", ";
                     ofs_initpos << "\"yaw\":" << ori[2] << "},";

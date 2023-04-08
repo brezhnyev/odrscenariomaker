@@ -31,11 +31,16 @@ public:
         m_treeView->slot_delItem(id);
         update();
     }
-    void clearConnections()
+    void closeActive()
     {
+        if (!m_activeDlg)
+            return;
+        m_activeDlg->close();
         for (auto && c : m_c)
             disconnect(c);
         m_c.clear();
+        delete m_activeDlg;
+        m_activeDlg = nullptr;
     }
 
 private:
@@ -46,6 +51,8 @@ private:
     WaypathProps   *m_pathProps{nullptr};
     CameraProps    *m_camProps{nullptr};
     VehicleProps   *m_vehicleProps{nullptr};
+    WalkerProps    *m_walkerProps{nullptr};
     ScenarioProps  *m_scenarioProps{nullptr};
+    QWidget        *m_activeDlg{nullptr};
     std::list<QMetaObject::Connection> m_c;
 };

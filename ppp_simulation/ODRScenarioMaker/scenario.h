@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Waypath.h"
-#include "Vehicle.h"
+#include "Selectable.h"
 
 #include <eigen3/Eigen/Eigen>
 
@@ -9,6 +8,10 @@
 
 #define DEG2RAD M_PI/180
 #define RAD2DEG 180/M_PI
+
+class Actor;
+class Waypath;
+class Waypoint;
 
 class Scenario : public Selectable
 {

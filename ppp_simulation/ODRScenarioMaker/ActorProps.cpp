@@ -18,6 +18,8 @@
 
 #define MINMAXPOS 1000000
 
+ActorProps::~ActorProps() {}
+
 ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
@@ -29,7 +31,6 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 
     QPushButton * addCamera = new QPushButton("Add Camera", this);
     mainLayout->addWidget(addCamera);
-
 
     connect(addWaypath, &QPushButton::clicked, [this]()
     { 
@@ -52,12 +53,49 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
         }
         emit signal_addCamera(id);
     });
+
+    m_colorPicker = new QPushButton(this);
+    std::string scolor = m_actor.colorToString();
+    m_colorPicker->setStyleSheet("background-color: rgb("+QString(m_actor.colorToString().c_str()) + ")");
+    m_colorPicker->setText("Color");
+    connect(m_colorPicker, &QPushButton::clicked, [this]()
+    {
+        QColor color = QColorDialog::getColor();
+        QString scolor(QString::number(color.red()) + "," + QString::number(color.green()) + "," + QString::number(color.blue()));
+        m_colorPicker->setStyleSheet("background-color: rgb("+scolor+")");
+        m_actor.set_color(Eigen::Vector3i(color.red(), color.green(), color.blue()));
+        emit signal_update();
+    });
+    mainLayout->addWidget(m_colorPicker);
+
+    m_delButton = new QPushButton();
+    m_delButton->setText("Delete");
+
+    connect(m_delButton, &QPushButton::clicked, [this]()
+    { 
+        int id = m_actor.getID();
+        if (id == -1)
+        {
+            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Vehicle: index not found!");
+            return;
+        }
+        emit signal_delete(id);
+        close();
+    });
+}
+
+void ActorProps::addTypes(const QStringList & ls)
+{
+    QComboBox * typeCombo = new QComboBox(this);
+    typeCombo->addItems(ls);
+    auto mainLayout = layout();
+    mainLayout->addWidget(typeCombo);
+    typeCombo->setCurrentIndex(typeCombo->findText(QString(m_actor.get_name().c_str())));
+    connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.set_name(name.toStdString()); });
 }
 
 VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(vehicle)
 {
-    auto mainLayout = layout();
-    QComboBox * typeCombo = new QComboBox(this);
     QStringList ls;
     ls << 
     "vehicle.audi.a2" <<
@@ -98,42 +136,63 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     "vehicle.volkswagen.t2" <<
     "vehicle.yamaha.yzf";
 
-    typeCombo->addItems(ls);
+    addTypes(ls);
 
-    // vehicle color:
-    m_colorPicker = new QPushButton(this);
-    std::string scolor = m_vehicle.colorToString();
-    m_colorPicker->setStyleSheet("background-color: rgb("+QString(m_vehicle.colorToString().c_str()) + ")");
-    m_colorPicker->setText("Color");
-    connect(m_colorPicker, &QPushButton::clicked, [this]()
-    {
-        QColor color = QColorDialog::getColor();
-        QString scolor(QString::number(color.red()) + "," + QString::number(color.green()) + "," + QString::number(color.blue()));
-        m_colorPicker->setStyleSheet("background-color: rgb("+scolor+")");
-        m_vehicle.m_color = Eigen::Vector3i(color.red(), color.green(), color.blue());
-        emit signal_update();
-    });
-    mainLayout->addWidget(m_colorPicker);
-
-    mainLayout->addWidget(typeCombo);
-    typeCombo->setCurrentIndex(typeCombo->findText(QString(m_actor.getName().c_str())));
-    connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.setName(name.toStdString()); });
-
+    auto mainLayout = layout();
     ((QVBoxLayout*)mainLayout)->addStretch(1);
+    mainLayout->addWidget(m_delButton);
+}
 
-    QPushButton * delButton = new QPushButton();
-    delButton->setText("Delete");
-    mainLayout->addWidget(delButton);
 
-    connect(delButton, &QPushButton::clicked, [this]()
-    { 
-        int id = m_actor.getID();
-        if (id == -1)
-        {
-            QMessageBox::warning(this, "Error deleting Element", "Failed to delete Vehicle: index not found!");
-            return;
-        }
-        emit signal_delete(id);
-        close();
-    });
+WalkerProps::WalkerProps(Walker & walker) : ActorProps(walker), m_walker(walker)
+{
+    QStringList ls;
+    ls << 
+    "walker.pedestrian.0001" <<
+    "walker.pedestrian.0002" <<
+    "walker.pedestrian.0003" <<
+    "walker.pedestrian.0004" <<
+    "walker.pedestrian.0005" <<
+    "walker.pedestrian.0006" <<
+    "walker.pedestrian.0007" <<
+    "walker.pedestrian.0008" <<
+    "walker.pedestrian.0009" <<
+    "walker.pedestrian.0010" <<
+    "walker.pedestrian.0011" <<
+    "walker.pedestrian.0012" <<
+    "walker.pedestrian.0013" <<
+    "walker.pedestrian.0014" <<
+    "walker.pedestrian.0015" <<
+    "walker.pedestrian.0016" <<
+    "walker.pedestrian.0017" <<
+    "walker.pedestrian.0018" <<
+    "walker.pedestrian.0019" <<
+    "walker.pedestrian.0020" <<
+    "walker.pedestrian.0021" <<
+    "walker.pedestrian.0022" <<
+    "walker.pedestrian.0023" <<
+    "walker.pedestrian.0024" <<
+    "walker.pedestrian.0025" <<
+    "walker.pedestrian.0026" <<
+    "walker.pedestrian.0027" <<
+    "walker.pedestrian.0028" <<
+    "walker.pedestrian.0029" <<
+    "walker.pedestrian.0030" <<
+    "walker.pedestrian.0031" <<
+    "walker.pedestrian.0032" <<
+    "walker.pedestrian.0033" <<
+    "walker.pedestrian.0034" <<
+    "walker.pedestrian.0035" <<
+    "walker.pedestrian.0036" <<
+    "walker.pedestrian.0037" <<
+    "walker.pedestrian.0038" <<
+    "walker.pedestrian.0039" <<
+    "walker.pedestrian.0040" <<
+    "walker.pedestrian.0041";
+
+    addTypes(ls);
+    
+    auto mainLayout = layout();
+    ((QVBoxLayout*)mainLayout)->addStretch(1);
+    mainLayout->addWidget(m_delButton);
 }

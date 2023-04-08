@@ -21,5 +21,5 @@ public:
     void drawGeometry() const override;
 
 private:
-    std::vector<WaypointSmoothed> m_smoothPath;
+    std::vector<WaypointNonSelectable> m_smoothPath;
 };

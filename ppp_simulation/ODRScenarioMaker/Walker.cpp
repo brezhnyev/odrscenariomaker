@@ -1,4 +1,4 @@
-#include "Vehicle.h"
+#include "Walker.h"
 
 #include <fstream>
 #include <iostream>
@@ -18,7 +18,7 @@ static const float box[][12] = {
     +1,-1,-1, +1,-1,+1, +1,+1,+1, +1,+1,-1
 };
 
-void Vehicle::drawGeometry() const
+void Walker::drawGeometry() const
 {
     glDisable(GL_TEXTURE_2D);
 
@@ -60,13 +60,13 @@ void Vehicle::drawGeometry() const
     glPopMatrix();
 }
 
-void Vehicle::draw() const
+void Walker::draw() const
 {
     drawGeometry();
     for (auto && child : m_children) child.second->draw();
 }
 
-void Vehicle::drawWithNames() const
+void Walker::drawWithNames() const
 {
     glPushName(m_id);
     drawGeometry();

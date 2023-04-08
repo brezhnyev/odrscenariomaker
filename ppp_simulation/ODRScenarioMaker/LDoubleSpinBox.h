@@ -14,5 +14,4 @@ signals:
 
 public:
   QDoubleSpinBox  * m_spinBox;
-  QLabel          * m_label;
 };
