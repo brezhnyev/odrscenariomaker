@@ -19,7 +19,7 @@ using namespace std;
 //using namespace qglviewer; // otherwise names clash with Camera
 using namespace Eigen;
 
-Matrix4f camTrf;
+extern Matrix4f camTrf;
 extern int playStatus;
 
 Viewer::Viewer(Scenario & scenario, const string & xodrfile, string objfile) : m_scenario(scenario), m_canvas(xodrfile), m_world3d(objfile)

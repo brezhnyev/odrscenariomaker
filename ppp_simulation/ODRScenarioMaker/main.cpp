@@ -1,14 +1,26 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
 
+#include <eigen3/Eigen/Eigen>
 #include <QtWidgets/QApplication>
+
 #include "MainWindow.h"
 
 using namespace std;
+using namespace Eigen;
 
+int playStatus;
+condition_variable playCondVar;
+mutex playCondVarMtx;
+Matrix4f camTrf;
 MainWindow * mw;
-extern int playStatus;
+int FPS = 30;
+bool realtime_playback = true;
+bool is_synchronous = true;
 
 int main(int argc, char ** argv)
 {

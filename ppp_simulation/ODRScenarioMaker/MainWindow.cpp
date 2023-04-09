@@ -14,10 +14,9 @@
 using namespace std;
 using namespace Eigen;
 
-int playStatus;
-condition_variable playCondVar;
-mutex playCondVarMtx;
-
+extern int playStatus;
+extern condition_variable playCondVar;
+extern mutex playCondVarMtx;
 extern int FPS;
 extern bool realtime_playback;
 extern bool is_synchronous;

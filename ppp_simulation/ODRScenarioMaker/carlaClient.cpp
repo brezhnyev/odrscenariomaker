@@ -60,9 +60,9 @@ extern condition_variable playCondVar;
 extern mutex playCondVarMtx;
 extern Matrix4f camTrf;
 extern MainWindow * mw;
-int FPS = 30;
-bool realtime_playback = true;
-bool is_synchronous = true;
+extern int FPS = 30;
+extern bool realtime_playback = true;
+extern bool is_synchronous = true;
 //extern vector<QLabel*> camera_widgets; // need to be extern to be created in the parent thread
 
 
