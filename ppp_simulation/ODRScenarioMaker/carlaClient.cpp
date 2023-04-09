@@ -60,9 +60,9 @@ extern condition_variable playCondVar;
 extern mutex playCondVarMtx;
 extern Matrix4f camTrf;
 extern MainWindow * mw;
-extern int FPS = 30;
-extern bool realtime_playback = true;
-extern bool is_synchronous = true;
+extern int FPS;
+extern bool realtime_playback;
+extern bool is_synchronous;
 //extern vector<QLabel*> camera_widgets; // need to be extern to be created in the parent thread
 
 
@@ -93,11 +93,11 @@ void play(Scenario & scenario)
     vector<ShrdPtrActor> vehicles;
     vector<ShrdPtrActor> walkers;
     std::vector<ShrdPtrActor> cameras; // carla cameras
-    std::vector<Camera*> scene_cameras;
+    std::vector<Camera*> scenario_cameras;
 
     auto addCam = [&](Camera * camera, ShrdPtrActor actor)
     {
-        scene_cameras.push_back(camera);
+        scenario_cameras.push_back(camera);
         auto blueprint_library = world.GetBlueprintLibrary();
         // Find a camera blueprint.
         auto camera_bp = const_cast<cc::BlueprintLibrary::value_type*>(blueprint_library->Find("sensor.camera.rgb"));
@@ -292,12 +292,42 @@ void play(Scenario & scenario)
                 wheelsAngle = min<float>(1.0f, wheelsAngle/1.22173);
                 float accLon = (targetSpeed - speed);
                 applyControl(0, accLon, carla_vehicle, targetSpeed, sign*wheelsAngle);
-                Actor * visuactor = dynamic_cast<Actor*>(scenario.children()[scenario_vehicle.getID()]);
-                if (visuactor)
+                scenario_vehicle.setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
+                scenario_vehicle.set_bbox(Vector3f(carla_vehicle->GetBoundingBox().extent.x, carla_vehicle->GetBoundingBox().extent.y, carla_vehicle->GetBoundingBox().extent.z));
+            }
+            carla_actor = &walkers[0];
+            for (auto && scenario_actor : scenario.children())
+            {
+                if (scenario_actor.second->getType() != "Walker")
+                    continue;
+
+                cc::Walker * carla_walker = dynamic_cast<cc::Walker*>(carla_actor->get());
+
+                auto trf = carla_walker->GetTransform();
+                auto heading = (carla_walker->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
+                auto speed =  carla_walker->GetVelocity().Length();
+
+                Walker & scenario_walker = *dynamic_cast<Walker*>(scenario_actor.second); 
+                Waypath & waypath = *dynamic_cast<Waypath*>(scenario_walker.children().begin()->second);
+
+                // Get the next waypoints in some distance away:
+                Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
+                float targetSpeed;
+                Eigen::Vector3f targetDir;
+                cc::Walker::Control wc = carla_walker->GetWalkerControl();
+                if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
                 {
-                    visuactor->setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
-                    visuactor->set_bbox(Vector3f(carla_vehicle->GetBoundingBox().extent.x, carla_vehicle->GetBoundingBox().extent.y, carla_vehicle->GetBoundingBox().extent.z));
+                    wc.speed = 0;
                 }
+                else
+                {
+                    wc.speed = targetSpeed;
+                    wc.direction = cg::Vector3D(targetDir[0], -targetDir[1], targetDir[2]);
+                }
+                static_cast<cc::Walker*>(carla_actor->get())->ApplyControl(wc);
+                ++carla_actor;
+                scenario_walker.setTrf(trf.location.x, -trf.location.y, trf.location.z - carla_walker->GetBoundingBox().extent.z, 0, 0, -trf.rotation.yaw);
+                scenario_walker.set_bbox(Vector3f(carla_walker->GetBoundingBox().extent.x, carla_walker->GetBoundingBox().extent.y, carla_walker->GetBoundingBox().extent.z));
             }
         }
     });
@@ -326,7 +356,7 @@ void play(Scenario & scenario)
 
     world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
     // close the qt widgets
-    for (auto c : scene_cameras) c->get_camWidget()->close();
+    for (auto c : scenario_cameras) c->get_camWidget()->close();
     for (auto c : cameras) c->Destroy();
     for (auto v : vehicles) v->Destroy();
     for (auto w : walkers) w->Destroy();

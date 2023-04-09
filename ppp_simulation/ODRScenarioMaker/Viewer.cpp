@@ -28,7 +28,7 @@ Viewer::Viewer(Scenario & scenario, const string & xodrfile, string objfile) : m
     camera()->setSceneRadius(400);
     camera()->fitSphere(Vec(0, 0, 0), 200);
     camera()->setZNearCoefficient(0.001);
-    camera()->setFieldOfView(M_PI_2);
+    camera()->setFieldOfView(M_PI*100.f/180.f);
 }
 
 void Viewer::init()

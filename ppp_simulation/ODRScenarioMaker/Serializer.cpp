@@ -46,14 +46,14 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
     {
         YAML::Node node;
         node["type"] = object->getType();
-        if (object->getType() == "Vehicle")
+        Actor * actor = dynamic_cast<Actor*>(object);
+        if (actor)
         {
-            Vehicle * vehicle = dynamic_cast<Vehicle*>(object);
             YAML::Node color;
-            node["name"] = vehicle->get_name();
-            color["r"] = vehicle->get_color()[0];
-            color["g"] = vehicle->get_color()[1];
-            color["b"] = vehicle->get_color()[2];
+            node["name"] = actor->get_name();
+            color["r"] = actor->get_color()[0];
+            color["g"] = actor->get_color()[1];
+            color["b"] = actor->get_color()[2];
             node["color"] = color;
             YAML::Node waypaths;
             node["facilities"] = waypaths;
@@ -125,18 +125,20 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
     for (auto it = node.begin(); it != node.end(); ++it)
     {
         auto child = *it;
-        if (child["type"].as<string>() == "Vehicle")
+        Actor * actor = nullptr;
+        if (child["type"].as<string>() == "Vehicle") actor = new Vehicle(&object);
+        if (child["type"].as<string>() == "Walker")  actor = new Walker(&object);
+        if (actor)
         {
-            Vehicle * vehicle = new Vehicle(&object);
-            object.addChild(vehicle);
-            vehicle->set_name(child["name"].as<string>());
+            object.addChild(actor);
+            actor->set_name(child["name"].as<string>());
             auto color = child["color"];
             int r = color["r"].as<int>();
             int g = color["g"].as<int>();
             int b = color["b"].as<int>();
-            vehicle->set_color(Eigen::Vector3i(r,g,b));
+            actor->set_color(Eigen::Vector3i(r,g,b));
             if (!child["facilities"].IsNull())
-                deserialize_yaml(child["facilities"], *vehicle);
+                deserialize_yaml(child["facilities"], *actor);
         }
         if (child["type"].as<string>() == "Waypath")
         {
