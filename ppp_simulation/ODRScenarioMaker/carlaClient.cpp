@@ -279,15 +279,7 @@ void play(Scenario & scenario)
                 }
                 cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
                 auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
-                float alpha = acos(dir.x*heading.x + dir.y*heading.y + dir.z*heading.z);
-                float wheelsAngle = 0;
-                if (alpha > 0.00001)
-                {
-                    float R = speed/sin(alpha); // i.e. speed*1 = length of arc the vehicle will pass while steering during 1 second
-                    R = max(R, 2*carla_vehicle->GetBoundingBox().extent.x); // assuming min radius is 1 length of car
-                    float s = 2.0f*(1.0f/(1.0f+exp(-speed*100.0f))-0.5f);
-                    wheelsAngle = asin(2*carla_vehicle->GetBoundingBox().extent.x/R)*s;
-                }
+                float wheelsAngle = acos(dir.x*heading.x + dir.y*heading.y + dir.z*heading.z);
                 // assuming max weelAngle is 70 degrees # for each car is individual, need to be looked up
                 wheelsAngle = min<float>(1.0f, wheelsAngle/1.22173);
                 float accLon = (targetSpeed - speed);
