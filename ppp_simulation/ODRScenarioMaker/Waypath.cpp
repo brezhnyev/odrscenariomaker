@@ -112,6 +112,10 @@ Vector3f Waypath::getEndingPosition()
 
 bool Waypath::getNext(Vector3f & pos, Vector3f & dir, float & targetSpeed, float currentSpeed, int fps)
 {
+    if (m_smoothPath.empty())
+    {
+        return false;
+    }
     // find the nearest next point:
     float dist = 100000;
     int index = 0;

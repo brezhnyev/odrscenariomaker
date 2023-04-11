@@ -242,7 +242,7 @@ void play(Scenario & scenario)
             unique_lock<mutex> lk(playCondVarMtx);
             playCondVar.wait(lk);
                 
-            auto carla_actor = &vehicles[0];
+            size_t carla_actor_c = 0;
             for (auto && scenario_actor : scenario.children())
             {
                 if (!playStatus)
@@ -251,9 +251,7 @@ void play(Scenario & scenario)
                 if (scenario_actor.second->getType() != "Vehicle")
                     continue;
 
-                cc::Vehicle * carla_vehicle = dynamic_cast<cc::Vehicle*>(carla_actor->get());
-
-                ++carla_actor;
+                cc::Vehicle * carla_vehicle = dynamic_cast<cc::Vehicle*>(vehicles[carla_actor_c].get());
 
                 auto trf = carla_vehicle->GetTransform();
                 auto heading = (carla_vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
@@ -286,14 +284,18 @@ void play(Scenario & scenario)
                 applyControl(0, accLon, carla_vehicle, targetSpeed, sign*wheelsAngle);
                 scenario_vehicle.setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
                 scenario_vehicle.set_bbox(Vector3f(carla_vehicle->GetBoundingBox().extent.x, carla_vehicle->GetBoundingBox().extent.y, carla_vehicle->GetBoundingBox().extent.z));
+
+                ++carla_actor_c;
+                if (carla_actor_c >= vehicles.size())
+                    break;
             }
-            carla_actor = &walkers[0];
+            carla_actor_c = 0;
             for (auto && scenario_actor : scenario.children())
             {
                 if (scenario_actor.second->getType() != "Walker")
                     continue;
 
-                cc::Walker * carla_walker = dynamic_cast<cc::Walker*>(carla_actor->get());
+                cc::Walker * carla_walker = dynamic_cast<cc::Walker*>(walkers[carla_actor_c].get());
 
                 auto trf = carla_walker->GetTransform();
                 auto heading = (carla_walker->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
@@ -316,10 +318,12 @@ void play(Scenario & scenario)
                     wc.speed = targetSpeed;
                     wc.direction = cg::Vector3D(targetDir[0], -targetDir[1], targetDir[2]);
                 }
-                static_cast<cc::Walker*>(carla_actor->get())->ApplyControl(wc);
-                ++carla_actor;
+                carla_walker->ApplyControl(wc);
                 scenario_walker.setTrf(trf.location.x, -trf.location.y, trf.location.z - carla_walker->GetBoundingBox().extent.z, 0, 0, -trf.rotation.yaw);
                 scenario_walker.set_bbox(Vector3f(carla_walker->GetBoundingBox().extent.x, carla_walker->GetBoundingBox().extent.y, carla_walker->GetBoundingBox().extent.z));
+                ++carla_actor_c;
+                if (carla_actor_c >= walkers.size())
+                    break;
             }
         }
     });
