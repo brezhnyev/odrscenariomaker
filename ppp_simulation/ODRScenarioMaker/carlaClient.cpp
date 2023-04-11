@@ -273,6 +273,9 @@ void play(Scenario & scenario)
                     ls = crpc::VehicleLightState::LightState::Brake;
                     carla_vehicle->SetLightState(ls);
                     carla_vehicle->ApplyControl(control);
+                    ++carla_actor_c;
+                    if (carla_actor_c >= vehicles.size())
+                        break;
                     continue;
                 }
                 cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
