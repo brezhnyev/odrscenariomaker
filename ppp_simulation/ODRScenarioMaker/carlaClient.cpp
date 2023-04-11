@@ -235,122 +235,108 @@ void play(Scenario & scenario)
         }
     });
 
-    thread driveThread([&]()
+    while (playStatus)
     {
-        while (playStatus)
+        std::chrono::time_point<std::chrono::system_clock> timenow = std::chrono::system_clock::now();
+        if (1 == playStatus)
         {
             unique_lock<mutex> lk(playCondVarMtx);
             playCondVar.wait(lk);
-                
-            size_t carla_actor_c = 0;
-            for (auto && scenario_actor : scenario.children())
+        }
+        
+        size_t carla_actor_c = 0;
+        for (auto && scenario_actor : scenario.children())
+        {
+            if (!playStatus)
+                break;
+
+            if (scenario_actor.second->getType() != "Vehicle")
+                continue;
+
+            cc::Vehicle * carla_vehicle = dynamic_cast<cc::Vehicle*>(vehicles[carla_actor_c].get());
+
+            auto trf = carla_vehicle->GetTransform();
+            auto heading = (carla_vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
+            auto speed =  carla_vehicle->GetVelocity().Length();
+
+            Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(scenario_actor.second);
+            Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
+
+            // Get the next waypoints in some distance away:
+            Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
+            float targetSpeed;
+            Eigen::Vector3f targetDir;
+            if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
             {
-                if (!playStatus)
-                    break;
-
-                if (scenario_actor.second->getType() != "Vehicle")
-                    continue;
-
-                cc::Vehicle * carla_vehicle = dynamic_cast<cc::Vehicle*>(vehicles[carla_actor_c].get());
-
-                auto trf = carla_vehicle->GetTransform();
-                auto heading = (carla_vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
-                auto speed =  carla_vehicle->GetVelocity().Length();
-
-                Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(scenario_actor.second);
-                Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
-
-                // Get the next waypoints in some distance away:
-                Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
-                float targetSpeed;
-                Eigen::Vector3f targetDir;
-                if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
-                {
-                    cc::Vehicle::Control control;
-                    control.brake = 1.0f;
-                    control.throttle = 0.0f;
-                    auto ls = carla_vehicle->GetLightState();
-                    ls = crpc::VehicleLightState::LightState::Brake;
-                    carla_vehicle->SetLightState(ls);
-                    carla_vehicle->ApplyControl(control);
-                    ++carla_actor_c;
-                    if (carla_actor_c >= vehicles.size())
-                        break;
-                    continue;
-                }
-                cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
-                auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
-                float wheelsAngle = acos(dir.x*heading.x + dir.y*heading.y + dir.z*heading.z);
-                // assuming max weelAngle is 70 degrees # for each car is individual, need to be looked up
-                wheelsAngle = min<float>(1.0f, wheelsAngle/1.22173);
-                float accLon = (targetSpeed - speed);
-                applyControl(0, accLon, carla_vehicle, targetSpeed, sign*wheelsAngle);
-                scenario_vehicle.setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
-                scenario_vehicle.set_bbox(Vector3f(carla_vehicle->GetBoundingBox().extent.x, carla_vehicle->GetBoundingBox().extent.y, carla_vehicle->GetBoundingBox().extent.z));
-
+                cc::Vehicle::Control control;
+                control.brake = 1.0f;
+                control.throttle = 0.0f;
+                auto ls = carla_vehicle->GetLightState();
+                ls = crpc::VehicleLightState::LightState::Brake;
+                carla_vehicle->SetLightState(ls);
+                carla_vehicle->ApplyControl(control);
                 ++carla_actor_c;
                 if (carla_actor_c >= vehicles.size())
                     break;
+                continue;
             }
-            carla_actor_c = 0;
-            for (auto && scenario_actor : scenario.children())
-            {
-                if (scenario_actor.second->getType() != "Walker")
-                    continue;
+            cg::Vector3D dir(targetDir.x(), -targetDir.y(), targetDir.z());
+            auto sign = (dir.x * heading.y - dir.y * heading.x) > 0 ? -1 : 1;
+            float wheelsAngle = acos(dir.x*heading.x + dir.y*heading.y + dir.z*heading.z);
+            // assuming max weelAngle is 70 degrees # for each car is individual, need to be looked up
+            wheelsAngle = min<float>(1.0f, wheelsAngle/1.22173);
+            float accLon = (targetSpeed - speed);
+            applyControl(0, accLon, carla_vehicle, targetSpeed, sign*wheelsAngle);
+            scenario_vehicle.setTrf(trf.location.x, -trf.location.y, trf.location.z, 0, 0, -trf.rotation.yaw);
+            scenario_vehicle.set_bbox(Vector3f(carla_vehicle->GetBoundingBox().extent.x, carla_vehicle->GetBoundingBox().extent.y, carla_vehicle->GetBoundingBox().extent.z));
 
-                cc::Walker * carla_walker = dynamic_cast<cc::Walker*>(walkers[carla_actor_c].get());
-
-                auto trf = carla_walker->GetTransform();
-                auto heading = (carla_walker->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
-                auto speed =  carla_walker->GetVelocity().Length();
-
-                Walker & scenario_walker = *dynamic_cast<Walker*>(scenario_actor.second); 
-                Waypath & waypath = *dynamic_cast<Waypath*>(scenario_walker.children().begin()->second);
-
-                // Get the next waypoints in some distance away:
-                Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
-                float targetSpeed;
-                Eigen::Vector3f targetDir;
-                cc::Walker::Control wc = carla_walker->GetWalkerControl();
-                if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
-                {
-                    wc.speed = 0;
-                }
-                else
-                {
-                    wc.speed = targetSpeed;
-                    wc.direction = cg::Vector3D(targetDir[0], -targetDir[1], targetDir[2]);
-                }
-                carla_walker->ApplyControl(wc);
-                scenario_walker.setTrf(trf.location.x, -trf.location.y, trf.location.z - carla_walker->GetBoundingBox().extent.z, 0, 0, -trf.rotation.yaw);
-                scenario_walker.set_bbox(Vector3f(carla_walker->GetBoundingBox().extent.x, carla_walker->GetBoundingBox().extent.y, carla_walker->GetBoundingBox().extent.z));
-                ++carla_actor_c;
-                if (carla_actor_c >= walkers.size())
-                    break;
-            }
+            ++carla_actor_c;
+            if (carla_actor_c >= vehicles.size())
+                break;
         }
-    });
-
-    while (playStatus)
-    {
-        try
+        carla_actor_c = 0;
+        for (auto && scenario_actor : scenario.children())
         {
-            std::chrono::time_point<std::chrono::system_clock> timenow = std::chrono::system_clock::now();
-            if (1 == playStatus)
-            {
-                unique_lock<mutex> lk(playCondVarMtx);
-                playCondVar.wait(lk);
-            }
-            // unfortunately we cannot Tick for Navigation only - in this case the Actors will live "on their onw"
-            mw->update();
-            playCondVar.notify_all();
-            world.Tick(carla::time_duration(1s));
+            if (scenario_actor.second->getType() != "Walker")
+                continue;
 
-            auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
-            if (realtime_playback)
-                usleep(std::max(0.0, (1.0 * 1e6 / FPS - diff)));
+            cc::Walker * carla_walker = dynamic_cast<cc::Walker*>(walkers[carla_actor_c].get());
+
+            auto trf = carla_walker->GetTransform();
+            auto heading = (carla_walker->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
+            auto speed =  carla_walker->GetVelocity().Length();
+
+            Walker & scenario_walker = *dynamic_cast<Walker*>(scenario_actor.second); 
+            Waypath & waypath = *dynamic_cast<Waypath*>(scenario_walker.children().begin()->second);
+
+            // Get the next waypoints in some distance away:
+            Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
+            float targetSpeed;
+            Eigen::Vector3f targetDir;
+            cc::Walker::Control wc = carla_walker->GetWalkerControl();
+            if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
+            {
+                wc.speed = 0;
+            }
+            else
+            {
+                wc.speed = targetSpeed;
+                wc.direction = cg::Vector3D(targetDir[0], -targetDir[1], targetDir[2]);
+            }
+            carla_walker->ApplyControl(wc);
+            scenario_walker.setTrf(trf.location.x, -trf.location.y, trf.location.z - carla_walker->GetBoundingBox().extent.z, 0, 0, -trf.rotation.yaw);
+            scenario_walker.set_bbox(Vector3f(carla_walker->GetBoundingBox().extent.x, carla_walker->GetBoundingBox().extent.y, carla_walker->GetBoundingBox().extent.z));
+            ++carla_actor_c;
+            if (carla_actor_c >= walkers.size())
+                break;
         }
+        mw->update();
+        try { world.Tick(carla::time_duration(1s)); }
         catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
+        playCondVar.notify_all();
+        auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
+        if (realtime_playback)
+            usleep(std::max(0.0, (1.0 * 1e6 / FPS - diff)));
     }
 
     world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));
@@ -360,7 +346,6 @@ void play(Scenario & scenario)
     for (auto v : vehicles) v->Destroy();
     for (auto w : walkers) w->Destroy();
     camThread.join();
-    driveThread.join();
 
     usleep(1e6);
 }
