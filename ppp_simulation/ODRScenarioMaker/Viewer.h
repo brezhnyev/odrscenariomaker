@@ -23,6 +23,7 @@ public:
     void mousePressEvent(QMouseEvent *) override;
     void mouseMoveEvent(QMouseEvent *) override;
     void mouseReleaseEvent(QMouseEvent *) override;
+    void keyPressEvent(QKeyEvent*) override;
     void listenForResponse();
 
 signals:
@@ -35,10 +36,14 @@ public slots:
     void slot_select(int);
 
 private:
+    void renderAxis();
+
+private:
     Scenario &      m_scenario;
     CanvasXODR      m_canvas;
     World3D         m_world3d;
     bool            m_leftMousePressed{false};
     int x{-1};
     int y{-1};
+    bool            m_renderAxis{false};
 };

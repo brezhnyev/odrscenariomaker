@@ -32,15 +32,24 @@ public:
     void draw() const override;
     void drawWithNames() const override;
     std::string getType() const override { return "CanvasXODR"; }
-
-    static int getLaneID(Eigen::Vector3d p);
+    std::pair<Eigen::Vector3d, Eigen::Vector3d> getSceneBbox() { return m_sceneBbox; }
 
 private:
     std::multimap<double, SValue> collectSValues(const odr_1_5::t_road &);
+    void addToSceneBbox(const Eigen::Vector4d & v)
+    {
+        if (v[0] < m_sceneBbox.first[0])  m_sceneBbox.first[0]  = v[0];
+        if (v[1] < m_sceneBbox.first[1])  m_sceneBbox.first[1]  = v[1];
+        if (v[2] < m_sceneBbox.first[2])  m_sceneBbox.first[2]  = v[2];
+        if (v[0] > m_sceneBbox.second[0]) m_sceneBbox.second[0] = v[0];
+        if (v[1] > m_sceneBbox.second[1]) m_sceneBbox.second[1] = v[1];
+        if (v[2] > m_sceneBbox.second[2]) m_sceneBbox.second[2] = v[2];
+    }
 
 private:
     // key1: roadID, key2: sectionID, key3: laneID
     XodrBuilder m_xodrBuilder;
     uint listRoad, listBounadries, listCenterlines;
     float mXodrResolution {0.1};
+    std::pair<Eigen::Vector3d, Eigen::Vector3d> m_sceneBbox;
 };

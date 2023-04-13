@@ -24,19 +24,25 @@ extern int playStatus;
 
 Viewer::Viewer(Scenario & scenario, const string & xodrfile, string objfile) : m_scenario(scenario), m_canvas(xodrfile), m_world3d(objfile)
 {
-    using namespace qglviewer;
-    camera()->setSceneRadius(400);
-    camera()->fitSphere(Vec(0, 0, 0), 200);
-    camera()->setZNearCoefficient(0.001);
-    camera()->setFieldOfView(M_PI*100.f/180.f);
 }
 
 void Viewer::init()
 {
+    using namespace qglviewer;
     glDisable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     m_canvas.init();
     m_world3d.init();
+
+    auto bbox = m_canvas.getSceneBbox();
+    Vec minp(bbox.first[0], bbox.first[1], bbox.first[2]);
+    Vec maxp(bbox.second[0], bbox.second[1], bbox.second[2]);
+    camera()->setSceneBoundingBox(minp, maxp);
+    camera()->setSceneRadius((bbox.second - bbox.first).norm()); // we reset the radius from setSceneBoundingBox
+    //camera()->showEntireScene();
+    camera()->fitSphere(sceneCenter(), 0.1*sceneRadius()); // we make our own showEntireScene()
+    camera()->setZNearCoefficient(0.001);
+    camera()->setFieldOfView(M_PI*100.f/180.f);
 }
 
 void Viewer::draw()
@@ -45,6 +51,8 @@ void Viewer::draw()
     m_scenario.draw();
     m_world3d.draw();
     camera()->getModelViewMatrix(camTrf.data());
+    if (m_renderAxis)
+        renderAxis();
 }
 
 void Viewer::drawWithNames()
@@ -159,5 +167,64 @@ void Viewer::slot_select(int id)
 {
     m_scenario.select(id); // in the tree we can select both waypoint and waypath
     emit signal_select(id);
+    update();
+}
+
+void Viewer::keyPressEvent(QKeyEvent * e)
+{
+    if (e->key() == Qt::Key_A)
+    {
+        m_renderAxis = !m_renderAxis;
+        update();
+    }
+    else
+        QGLViewer::keyPressEvent(e);
+}
+
+void Viewer::renderAxis()
+{
+    const float length = 0.25f;
+    const float charWidth = length / 40.0f;
+    const float charHeight = length / 30.0f;
+    const float charShift = 1.04 * length;
+
+    glPushMatrix();
+    float sf = camera()->sceneRadius();
+    glScalef(sf, sf, sf);
+    glBegin(GL_LINES);
+    // The X
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(charShift, charWidth, -charHeight);
+    glVertex3f(charShift, -charWidth, charHeight);
+    glVertex3f(charShift, -charWidth, -charHeight);
+    glVertex3f(charShift, charWidth, charHeight);
+    // The X axis:
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glVertex3f(length, 0.0f, 0.0f);
+    // The Y
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glVertex3d(charWidth, charShift, charHeight);
+    glVertex3d(0.0, charShift, 0.0);
+    glVertex3d(-charWidth, charShift, charHeight);
+    glVertex3d(0.0, charShift, 0.0);
+    glVertex3d(0.0, charShift, 0.0);
+    glVertex3d(0.0, charShift, -charHeight);
+    // The Y axis:
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glVertex3f(0.0f, length, 0.0f);
+    // The Z
+    glColor3f(0.0f, 0.0f, 1.0f);
+    glVertex3d(-charWidth, charHeight, charShift);
+    glVertex3d(charWidth, charHeight, charShift);
+    glVertex3d(charWidth, charHeight, charShift);
+    glVertex3d(-charWidth, -charHeight, charShift);
+    glVertex3d(-charWidth, -charHeight, charShift);
+    glVertex3d(charWidth, -charHeight, charShift);
+    // The Z axis:
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glVertex3f(0.0f, 0.0f, length);
+    glEnd();
+    glPopMatrix();
+
     update();
 }

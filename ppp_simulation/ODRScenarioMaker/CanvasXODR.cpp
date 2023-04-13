@@ -23,6 +23,12 @@ CanvasXODR::~CanvasXODR()
 
 void CanvasXODR::init()
 {
+    m_sceneBbox.first[0] = __DBL_MAX__;
+    m_sceneBbox.first[1] = __DBL_MAX__;
+    m_sceneBbox.first[2] = __DBL_MAX__;
+    m_sceneBbox.second[0] = -__DBL_MAX__;
+    m_sceneBbox.second[1] = -__DBL_MAX__;
+    m_sceneBbox.second[2] = -__DBL_MAX__;
     // roads:
     listRoad = glGenLists(1);
     glNewList(listRoad, GL_COMPILE);
@@ -69,6 +75,7 @@ void CanvasXODR::init()
                     for (auto && p : l.second)
                     {
                         glVertex3f(p.x(), p.y(), p.z());
+                        addToSceneBbox(p);
                     }
                     glEnd();
                 }
