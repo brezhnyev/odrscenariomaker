@@ -34,7 +34,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 
     connect(addWaypath, &QPushButton::clicked, [this]()
     { 
-        int id = m_actor.addChild(new Waypath(&m_actor));
+        int id = (new Waypath(&m_actor))->getID();
         if (id == -1)
         {
             QMessageBox::warning(this, "Error adding Element", "Failed to add Waypath: index not found!");
@@ -44,8 +44,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
     });
     connect(addCamera, &QPushButton::clicked, [this]()
     {
-        Camera * camera = new Camera(&m_actor);
-        int id = m_actor.addChild(camera);
+        int id = (new Camera(&m_actor))->getID();
         if (id == -1)
         {
             QMessageBox::warning(this, "Error adding Element", "Failed to add Camera: index not found!");

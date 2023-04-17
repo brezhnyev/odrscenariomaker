@@ -16,7 +16,7 @@ class Waypoint;
 class Scenario : public Selectable
 {
 public:
-    Scenario() : Selectable(nullptr) {};
+    Scenario(Selectable * parent) : Selectable(parent) {};
     Scenario(const Scenario &); // copy c-tor (need to redefine since we can load)
     Scenario & operator=(const Scenario &);
     std::string getType() const override { return "Scenario"; }

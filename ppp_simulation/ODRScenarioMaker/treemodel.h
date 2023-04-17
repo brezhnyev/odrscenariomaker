@@ -51,13 +51,13 @@
 #ifndef TREEMODEL_H
 #define TREEMODEL_H
 
+#include "Selectable.h"
+
 #include <QAbstractItemModel>
 #include <QModelIndex>
 #include <QVariant>
 
 #include <map>
-
-class TreeItem;
 
 //! [0]
 class TreeModel : public QAbstractItemModel
@@ -65,7 +65,7 @@ class TreeModel : public QAbstractItemModel
     Q_OBJECT
 
 public:
-    explicit TreeModel(const QString &data, QObject *parent = nullptr);
+    explicit TreeModel(TreeItem * root, QObject *parent = nullptr);
     ~TreeModel();
 
     QVariant data(const QModelIndex &index, int role) const override;
@@ -78,14 +78,11 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    void addItem(int, int, std::string type);
-    void delItem(int);
     QModelIndex getIndexById(int);
 
 private:
     void setupModelData(const QStringList &lines, TreeItem *parent);
     TreeItem *rootItem;
-    std::map<int, TreeItem*> m_itemsMap;
 };
 //! [0]
 

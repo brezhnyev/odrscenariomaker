@@ -71,7 +71,6 @@ set(SOURCE
     Camera.cpp
     Waypath.cpp
     Waypoint.cpp
-    treeitem.cpp
     treemodel.cpp
     treeview.cpp
     scenario.cpp

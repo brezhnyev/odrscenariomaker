@@ -85,14 +85,14 @@ void Viewer::postSelection(const QPoint &point)
                 QMessageBox::warning(this, "Error adding Element", "Add/activate waypath in Actor!");
                 return;
             }
-            int id = waypath->addChild(new Waypoint(Vector3f(sp.x, sp.y, sp.z), 0, waypath));
+            int id = (new Waypoint(Vector3f(sp.x, sp.y, sp.z), 0, waypath))->getID();
             emit signal_addWaypoint(id);
         }
     }
     else
     {
         int id = selectedName();
-        m_scenario.select(id); // In graphics we can only select waypoint
+        m_scenario.select(id);
         emit signal_select(id);
         // KB: no need to call update, since this function is a virtual and the update is called after it from OGLViewer
     }

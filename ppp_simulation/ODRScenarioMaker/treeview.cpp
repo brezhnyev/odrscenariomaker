@@ -1,14 +1,14 @@
 #include "treeview.h"
-#include "treeitem.h"
+#include "Selectable.h"
 
 #include <QtCore/QItemSelectionModel>
 #include <QtWidgets/QMessageBox>
 
 #include <string>
 
-TreeView::TreeView(int scenarioID) : QTreeView()
+TreeView::TreeView(TreeItem * root) : QTreeView()
 {
-    m_treeModel = new TreeModel("", this);
+    m_treeModel = new TreeModel(root, this);
     setModel(m_treeModel);
     connect(selectionModel(), &QItemSelectionModel::selectionChanged, 
     [this](const QItemSelection & sel, const QItemSelection & desel){
@@ -17,26 +17,23 @@ TreeView::TreeView(int scenarioID) : QTreeView()
         auto treeItem = static_cast<TreeItem*>(sellist[0].internalPointer());
         emit signal_select(treeItem->getID());
     });
-    m_treeModel->addItem(-1, scenarioID, "Scenario");
-    m_scenarioID = scenarioID;
 }
 
-void TreeView::slot_addItem(int id, std::string name, int parentID)
+void TreeView::slot_addItem(int id)
 {
-    m_treeModel->addItem(parentID == -1 ? m_selectedItemID : parentID, id, name);
+    m_treeModel->layoutChanged();
     emit signal_select(id);
 }
 
 void TreeView::slot_delItem(int id)
 {
-    m_treeModel->delItem(id);
     selectionModel()->clearSelection();
+    m_treeModel->layoutChanged();
 }
 
 void TreeView::slot_select(int id)
 {
-    m_selectedItemID = id;
-    setExpanded(m_treeModel->getIndexById(m_selectedItemID), true);
+    setExpanded(m_treeModel->getIndexById(id), true);
     selectionModel()->clear();
     blockSignals(true);
     selectionModel()->select(m_treeModel->getIndexById(id), QItemSelectionModel::Rows | QItemSelectionModel::Select);

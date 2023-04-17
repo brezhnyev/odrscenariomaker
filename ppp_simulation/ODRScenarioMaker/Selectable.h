@@ -30,7 +30,6 @@ public:
     virtual void select(int);
     virtual std::string getType() const = 0;
 
-    int addChild(Selectable * child);
     void deleteSelectable(int);
     void deleteSelectable(Selectable *);
 
@@ -40,18 +39,31 @@ public:
     std::map<int, Selectable*> & children() { return m_children; }
     void clear();
     void parse(std::function<void(Selectable*)> fun);
-    Selectable * getParent()                { return m_parent; }
+    Selectable * getParent() const          { return m_parent; }
     void setParent(Selectable * parent)     { m_parent = parent; } // used only once in copy c-tor of Scenario (loading scenario)
     Selectable * getSelected();
-    
+
+    int row() const;
+    int columnCount() const { return 2; }
+    std::string data(int index) const;
+
 protected:
     static int                  s_ID;
     int                         m_id;
     bool                        m_selected;
     std::map<int, Selectable*>  m_children;
-    Selectable *                m_parent;
+    Selectable *                m_parent{nullptr};
 
 protected:
     virtual void drawGeometry() const {};
     Selectable * getActiveChild(int depth, int cDepth = 0);
 };
+
+class Root : public Selectable
+{
+public:
+    Root() : Selectable(nullptr) {}
+    std::string getType() const override { return "Root"; }
+};
+
+typedef Selectable TreeItem;

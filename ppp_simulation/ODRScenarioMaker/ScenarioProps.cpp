@@ -51,7 +51,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     mainLayout->addWidget(addVehicle);
     connect(addVehicle, &QPushButton::clicked, [this]()
     { 
-        int id = m_scenario.addChild(new Vehicle(&m_scenario));
+        int id = (new Vehicle(&m_scenario))->getID();
         if (id == -1)
         {
             QMessageBox::warning(this, "Error adding Element", "Failed to add Vehicle: index not found!");
@@ -64,7 +64,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     mainLayout->addWidget(addWalker);
     connect(addWalker, &QPushButton::clicked, [this]()
     { 
-        int id = m_scenario.addChild(new Walker(&m_scenario));
+        int id = (new Walker(&m_scenario))->getID();
         if (id == -1)
         {
             QMessageBox::warning(this, "Error adding Element", "Failed to add Walker: index not found!");
@@ -77,8 +77,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     mainLayout->addWidget(addCamera);
     connect(addCamera, &QPushButton::clicked, [this]()
     {
-        Camera * camera = new Camera(&m_scenario);
-        int id = m_scenario.addChild(camera);
+        int id = (new Camera(&m_scenario))->getID();
         if (id == -1)
         {
             QMessageBox::warning(this, "Error adding Element", "Failed to add Camera: index not found!");
@@ -134,17 +133,11 @@ QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
         
         ifstream ifs(name.toStdString());
         m_scenario.clear();
-        rosTopics->clear();
         stringstream ssf; ssf << ifs.rdbuf();
-        m_scenario = Serializer::deserialize_yaml(ssf.str());
-        emit signal_update();
+        Serializer::deserialize_yaml(m_scenario, ssf.str());
 
-        townName->setText(m_scenario.getTownName().c_str());
-        rosBagfile->setText(m_scenario.getRosbagFile().c_str());
-        for (auto && topic : m_scenario.getRosbagTopics())
-            rosTopics->append(topic.c_str());
-        rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
         ifs.close();
+        emit signal_update();
     });
 
     connect(saveScenario, &QPushButton::clicked, [this](){

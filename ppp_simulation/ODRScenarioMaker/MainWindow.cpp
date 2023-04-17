@@ -27,19 +27,19 @@ extern void play(Scenario & scenario);
 void play(Scenario & scenario) {} // dummy play to link successfully
 #endif
 
-MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent) : QMainWindow(parent)
+MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent) : QMainWindow(parent), m_scenario(new Root())
 {
     m_viewer = new Viewer(m_scenario, xodrfile, objfile);
     setCentralWidget(m_viewer);
 
-    m_treeView = new TreeView(m_scenario.getID());
+    m_treeView = new TreeView(m_scenario.getParent());
     QDockWidget *treeDock = new QDockWidget(tr("Paths"), this);
     addDockWidget(Qt::LeftDockWidgetArea, treeDock);
     treeDock->setWidget(m_treeView);
 
     connect(m_viewer,   &Viewer::signal_addWaypoint, [this](int id)
     {
-        m_treeView->slot_addItem(id, "Waypoint", m_scenario.getActiveWaypath()->getID());
+        m_treeView->slot_addItem(id);
         m_scenario.getActiveWaypath()->updateSmoothPath();
         m_scenario.getActiveActor()->updatePose();
         update();
@@ -132,8 +132,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
                 deleteItem(id);
             }));
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_update, [this](){ update(); })); // color update
-            m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id, "Waypath"); update(); }));
-            m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id, "Camera");  update(); }));
+            m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id); update(); }));
+            m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id);  update(); }));
         }
         else if (item->getType() == "Walker")
         {
@@ -145,26 +145,26 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
                 deleteItem(id);
             }));
             m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_update, [this](){ update(); })); // color update
-            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id, "Waypath"); update(); }));
-            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id, "Camera");  update(); }));
+            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id); update(); }));
+            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id);  update(); }));
         }
         else if (item->getType() == "Scenario")
         {
             closeActive();
             m_activeDlg = m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
             propsDock->setWidget(m_scenarioProps);
-            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addItem(id, "Vehicle"); update(); }));
-            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addWalker, [this](int id){ m_treeView->slot_addItem(id, "Walker"); update(); }));
-            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id, "Camera");  update(); }));
-            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->loadScenario(&m_scenario); update(); }));
+            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addItem(id); update(); }));
+            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addWalker, [this](int id){ m_treeView->slot_addItem(id); update(); }));
+            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id);  update(); }));
+            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->slot_addItem(m_scenario.getID()); update(); }));
             m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_clear, [this]()
             {
                 m_scenario.clear();
-                m_treeView->loadScenario(&m_scenario);
+                m_treeView->slot_addItem(m_scenario.getID());
                 update();
             }));
         }
-        propsDock->setMaximumWidth(200);
+        propsDock->setMaximumWidth(200);    
         propsDock->setMinimumWidth(200);
     });
 

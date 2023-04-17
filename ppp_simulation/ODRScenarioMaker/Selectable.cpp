@@ -2,6 +2,7 @@
 
 #include <string>
 #include <algorithm>
+#include <assert.h>
 
 using namespace std;
 
@@ -14,6 +15,8 @@ Selectable::~Selectable() {}
 Selectable::Selectable(Selectable * parent) : m_selected(false), m_parent(parent)
 { 
     m_id = s_ID; ++s_ID;
+    if (parent)
+        parent->m_children[m_id] = this;
 }
 
 void Selectable::draw() const
@@ -24,12 +27,6 @@ void Selectable::draw() const
 void Selectable::drawWithNames() const
 {
     for (auto && c : m_children) c.second->drawWithNames();
-}
-
-int Selectable::addChild(Selectable * object)
-{
-    m_children[object->getID()] = object;
-    return object->getID();
 }
 
 void Selectable::deleteSelectable(int id)
@@ -119,4 +116,39 @@ Selectable * Selectable::getSelected()
             selected = s;
     });
     return selected;
+}
+
+int Selectable::row() const
+{
+    if (!m_parent)
+        return 0;
+    int r = 0;
+    for (auto & c : m_parent->children())
+    {
+        if (c.second == this)
+            return r;
+        ++r;
+    }
+    assert(false);
+}
+
+std::string Selectable::data(int index) const
+{
+    assert(index < 2);
+
+    if (m_parent)
+    {
+        if (index == 0)
+            return getType();
+        if (index == 1)
+            return std::to_string(m_id);
+    }
+    else
+    {
+        if (index == 0)
+            return "Type";
+        if (index == 1)
+            return "Id";
+    }
+    return "";
 }

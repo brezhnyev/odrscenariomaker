@@ -97,10 +97,9 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
     }
 }
 
-Scenario Serializer::deserialize_yaml(const std::string & data)
+void Serializer::deserialize_yaml(Scenario & scenario, const std::string & data)
 {
     YAML::Node root = YAML::Load(data);
-    Scenario scenario;
 
     if (root["type"].as<string>() == "Scenario")
     {
@@ -116,8 +115,6 @@ Scenario Serializer::deserialize_yaml(const std::string & data)
         scenario.setRosbagOffset(root["rosbagoffset"].as<float>());
         deserialize_yaml(root["actors"], scenario);
     }
-
-    return scenario;
 }
 
 void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
@@ -130,7 +127,6 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
         if (child["type"].as<string>() == "Walker")  actor = new Walker(&object);
         if (actor)
         {
-            object.addChild(actor);
             actor->set_name(child["name"].as<string>());
             auto color = child["color"];
             int r = color["r"].as<int>();
@@ -139,13 +135,14 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             actor->set_color(Eigen::Vector3i(r,g,b));
             if (!child["facilities"].IsNull())
                 deserialize_yaml(child["facilities"], *actor);
+            actor->updatePose();
         }
         if (child["type"].as<string>() == "Waypath")
         {
             Waypath * waypath = new Waypath(&object);
-            object.addChild(waypath);
             if (!child["waypoints"].IsNull())
                 deserialize_yaml(child["waypoints"], *waypath);
+            waypath->updateSmoothPath();
         }
         if (child["type"].as<string>() == "Camera")
         {
@@ -160,7 +157,6 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             float pitch = orientation["pitch"].as<float>();
             float yaw = orientation["yaw"].as<float>();
             camera->set_ori(Eigen::Vector3f(roll,pitch,yaw));
-            object.addChild(camera);
         }
         if (child["type"].as<string>() == "Waypoint")
         {
@@ -170,7 +166,6 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             float z = location["z"].as<float>();
             auto speed = child["speed"];
             Waypoint * waypoint = new Waypoint(Eigen::Vector3f(x,y,z), speed.as<float>(), &object);
-            object.addChild(waypoint);
         }
     }
 }
