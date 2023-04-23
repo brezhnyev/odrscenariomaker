@@ -1,3 +1,3 @@
 [submodule "ppp_simulation/xodr-builder"]
-	path = ppp_simulation/xodr-builder
+	path = src/thirdparty/xodr-builder
 	url = https://git.altran.de/adas/xodr-builder.git
