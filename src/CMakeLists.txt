@@ -81,7 +81,6 @@ set(SOURCE
     WaypathProps.cpp
     Actor.cpp
     ActorProps.cpp
-    IPC.cpp
     Serializer.cpp
     ScenarioProps.cpp
     World3D.cpp

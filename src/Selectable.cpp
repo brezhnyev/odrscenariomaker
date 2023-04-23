@@ -130,6 +130,7 @@ int Selectable::row() const
         ++r;
     }
     assert(false);
+    return 0;
 }
 
 std::string Selectable::data(int index) const
