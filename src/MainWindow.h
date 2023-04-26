@@ -7,7 +7,6 @@
 #include "CameraProps.h"
 #include "ActorProps.h"
 #include "ScenarioProps.h"
-#include "IPC.h"
 
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QLabel>

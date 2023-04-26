@@ -57,38 +57,39 @@ endif()
 
 include_directories(${Qt5Xml_INCLUDE_DIRS})
 include_directories(${Qt5OpenGL_INCLUDE_DIRS})
+include_directories(src)
 
 set(SOURCE
-    main.cpp
-    CanvasXODR.cpp
-    thirdparty/cpp-spline/CatmullRom.cpp
-    thirdparty/cpp-spline/Vector.cpp
-    thirdparty/cpp-spline/Curve.cpp
-    thirdparty/cpp-spline/BSpline.cpp
-    MainWindow.cpp
-    LDoubleSpinBox.cpp
-    Viewer.cpp
-    Camera.cpp
-    Waypath.cpp
-    Waypoint.cpp
-    treemodel.cpp
-    treeview.cpp
-    scenario.cpp
-    WaypointProps.cpp
-    Vehicle.cpp
-    Walker.cpp
-    Selectable.cpp
-    WaypathProps.cpp
-    Actor.cpp
-    ActorProps.cpp
-    Serializer.cpp
-    ScenarioProps.cpp
-    World3D.cpp
-    CameraProps.cpp
+    src/main.cpp
+    src/CanvasXODR.cpp
+    src/thirdparty/cpp-spline/CatmullRom.cpp
+    src/thirdparty/cpp-spline/Vector.cpp
+    src/thirdparty/cpp-spline/Curve.cpp
+    src/thirdparty/cpp-spline/BSpline.cpp
+    src/MainWindow.cpp
+    src/LDoubleSpinBox.cpp
+    src/Viewer.cpp
+    src/Camera.cpp
+    src/Waypath.cpp
+    src/Waypoint.cpp
+    src/treemodel.cpp
+    src/treeview.cpp
+    src/scenario.cpp
+    src/WaypointProps.cpp
+    src/Vehicle.cpp
+    src/Walker.cpp
+    src/Selectable.cpp
+    src/WaypathProps.cpp
+    src/Actor.cpp
+    src/ActorProps.cpp
+    src/Serializer.cpp
+    src/ScenarioProps.cpp
+    src/World3D.cpp
+    src/CameraProps.cpp
 )
 
 if (USE_CARLA)
-set(SOURCE ${SOURCE} carlaClient.cpp)
+set(SOURCE ${SOURCE} src/carlaClient.cpp)
 endif()
 
 add_executable(${PROJECT_NAME} ${SOURCE})
