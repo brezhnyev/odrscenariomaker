@@ -18,14 +18,10 @@ endif()
 
 set(CARLA_PATH "/home/carla" CACHE STRING "carla (git) path")
 
-find_package(yaml-cpp)
 find_package(Qt5 COMPONENTS Core Gui Widgets Xml OpenGL REQUIRED)
 
-include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser/include)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/odrparser)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/tinyxml2/)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/yaml-cpp/)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/cpp-spline/)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/yaml-cpp/include)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/cpp-spline/)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.)
 if (USE_CARLA)
@@ -35,14 +31,13 @@ include_directories(${CARLA_PATH}/Build/recast-0b13b0-c8-install/include)
 include_directories(${CARLA_PATH}/Build/boost-1.72.0-c8-install/include)
 endif()
 
+link_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/yaml-cpp/lib)
 link_directories(/usr/local/lib/)
 if (USE_CARLA)
 link_directories(${CARLA_PATH}/Build/rpclib-v2.2.1_c5-c8-libstdcxx-install/lib)
 link_directories(${CARLA_PATH}/Build/recast-0b13b0-c8-install/lib)
 link_directories(${CARLA_PATH}/Build/boost-1.72.0-c8-install/lib)
 endif()
-
-link_directories("/usr/local/lib")
 
 if (USE_CARLA)
 if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -58,6 +53,9 @@ endif()
 include_directories(${Qt5Xml_INCLUDE_DIRS})
 include_directories(${Qt5OpenGL_INCLUDE_DIRS})
 include_directories(src)
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/yaml-cpp)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/xodr-builder)
 
 set(SOURCE
     src/main.cpp
@@ -110,7 +108,7 @@ set(LIBS
     rt
     pthread
     -lGLU
-    -lXodrBuilder
+    XodrBuilder
 )
 
 if (USE_CARLA)
