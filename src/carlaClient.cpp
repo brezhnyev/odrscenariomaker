@@ -126,65 +126,68 @@ void play(Scenario & scenario)
 
     for (auto && child : scenario.children())
     {
-        Actor * scenario_actor = dynamic_cast<Actor*>(child.second);
-        if (scenario_actor) // can be also ex. Sensor (Camera or Lidar) or Walker 
-        {
-            auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_actor->get_name()))[0];
-            if (blueprint.ContainsAttribute("color"))
-            {
-                auto &attribute = blueprint.GetAttribute("color");
-                blueprint.SetAttribute("color", scenario_actor->colorToString());
-            }
-            ShrdPtrActor actor = nullptr;
-            // Initialize Actor with first position of the first Waypath:
-            for (auto && child : scenario_actor->children())
-            {
-                Waypath * waypath = dynamic_cast<Waypath*>(child.second);
-                // KB: here we need to think if we really need multiple waypaths for a vehicle
-                if (waypath && !waypath->children().empty())
-                {
-                    waypath->updateSmoothPath();
-                    Eigen::Vector3f dir = waypath->getStartingDirection();
-                    Eigen::Vector3f pos = waypath->getStartingPosition();
-                    auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
-                    cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()+0.5), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
-                    // Spawn the vehicle.
-                    actor = world.TrySpawnActor(blueprint, transform);
-                    if (!actor)
-                    {
-                        cout << "Failed to spawn actor ------" << endl;
-                        break; // alternatively we can keep on searching for spawning point in following Waypaths
-                    }
-                    cout << "Spawned " << actor->GetDisplayId() << '\n';
-                    auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
-                    if (vehicle)
-                    {
-                        vehicle->SetSimulatePhysics();
-                        vehicles.push_back(actor);
-                    }
-                    if (dynamic_cast<cc::Walker*>(actor.get()))
-                    {
-                        walkers.push_back(actor);
-                    }
-                    break;
-                }
-            }
-            if (actor)
-            {
-                for (auto && child : scenario_actor->children())
-                {
-                    Camera * camera = dynamic_cast<Camera*>(child.second);
-                    if (camera)
-                    {
-                        addCam(camera, actor);
-                    }
-                }
-            }
-        }
         Camera * scenario_camera = dynamic_cast<Camera*>(child.second);
         if (scenario_camera)
         {
             addCam(scenario_camera, nullptr);
+        }
+        else // Vehicle or Walker 
+        {
+            Actor * scenario_actor = dynamic_cast<Actor*>(child.second);
+            if (scenario_actor)
+            {
+                auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_actor->get_name()))[0];
+                if (blueprint.ContainsAttribute("color"))
+                {
+                    auto &attribute = blueprint.GetAttribute("color");
+                    blueprint.SetAttribute("color", scenario_actor->colorToString());
+                }
+                ShrdPtrActor actor = nullptr;
+                // Initialize Actor with first position of the first Waypath:
+                for (auto && child : scenario_actor->children())
+                {
+                    Waypath * waypath = dynamic_cast<Waypath*>(child.second);
+                    // KB: here we need to think if we really need multiple waypaths for a vehicle
+                    if (waypath && !waypath->children().empty())
+                    {
+                        waypath->updateSmoothPath();
+                        Eigen::Vector3f dir = waypath->getStartingDirection();
+                        Eigen::Vector3f pos = waypath->getStartingPosition();
+                        auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
+                        cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()+0.5), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
+                        // Spawn the vehicle.
+                        actor = world.TrySpawnActor(blueprint, transform);
+                        if (!actor)
+                        {
+                            cout << "Failed to spawn actor ------" << endl;
+                            break; // alternatively we can keep on searching for spawning point in following Waypaths
+                        }
+                        cout << "Spawned " << actor->GetDisplayId() << '\n';
+                        auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
+                        if (vehicle)
+                        {
+                            vehicle->SetSimulatePhysics();
+                            vehicles.push_back(actor);
+                        }
+                        if (dynamic_cast<cc::Walker*>(actor.get()))
+                        {
+                            walkers.push_back(actor);
+                        }
+                        break;
+                    }
+                }
+                if (actor)
+                {
+                    for (auto && child : scenario_actor->children())
+                    {
+                        Camera * camera = dynamic_cast<Camera*>(child.second);
+                        if (camera)
+                        {
+                            addCam(camera, actor);
+                        }
+                    }
+                }
+            }
         }
     }
     world.Tick(carla::time_duration(1s)); // to set the transform of the vehicle

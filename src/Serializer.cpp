@@ -46,9 +46,9 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
     {
         YAML::Node node;
         node["type"] = object->getType();
-        Actor * actor = dynamic_cast<Actor*>(object);
-        if (actor)
+        if (object->getType() == "Vehicle" || object->getType() == "Walker")
         {
+            Actor * actor = dynamic_cast<Actor*>(object);
             YAML::Node color;
             node["name"] = actor->get_name();
             color["r"] = actor->get_color()[0];

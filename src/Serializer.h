@@ -2,7 +2,7 @@
 
 #include "scenario.h"
 #include <string>
-#include <yaml-cpp/yaml.h>
+#include "yaml-cpp/yaml.h"
 
 class Serializer
 {
