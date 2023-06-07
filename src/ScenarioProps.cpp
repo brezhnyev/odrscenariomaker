@@ -88,6 +88,8 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 
     QPushButton * clearScenario = new QPushButton("Clear Scenario", this);
     mainLayout->addWidget(clearScenario);
+    mainLayout->addStretch(1);
+
     connect(clearScenario, &QPushButton::clicked, [this]()
     {
         QMessageBox::StandardButton reply = QMessageBox::question(this, "No undo option", "The scenario will be lost. Proceed?");
@@ -95,39 +97,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             signal_clear();
     });
 
-
-    // addd rosbag file
-    QGroupBox * rosGroup = new QGroupBox(this);
-    QVBoxLayout * rosLayout = new QVBoxLayout();
-    rosGroup->setLayout(rosLayout);
-
-    rosLayout->addWidget(new QLabel("Rosbag file:", rosGroup));
-    QLineEdit * rosBagfile = new QLineEdit(rosGroup);
-    rosBagfile->setText(m_scenario.getRosbagFile().c_str());
-    connect(rosBagfile, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setRosbagFile(text.toStdString()); });
-    rosLayout->addWidget(rosBagfile);
-
-    rosLayout->addWidget(new QLabel("Rosbag topic:", rosGroup));
-    QTextEdit * rosTopics = new QTextEdit(rosGroup);
-    for (auto && topic : m_scenario.getRosbagTopics())
-        rosTopics->append(topic.c_str());
-    connect(rosTopics, &QTextEdit::textChanged, [this, rosTopics]()
-    {
-        stringstream ss(rosTopics->toPlainText().toStdString());
-        vector<string> topics; string line;
-        while (ss >> line) topics.push_back(line);
-        m_scenario.setRosbagTopics(topics);
-    });
-    rosLayout->addWidget(rosTopics);
-
-rosLayout->addWidget(new QLabel("Rosbag playback offset:"));
-QLineEdit * rosTimeOffset = new QLineEdit(rosGroup);
-    rosTimeOffset->setText(QString::number(m_scenario.getRosbagOffset()));
-    connect(rosTimeOffset, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setRosbagOffset(text.toFloat()); });
-    rosLayout->addWidget(rosTimeOffset);
-    mainLayout->addWidget(rosGroup);
-
-    connect(loadScenario, &QPushButton::clicked, [this, townName, rosBagfile, rosTopics, rosTimeOffset](){
+    connect(loadScenario, &QPushButton::clicked, [this, townName](){
         QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
         if (name.isEmpty()) return;
         

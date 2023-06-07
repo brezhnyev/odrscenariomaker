@@ -72,13 +72,23 @@ void play(Scenario & scenario)
     camTrf.setIdentity();
 
     auto client = cc::Client("127.0.0.1", 2000);
-    client.SetTimeout(10s);
+    auto const TIMEOUT = 10s;
+    client.SetTimeout(TIMEOUT);
 
     cout << "Client API version : " << client.GetClientVersion() << '\n';
-    cout << "Server API version : " << client.GetServerVersion() << '\n';
+    try
+    {
+        cout << "Trying to connect to server, waiting for " << TIMEOUT.count() << " seconds" << endl;
+        cout << "Server API version : " << client.GetServerVersion() << '\n';
+    }
+    catch(...)
+    {
+        cerr << "Cannot connect to server." << endl;
+        return;
+    }
 
     auto world = scenario.getTownName().empty() ? client.GetWorld() : client.LoadWorld(scenario.getTownName());
-
+ 
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
     crpc::EpisodeSettings wsettings(is_synchronous, false, 1.0 / FPS); // (synchrone, noRender, interval)
@@ -334,12 +344,20 @@ void play(Scenario & scenario)
                 break;
         }
         mw->update();
-        try { world.Tick(carla::time_duration(1s)); }
-        catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
-        playCondVar.notify_all();
-        auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
-        if (realtime_playback)
-            usleep(std::max(0.0, (1.0 * 1e6 / FPS - diff)));
+        if (is_synchronous)
+        {
+            try { world.Tick(carla::time_duration(1s)); }
+            catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
+            playCondVar.notify_all();
+            auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
+            if (realtime_playback)
+                usleep(std::max(0.0, (1.0 * 1e6 / FPS - diff)));
+        }
+        else
+        {
+            world.WaitForTick(carla::time_duration(1s));
+            playCondVar.notify_all();
+        }
     }
 
     world.ApplySettings(defaultSettings, carla::time_duration::seconds(10));

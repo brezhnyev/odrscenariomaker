@@ -15,8 +15,9 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
     QPushButton * updateWaypath = new QPushButton("Update Waypath", this);
     lh->addWidget(updateWaypath);
     QPushButton * delThis = new QPushButton("Delete", this);
-    lh->addStretch(1);
+    lh->addWidget(new QGroupBox(this));
     lh->addWidget(delThis);
+    lh->addStretch(1);
 
     setLayout(lh);
     connect(delThis, &QPushButton::clicked, [this]()
@@ -34,5 +35,4 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
         m_waypath.updateSmoothPath();
         emit signal_update();
     });
-    lh->addStretch(1);
 }

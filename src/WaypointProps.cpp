@@ -32,7 +32,6 @@ WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
     lh->addWidget(idInfo);
     lh->addWidget(posInfo);
 
-    lh->addStretch(1);
 
     QPushButton * delButton = new QPushButton(this);
     delButton->setText("Delete");
@@ -46,7 +45,9 @@ WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
         emit signal_delete(id);
         close();
     });
+    lh->addWidget(new QGroupBox(this));
     lh->addWidget(delButton);
+    lh->addStretch(1);
 
     connect(x, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_pos(Eigen::Vector3f(val, y->value(), z->value())); emit signal_update(); });
     connect(y, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_pos(Eigen::Vector3f(x->value(), val, z->value())); emit signal_update(); });

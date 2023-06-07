@@ -4,7 +4,6 @@
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QCheckBox>
-#include <QtWidgets/QGroupBox>
 
 #include <iostream>
 #include <thread>
@@ -33,7 +32,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     setCentralWidget(m_viewer);
 
     m_treeView = new TreeView(m_scenario.getParent());
-    QDockWidget *treeDock = new QDockWidget(tr("Paths"), this);
+    QDockWidget *treeDock = new QDockWidget(tr("Actors"), this);
     addDockWidget(Qt::LeftDockWidgetArea, treeDock);
     treeDock->setWidget(m_treeView);
 
@@ -169,28 +168,23 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     });
 
     QDockWidget *playDock = new QDockWidget("Animation");
-    QHBoxLayout * playLayout = new QHBoxLayout();
+    QVBoxLayout * playLayout = new QVBoxLayout();
 
     QPushButton *playButton = new QPushButton(playDock);
     playButton->setText("Play");
     QLabel * rosbagImage = new QLabel(); // need to be created in the parent thread, creating in the thread does not update it
 
-    QHBoxLayout * settingsLayout = new QHBoxLayout(this);
-    QGroupBox * settings = new QGroupBox();
-    QCheckBox * isSync = new QCheckBox("synch mode", settings);
-    QCheckBox * isRealtime = new QCheckBox("real time", settings);
-    QSpinBox * freq = new QSpinBox(settings);
+    QCheckBox * isSync = new QCheckBox("synch mode", playDock);
+    QCheckBox * isRealtime = new QCheckBox("real time", playDock);
+    QSpinBox * freq = new QSpinBox(playDock);
     isSync->setChecked(true);
-    isRealtime->setChecked(true);
-    settingsLayout->addWidget(isSync);
-    settingsLayout->addWidget(isRealtime);
-    settings->setLayout(settingsLayout);
+    isRealtime->setChecked(realtime_playback);
     freq->setRange(1,100);
     freq->setSingleStep(1);
     freq->setValue(30);
-    settingsLayout->addWidget(new QLabel("simulation FPS:", settings));
-    settingsLayout->addWidget(freq);
-    playLayout->addWidget(settings);
+    playLayout->addWidget(isSync);
+    playLayout->addWidget(isRealtime);
+    playLayout->addWidget(freq);
 
     connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton, isSync, isRealtime, freq]()
     {
@@ -258,15 +252,21 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         }
     );
 
-    connect(isSync, &QCheckBox::stateChanged, [&](int state){ is_synchronous = state; });
+    connect(isSync, &QCheckBox::stateChanged, [&, isRealtime ](int state)
+    { 
+        is_synchronous = state;
+        isRealtime->setChecked(false);
+        isRealtime->setEnabled(state);
+    });
     connect(isRealtime, &QCheckBox::stateChanged, [&](int state){ realtime_playback = state; });
     connect(freq, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [&](int val){ FPS = val; });
 
     playLayout->addWidget(playButton);
     playLayout->addWidget(stopButton);
+    playLayout->addStretch(1);
 
     QWidget * playWidget = new QWidget();
     playWidget->setLayout(playLayout);
     playDock->setWidget(playWidget);
-    addDockWidget(Qt::BottomDockWidgetArea, playDock);
+    addDockWidget(Qt::LeftDockWidgetArea, playDock);
 }

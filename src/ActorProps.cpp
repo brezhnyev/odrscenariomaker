@@ -138,8 +138,9 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     addTypes(ls);
 
     auto mainLayout = layout();
-    ((QVBoxLayout*)mainLayout)->addStretch(1);
+    ((QVBoxLayout*)mainLayout)->addWidget(new QGroupBox(this));
     mainLayout->addWidget(m_delButton);
+    ((QVBoxLayout*)mainLayout)->addStretch(1);
 }
 
 
@@ -192,6 +193,7 @@ WalkerProps::WalkerProps(Walker & walker) : ActorProps(walker), m_walker(walker)
     addTypes(ls);
     
     auto mainLayout = layout();
-    ((QVBoxLayout*)mainLayout)->addStretch(1);
+    ((QVBoxLayout*)mainLayout)->addWidget(new QGroupBox(this));
     mainLayout->addWidget(m_delButton);
+    ((QVBoxLayout*)mainLayout)->addStretch(1);
 }

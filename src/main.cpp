@@ -19,7 +19,7 @@ mutex playCondVarMtx;
 Matrix4f camTrf;
 MainWindow * mw;
 int FPS = 30;
-bool realtime_playback = true;
+bool realtime_playback = false;
 bool is_synchronous = true;
 
 int main(int argc, char ** argv)
