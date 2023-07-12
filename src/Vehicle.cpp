@@ -63,7 +63,7 @@ void Vehicle::drawGeometry() const
 void Vehicle::draw() const
 {
     drawGeometry();
-    for (auto && child : m_children) child.second->draw();
+    this->Selectable::draw();
 }
 
 void Vehicle::drawWithNames() const

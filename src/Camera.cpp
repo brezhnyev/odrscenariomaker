@@ -91,7 +91,7 @@ void Camera::drawGeometry() const
 void Camera::draw() const
 {
     drawGeometry();
-    for (auto && child : m_children) child.second->draw();
+    this->Selectable::draw();
 }
 
 void Camera::drawWithNames() const

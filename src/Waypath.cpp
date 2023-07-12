@@ -33,7 +33,7 @@ void Waypath::drawGeometry() const
 void Waypath::draw() const
 {
     drawGeometry();
-    for (auto && c : m_children) c.second->draw();
+    this->Selectable::draw();
 }
 
 
