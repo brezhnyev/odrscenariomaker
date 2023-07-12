@@ -7,7 +7,7 @@
 
 #include <eigen3/Eigen/Eigen>
 
-#include <XodrBuilder/XodrBuilder.h>
+#include "XodrBuilder.h"
 
 #include <string>
 #include <vector>

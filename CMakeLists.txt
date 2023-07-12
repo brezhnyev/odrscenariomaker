@@ -22,6 +22,7 @@ find_package(Qt5 COMPONENTS Core Gui Widgets Xml OpenGL REQUIRED)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/yaml-cpp/include)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/cpp-spline/)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/xodr-builder/)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.)
 if (USE_CARLA)
