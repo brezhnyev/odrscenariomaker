@@ -5,6 +5,7 @@
 #include "Walker.h"
 #include "Waypoint.h"
 #include "Waypath.h"
+#include "exporters/xosc/components.h"
 
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QVBoxLayout>
@@ -228,5 +229,34 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         ofs_initpos << "\t]" << endl;
         ofs_initpos << "}";
         ofs_initpos.close();
+
+        ofstream ofs_xosc(name.toStdString()+".xosc");
+        ofs_xosc << xosc_template_header << endl;
+        ofs_xosc << xosc_template_start_entities << endl;
+        for (auto && it : m_scenario.children())
+        {
+            if (it.second->getType() == "Vehicle")
+            {
+                ofs_xosc << xosc_template_vehicle << endl;
+            }
+            if (it.second->getType() == "Walker")
+            {
+                ofs_xosc << xosc_template_pedestrian << endl;
+            }
+        }
+        ofs_xosc << xosc_template_end_entities << endl;
+        ofs_xosc << xosc_template_start_storyboard << endl;
+        for (auto && it : m_scenario.children())
+        {
+            Vehicle * v = dynamic_cast<Vehicle*>(it.second);
+            if (it.second->getType() == "Vehicle" || it.second->getType() == "Walker")
+            {
+                ofs_xosc << xosc_template_action_member << endl;
+            }
+        }
+        ofs_xosc << xosc_template_end_init_storyboard << endl;
+        ofs_xosc << xosc_template_story << endl;
+        ofs_xosc << xosc_template_footer << endl;
+        ofs_xosc.close();
     });
 }
