@@ -136,7 +136,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
                         {
                             Waypoint * p = dynamic_cast<Waypoint*>(it.second);
                             auto pos = p->get_pos();
-                            ofs_waypath << pos[0] << "," << -pos[1] << "," << (pos[2] + 0.5*v->get_bbox()[2]) << ", "; 
+                            ofs_waypath << pos[0] << "," << pos[1] << "," << (pos[2] + 0.5*v->get_bbox()[2]) << ", "; 
                         }
                         ofs_waypath << "]" << "\n";
                     }
