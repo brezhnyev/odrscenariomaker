@@ -1,8 +1,7 @@
 #pragma once
 
 #include "globals.h"
-#include "Selectable.h"
-
+#include "Waypath.h"
 #include <eigen3/Eigen/Eigen>
 
 class Actor : public Selectable
@@ -21,6 +20,8 @@ public:
         m_ori = Eigen::Vector3f(roll, pitch, yaw);
     }
     void updatePose();
+    Waypath * getFirstWaypath();
+    Waypoint * getFirstWaypoint();
 
     ADDVAR(protected, std::string, name, "");
     ADDVAR(protected, Eigen::Vector3f, pos, Eigen::Vector3f(0.0f, 0.0f, 0.0f));

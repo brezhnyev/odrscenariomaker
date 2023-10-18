@@ -58,6 +58,10 @@ void Serializer::serialize_yaml(YAML::Node & parent, Selectable * object)
             YAML::Node waypaths;
             node["facilities"] = waypaths;
             for (auto && child : object->children()) serialize_yaml(waypaths, child.second);
+            if (object->getType() == "Vehicle")
+            {
+                node["isEgo"] = dynamic_cast<Vehicle*>(object)->get_isEgo();
+            }
             parent.push_back(node);
         }
         else if (object->getType() == "Waypath")
@@ -136,6 +140,10 @@ void Serializer::deserialize_yaml(YAML::Node node, Selectable & object)
             if (!child["facilities"].IsNull())
                 deserialize_yaml(child["facilities"], *actor);
             actor->updatePose();
+            if (child["type"].as<string>() == "Vehicle")
+            {
+                dynamic_cast<Vehicle*>(actor)->set_isEgo(child["isEgo"].as<bool>());
+            }
         }
         if (child["type"].as<string>() == "Waypath")
         {

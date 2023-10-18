@@ -4,7 +4,7 @@
 const char * xosc_template_header = R"(
 <?xml version='1.0' encoding='UTF-8'?>
 <OpenSCENARIO>
-  <FileHeader author="" date="" description="" revMajor="1" revMinor="0"/>
+  <FileHeader author="Capgemini" date="" description="" revMajor="1" revMinor="0"/>
   <ParameterDeclarations>
   </ParameterDeclarations>
   <CatalogLocations/>
@@ -21,10 +21,10 @@ const char * xosc_template_end_entities = R"(
 
 const char * xosc_template_vehicle = R"(
     <ScenarioObject name="">
-      <Vehicle name="" vehicleCategory="">
+      <Vehicle name="" vehicleCategory="car">
         <ParameterDeclarations/>
         <BoundingBox>
-          <Center x="" y="" z=""/>
+          <Center x="0" y="0" z=""/>
           <Dimensions width="" length="" height=""/>
         </BoundingBox>
         <Performance maxSpeed="69.44444444444444" maxAcceleration="4.5" maxDeceleration="8.0"/>
@@ -39,11 +39,11 @@ const char * xosc_template_vehicle = R"(
     </ScenarioObject>)";
 
 const char * xosc_template_pedestrian = R"(
-    <ScenarioObject name="Ped">
+    <ScenarioObject name="">
       <Pedestrian model="" mass="90.0" name="Ped" pedestrianCategory="pedestrian">
         <ParameterDeclarations/>
         <BoundingBox>
-          <Center x="" y="" z=""/>
+          <Center x="0" y="0" z=""/>
           <Dimensions width="" length="" height=""/>
         </BoundingBox>
         <Properties/>
@@ -62,7 +62,7 @@ const char * xosc_template_start_storyboard = R"(
         <GlobalAction>
           <EnvironmentAction>
             <Environment name="Environment 1">
-              <TimeOfDay animation="false" dateTime="2022-08-30T12:00:00"/>
+              <TimeOfDay animation="false" dateTime=""/>
               <Weather cloudState="free">
                 <Sun intensity="0.85" azimuth="0.0" elevation="1.31"/>
                 <Fog visualRange="100000.0"/>

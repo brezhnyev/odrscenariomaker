@@ -15,4 +15,5 @@ public:
     void drawWithNames() const override;
     void drawGeometry() const;
     std::string getType() const override { return "Vehicle"; }
+    ADDVAR(protected, bool, isEgo, false);
 };

@@ -89,6 +89,48 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 
     QPushButton * clearScenario = new QPushButton("Clear Scenario", this);
     mainLayout->addWidget(clearScenario);
+
+    // Add drop-down list to select Ego:
+    mainLayout->addWidget(new QLabel("Set Ego by Vehicle ID:"));
+    QStringList ls;
+    ls << "No";
+    for (auto && c : m_scenario.children())
+    {
+        if (c.second->getType() == "Vehicle")
+        {
+            Vehicle * vehicle = dynamic_cast<Vehicle*>(c.second);
+            QString entry((to_string(vehicle->getID())).c_str());
+            ls << entry;
+        }
+    }
+    QComboBox * vehiclesList = new QComboBox(this);
+    vehiclesList->addItems(ls);
+    mainLayout->addWidget(vehiclesList);
+
+    for (auto & c : m_scenario.children())
+    {
+        if (c.second->getType() == "Vehicle")
+        {
+            Vehicle * v = dynamic_cast<Vehicle*>(c.second);
+            if (v->get_isEgo())
+                vehiclesList->setCurrentText(to_string(v->getID()).c_str());
+        }
+    }
+
+    connect(vehiclesList, &QComboBox::currentTextChanged, [this](const QString & qentry){
+        string entry = qentry.toStdString();
+        for (auto & c : m_scenario.children())
+        {
+            if (c.second->getType() == "Vehicle")
+            {
+                Vehicle * v = dynamic_cast<Vehicle*>(c.second);
+                v->set_isEgo(false);
+                if (qentry != "No" && qentry.toInt() == v->getID())
+                    v->set_isEgo(true);
+            }
+        }
+    });
+
     mainLayout->addStretch(1);
 
     connect(clearScenario, &QPushButton::clicked, [this]()
@@ -230,28 +272,80 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         ofs_initpos << "}";
         ofs_initpos.close();
 
+        // XOSC exporter:
+        auto fillplaceholder = [](string & text, const string & placeholder, const auto & value)
+        {
+            size_t pos = text.find(placeholder);
+            if (pos != string::npos)
+            {
+                stringstream ss;
+                ss << value;
+                text.insert(pos+placeholder.size(), ss.str());
+            }
+        };
+
         ofstream ofs_xosc(name.toStdString()+".xosc");
         ofs_xosc << xosc_template_header << endl;
         ofs_xosc << xosc_template_start_entities << endl;
+        vector<string> objectNames;
         for (auto && it : m_scenario.children())
         {
             if (it.second->getType() == "Vehicle")
             {
-                ofs_xosc << xosc_template_vehicle << endl;
+                Vehicle * vehicle = dynamic_cast<Vehicle*>(it.second);
+                string xosc_vehicle(xosc_template_vehicle);
+                string scenarioObjectName = vehicle->get_isEgo() ? "hero" : "Vehicle_" + to_string(vehicle->getID());
+                objectNames.push_back(scenarioObjectName);
+                fillplaceholder(xosc_vehicle, "ScenarioObject name=\"", scenarioObjectName);
+                fillplaceholder(xosc_vehicle, "Vehicle name=\"", vehicle->get_name());
+                fillplaceholder(xosc_vehicle, "z=\"", vehicle->get_bbox().z());
+                fillplaceholder(xosc_vehicle, "width=\"", 2*vehicle->get_bbox().x());
+                fillplaceholder(xosc_vehicle, "length=\"", 2*vehicle->get_bbox().y());
+                fillplaceholder(xosc_vehicle, "height=\"", 2*vehicle->get_bbox().z());
+                string typevalue = vehicle->get_isEgo() ? "ego_vehicle" : "simulation";
+                fillplaceholder(xosc_vehicle, "value=\"", typevalue);
+                // maxSteering, wheelDiameter also possible if we keep this info in Vehicle in future
+                ofs_xosc << xosc_vehicle << endl;
             }
             if (it.second->getType() == "Walker")
             {
-                ofs_xosc << xosc_template_pedestrian << endl;
+                Walker * walker = dynamic_cast<Walker*>(it.second);
+                string xosc_walker(xosc_template_pedestrian);
+                string scenarioObjectName = "Ped_" + to_string(walker->getID());
+                objectNames.push_back(scenarioObjectName);
+                fillplaceholder(xosc_walker, "ScenarioObject name=\"", scenarioObjectName);
+                fillplaceholder(xosc_walker, "Pedestrian model=\"", walker->get_name());
+                fillplaceholder(xosc_walker, "z=\"", walker->get_bbox().z());
+                fillplaceholder(xosc_walker, "width=\"", 2*walker->get_bbox().x());
+                fillplaceholder(xosc_walker, "length=\"", 2*walker->get_bbox().y());
+                fillplaceholder(xosc_walker, "height=\"", 2*walker->get_bbox().z());
+                ofs_xosc << xosc_walker << endl;
             }
         }
         ofs_xosc << xosc_template_end_entities << endl;
         ofs_xosc << xosc_template_start_storyboard << endl;
+        auto onit = objectNames.begin(); // onit == object names iterator
         for (auto && it : m_scenario.children())
         {
             Vehicle * v = dynamic_cast<Vehicle*>(it.second);
+            string xosc_action_member(xosc_template_action_member);
             if (it.second->getType() == "Vehicle" || it.second->getType() == "Walker")
             {
-                ofs_xosc << xosc_template_action_member << endl;
+                Actor * actor = dynamic_cast<Actor*>(it.second);
+                fillplaceholder(xosc_action_member, "ScenarioObject name=\"", *onit);
+                fillplaceholder(xosc_action_member, "x=\"", actor->get_pos().x());
+                fillplaceholder(xosc_action_member, "y=\"", actor->get_pos().y());
+                fillplaceholder(xosc_action_member, "z=\"", actor->get_pos().z());
+                fillplaceholder(xosc_action_member, "r=\"", DEG2RAD*actor->get_ori().x());
+                fillplaceholder(xosc_action_member, "p=\"", DEG2RAD*actor->get_ori().y());
+                fillplaceholder(xosc_action_member, "h=\"", DEG2RAD*actor->get_ori().z());
+                Waypoint * wpoint = actor->getFirstWaypoint();
+                if (wpoint)
+                {
+                    fillplaceholder(xosc_action_member, "<AbsoluteTargetSpeed value=\"", wpoint->get_speed());
+                }
+                ofs_xosc << xosc_action_member << endl;
+                ++onit;
             }
         }
         ofs_xosc << xosc_template_end_init_storyboard << endl;

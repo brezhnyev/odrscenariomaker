@@ -154,40 +154,30 @@ void play(Scenario & scenario)
                 }
                 ShrdPtrActor actor = nullptr;
                 // Initialize Actor with first position of the first Waypath:
-                for (auto && child : scenario_actor->children())
+                Waypath * waypath = scenario_actor->getFirstWaypath();
+                if (waypath && !waypath->children().empty())
                 {
-                    Waypath * waypath = dynamic_cast<Waypath*>(child.second);
-                    // KB: here we need to think if we really need multiple waypaths for a vehicle
-                    if (waypath && !waypath->children().empty())
-                    {
-                        waypath->updateSmoothPath();
-                        Eigen::Vector3f dir = waypath->getStartingDirection();
-                        Eigen::Vector3f pos = waypath->getStartingPosition();
-                        auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
-                        cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()+0.5), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
-                        // Spawn the vehicle.
-                        actor = world.TrySpawnActor(blueprint, transform);
-                        if (!actor)
-                        {
-                            cout << "Failed to spawn actor ------" << endl;
-                            break; // alternatively we can keep on searching for spawning point in following Waypaths
-                        }
-                        cout << "Spawned " << actor->GetDisplayId() << '\n';
-                        auto vehicle = dynamic_cast<cc::Vehicle*>(actor.get());
-                        if (vehicle)
-                        {
-                            vehicle->SetSimulatePhysics();
-                            vehicles.push_back(actor);
-                        }
-                        if (dynamic_cast<cc::Walker*>(actor.get()))
-                        {
-                            walkers.push_back(actor);
-                        }
-                        break;
-                    }
+                    waypath->updateSmoothPath();
+                    Eigen::Vector3f dir = waypath->getStartingDirection();
+                    Eigen::Vector3f pos = waypath->getStartingPosition();
+                    auto yaw = (atan2(-dir.y(), dir.x()))*90/M_PI_2; // Since Carla is LEFT handed - flip Y
+                    cg::Transform transform(cg::Location(pos.x(), -pos.y(), pos.z()+0.5), cg::Rotation(0,yaw,0)); // Since Carla is LEFT handed - flip Y
+                    // Spawn the vehicle.
+                    actor = world.TrySpawnActor(blueprint, transform);
                 }
                 if (actor)
                 {
+                    cout << "Spawned " << actor->GetDisplayId() << '\n';
+                    auto vehicle = dynamic_cast<cc::Vehicle *>(actor.get());
+                    if (vehicle)
+                    {
+                        vehicle->SetSimulatePhysics();
+                        vehicles.push_back(actor);
+                    }
+                    if (dynamic_cast<cc::Walker *>(actor.get()))
+                    {
+                        walkers.push_back(actor);
+                    }
                     for (auto && child : scenario_actor->children())
                     {
                         Camera * camera = dynamic_cast<Camera*>(child.second);
@@ -197,6 +187,8 @@ void play(Scenario & scenario)
                         }
                     }
                 }
+                else
+                    cout << "Failed to spawn actor ------" << endl;
             }
         }
     }
@@ -273,13 +265,15 @@ void play(Scenario & scenario)
             auto speed =  carla_vehicle->GetVelocity().Length();
 
             Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(scenario_actor.second);
-            Waypath & waypath = *dynamic_cast<Waypath*>(scenario_vehicle.children().begin()->second);
+            Waypath * waypath = scenario_vehicle.getFirstWaypath(); // cannot process multiple paths now
+            if (!waypath) // can be camera
+                continue;
 
             // Get the next waypoints in some distance away:
             Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
             float targetSpeed;
             Eigen::Vector3f targetDir;
-            if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
+            if (!waypath->getNext(peigen, targetDir, targetSpeed, speed, FPS))
             {
                 cc::Vehicle::Control control;
                 control.brake = 1.0f;
@@ -320,14 +314,16 @@ void play(Scenario & scenario)
             auto speed =  carla_walker->GetVelocity().Length();
 
             Walker & scenario_walker = *dynamic_cast<Walker*>(scenario_actor.second); 
-            Waypath & waypath = *dynamic_cast<Waypath*>(scenario_walker.children().begin()->second);
+            Waypath * waypath = scenario_walker.getFirstWaypath(); // cannot process multiple paths now
+            if (!waypath)
+                continue;
 
             // Get the next waypoints in some distance away:
             Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
             float targetSpeed;
             Eigen::Vector3f targetDir;
             cc::Walker::Control wc = carla_walker->GetWalkerControl();
-            if (!waypath.getNext(peigen, targetDir, targetSpeed, speed, FPS))
+            if (!waypath->getNext(peigen, targetDir, targetSpeed, speed, FPS))
             {
                 wc.speed = 0;
             }
