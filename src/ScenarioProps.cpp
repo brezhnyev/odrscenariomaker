@@ -332,7 +332,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             if (it.second->getType() == "Vehicle" || it.second->getType() == "Walker")
             {
                 Actor * actor = dynamic_cast<Actor*>(it.second);
-                fillplaceholder(xosc_action_member, "ScenarioObject name=\"", *onit);
+                fillplaceholder(xosc_action_member, "Private entityRef=\"", *onit);
                 fillplaceholder(xosc_action_member, "x=\"", actor->get_pos().x());
                 fillplaceholder(xosc_action_member, "y=\"", actor->get_pos().y());
                 fillplaceholder(xosc_action_member, "z=\"", actor->get_pos().z());
