@@ -15,10 +15,12 @@ public:
     void drawWithNames() const override;
     void drawGeometry() const override;
     std::string getType() const override { return "Camera"; }
+    void to_yaml(YAML::Node & parent) override;
+    void from_yaml(const YAML::Node & node) override;
 
-    ADDVAR(protected, double, FOV, 60.0f);
-    ADDVAR(protected, double, height, 300.0f);
-    ADDVAR(protected, double, width, 400.0f);
+    ADDVAR(protected, float, FOV, 60.0f);
+    ADDVAR(protected, float, height, 300.0f);
+    ADDVAR(protected, float, width, 400.0f);
     ADDVAR(protected, bool, enabled, true);
     ADDVAR(protected, QLabel *, camWidget, nullptr);
 };

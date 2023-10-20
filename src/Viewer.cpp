@@ -177,6 +177,10 @@ void Viewer::keyPressEvent(QKeyEvent * e)
         m_renderAxis = !m_renderAxis;
         update();
     }
+    else if (e->key() == Qt::Key_Escape)
+    {
+        // we do not allow exit program
+    }
     else
         QGLViewer::keyPressEvent(e);
 }

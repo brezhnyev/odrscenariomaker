@@ -2,33 +2,22 @@
 
 #include <map>
 #include <functional>
-
-/** Drawable is added as Basis for the Selectable.
- * The class is introduced to solve the problem of rendering the CatmullRom computed intermediate points of the Waypoints.
- * Drawable does not have ID and does not have children and therefore is not displayed in the scene tree
- */
-class Drawable
-{
-public:
-    Drawable() {}
-    virtual ~Drawable() = 0;
-    // the current design assumes that the Drawable does not have children
-    virtual void draw() const = 0;
-    virtual void drawWithNames() const = 0;
-};
+#include "yaml-cpp/yaml.h"
 
 /** Selectable is the base class for all objects that can be selected (with mouse) and is displayed in the scene tree.
- * Unlike Drawable this class does have the global unique ID and it is assumed that it also can have children.
+ * The class has unique ID, children, can be selected from scene tree and by mouse click.
  */
-class Selectable : public Drawable
+class Selectable
 {
 public:
     Selectable(Selectable * parent);
     virtual ~Selectable() = 0;
-    void draw() const override;
-    void drawWithNames() const override;
+    virtual void draw() const;
+    virtual void drawWithNames() const;
     virtual void select(int);
     virtual std::string getType() const = 0;
+    virtual void to_yaml(YAML::Node & parent);
+    virtual void from_yaml(const YAML::Node & parent) {};
 
     void deleteSelectable(int);
     void deleteSelectable(Selectable *);
@@ -42,6 +31,7 @@ public:
     Selectable * getParent() const          { return m_parent; }
     void setParent(Selectable * parent)     { m_parent = parent; } // used only once in copy c-tor of Scenario (loading scenario)
     Selectable * getSelected();
+
 
     int row() const;
     int columnCount() const { return 2; }

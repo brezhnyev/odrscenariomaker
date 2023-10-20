@@ -15,5 +15,8 @@ public:
     void drawWithNames() const override;
     void drawGeometry() const;
     std::string getType() const override { return "Vehicle"; }
+    void to_yaml(YAML::Node & parent) override;
+    void from_yaml(const YAML::Node & node) override;
+
     ADDVAR(protected, bool, isEgo, false);
 };

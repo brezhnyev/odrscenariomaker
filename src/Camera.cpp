@@ -101,3 +101,43 @@ void Camera::drawWithNames() const
     glPopName();
     for (auto && child : m_children) child.second->drawWithNames();
 }
+
+void Camera::to_yaml(YAML::Node & parent)
+{
+    YAML::Node node;
+    node["type"] = getType();
+    YAML::Node location;
+    location["x"] = m_pos.x();
+    location["y"] = m_pos.y();
+    location["z"] = m_pos.z();
+    node["location"] = location;
+    YAML::Node orientation;
+    orientation["roll"] = m_ori.x();
+    orientation["pitch"] = m_ori.y();
+    orientation["yaw"] = m_ori.z();
+    node["orientation"] = orientation;
+    YAML::Node camprops;
+    camprops["width"] = m_width;
+    camprops["height"] = m_height;
+    camprops["fov"] = m_FOV;
+    node["camprops"] = camprops;
+    parent.push_back(node);
+}
+
+void Camera::from_yaml(const YAML::Node & node)
+{
+    auto location = node["location"];
+    float x = location["x"].as<float>();
+    float y = location["y"].as<float>();
+    float z = location["z"].as<float>();
+    m_pos = Eigen::Vector3f(x,y,z);
+    auto orientation = node["orientation"];
+    float roll = orientation["roll"].as<float>();
+    float pitch = orientation["pitch"].as<float>();
+    float yaw = orientation["yaw"].as<float>();
+    m_ori = Eigen::Vector3f(roll,pitch,yaw);
+    auto camprops = node["camprops"];
+    m_width = camprops["width"].as<float>();
+    m_height = camprops["height"].as<float>();
+    m_FOV = camprops["fov"].as<float>();
+}

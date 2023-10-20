@@ -15,6 +15,7 @@
 class WaypointNonSelectable
 {
 public:
+    WaypointNonSelectable() {}
     WaypointNonSelectable(Eigen::Vector3f pos, float speed) : m_pos(pos), m_speed(speed) {}
     void flipY() { m_pos[1] = -m_pos[1]; }
 
@@ -29,9 +30,12 @@ public:
 class Waypoint : public Selectable, public WaypointNonSelectable
 {
 public:
+    Waypoint(Selectable * parent) : Selectable(parent) {};
     Waypoint(Eigen::Vector3f pos, float speed, Selectable * parent);
     void draw() const override;
     void drawWithNames() const override;
     void drawGeometry() const override;
     std::string getType() const override { return "Waypoint"; }
+    void to_yaml(YAML::Node & parent) override;
+    void from_yaml(const YAML::Node & node) override;
 };

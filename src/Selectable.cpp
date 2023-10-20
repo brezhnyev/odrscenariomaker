@@ -8,8 +8,6 @@ using namespace std;
 
 int Selectable::s_ID = 0;
 
-Drawable::~Drawable() {}
-
 Selectable::~Selectable() {}
 
 Selectable::Selectable(Selectable * parent) : m_selected(false), m_parent(parent)
@@ -27,6 +25,11 @@ void Selectable::draw() const
 void Selectable::drawWithNames() const
 {
     for (auto && c : m_children) c.second->drawWithNames();
+}
+
+void Selectable::to_yaml(YAML::Node & parent)
+{
+    for (auto && child : m_children) child.second->to_yaml(parent);
 }
 
 void Selectable::deleteSelectable(int id)

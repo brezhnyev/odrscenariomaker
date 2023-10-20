@@ -53,3 +53,27 @@ void Waypoint::drawWithNames() const
     drawGeometry();
     glPopName();
 }
+
+void Waypoint::to_yaml(YAML::Node & parent)
+{
+    YAML::Node node;
+    node["type"] = getType();
+    YAML::Node location;
+    location["x"] = m_pos.x();
+    location["y"] = m_pos.y();
+    location["z"] = m_pos.z();
+    node["location"] = location;
+    node["speed"] = m_speed;
+    parent.push_back(node);
+}
+
+
+void Waypoint::from_yaml(const YAML::Node & node)
+{
+    auto location = node["location"];
+    float x = location["x"].as<float>();
+    float y = location["y"].as<float>();
+    float z = location["z"].as<float>();
+    m_pos = Eigen::Vector3f(x,y,z);
+    m_speed = node["speed"].as<float>();
+}

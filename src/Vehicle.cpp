@@ -1,4 +1,5 @@
 #include "Vehicle.h"
+#include "Camera.h"
 
 #include <fstream>
 #include <iostream>
@@ -63,7 +64,7 @@ void Vehicle::drawGeometry() const
 void Vehicle::draw() const
 {
     drawGeometry();
-    this->Selectable::draw();
+    Selectable::draw();
 }
 
 void Vehicle::drawWithNames() const
@@ -72,4 +73,18 @@ void Vehicle::drawWithNames() const
     drawGeometry();
     glPopName();
     for (auto && child : m_children) child.second->drawWithNames();
+}
+
+void Vehicle::to_yaml(YAML::Node & parent)
+{
+    Actor::to_yaml(parent);
+    // specific Vehicle fields:
+    parent[parent.size()-1]["isEgo"] = m_isEgo;
+}
+
+void Vehicle::from_yaml(const YAML::Node & node)
+{
+    Actor::from_yaml(node);
+    // specific Vehicle fields:
+    m_isEgo = node["isEgo"].as<bool>();
 }

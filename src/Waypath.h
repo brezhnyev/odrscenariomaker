@@ -11,6 +11,9 @@ public:
     Waypath(Selectable * parent) : Selectable(parent) {}
     std::string serialize() const;
     std::string getType() const override { return "Waypath"; }
+    void to_yaml(YAML::Node & parent) override;
+    void from_yaml(const YAML::Node & node) override;
+
     bool getNext(Eigen::Vector3f & pos, Eigen::Vector3f & dir, float & targetSpeed, float currentSpeed, int fps);
     Eigen::Vector3f getStartingDirection();
     Eigen::Vector3f getEndingDirection();

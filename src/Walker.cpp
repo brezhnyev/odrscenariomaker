@@ -1,4 +1,5 @@
 #include "Walker.h"
+#include "Camera.h"
 
 #include <fstream>
 #include <iostream>
@@ -63,7 +64,7 @@ void Walker::drawGeometry() const
 void Walker::draw() const
 {
     drawGeometry();
-    this->Selectable::draw();
+    Selectable::draw();
 }
 
 void Walker::drawWithNames() const
@@ -72,4 +73,17 @@ void Walker::drawWithNames() const
     drawGeometry();
     glPopName();
     for (auto && child : m_children) child.second->drawWithNames();
+}
+
+void Walker::to_yaml(YAML::Node & parent)
+{
+    Actor::to_yaml(parent);
+    // specific Walker implementation
+    // parent[parent.size()-1]["specific_field"] =
+}
+
+void Walker::from_yaml(const YAML::Node & node)
+{
+    Actor::from_yaml(node);
+    // specific Vehicle fields:
 }

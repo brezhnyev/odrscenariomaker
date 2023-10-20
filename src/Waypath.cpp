@@ -33,9 +33,8 @@ void Waypath::drawGeometry() const
 void Waypath::draw() const
 {
     drawGeometry();
-    this->Selectable::draw();
+    Selectable::draw();
 }
-
 
 void Waypath::updateSmoothPath()
 {
@@ -157,4 +156,29 @@ string Waypath::serialize() const
         ss << p.x() << " " << p.y() << " " << p.z() << " ";
     }
     return ss.str();
+}
+
+void Waypath::to_yaml(YAML::Node & parent)
+{
+    YAML::Node node;
+    node["type"] = getType();
+    YAML::Node waypoints;
+    node["components"] = waypoints;
+    Selectable::to_yaml(waypoints);
+    parent.push_back(node);
+}
+
+void Waypath::from_yaml(const YAML::Node & node)
+{
+    auto components = node["components"];
+    for (auto it = components.begin(); it != components.end(); ++it)
+    {
+        auto child = *it;
+        if (child["type"].as<string>() == "Waypoint")
+        {
+            Waypoint * waypoint = new Waypoint(this);
+            waypoint->from_yaml(child);
+        }
+    }
+    updateSmoothPath();
 }

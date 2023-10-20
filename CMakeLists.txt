@@ -81,7 +81,6 @@ set(SOURCE
     src/WaypathProps.cpp
     src/Actor.cpp
     src/ActorProps.cpp
-    src/Serializer.cpp
     src/ScenarioProps.cpp
     src/World3D.cpp
     src/CameraProps.cpp

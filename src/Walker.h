@@ -16,4 +16,6 @@ public:
     void drawWithNames() const override;
     void drawGeometry() const;
     std::string getType() const override { return "Walker"; }
+    void to_yaml(YAML::Node & parent) override;
+    void from_yaml(const YAML::Node & node) override;
 };

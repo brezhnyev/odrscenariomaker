@@ -1,13 +1,13 @@
 #include "Actor.h"
 #include "scenario.h"
 #include "Waypath.h"
+#include "Camera.h"
 
 #include <eigen3/Eigen/Eigen>
 
 using namespace std;
 using namespace Eigen;
 
-Actor::~Actor() {} // pure virtual destructor is not allowed to be inline, so place it here
 
 void Actor::updatePose()
 {
@@ -45,4 +45,46 @@ Waypoint * Actor::getFirstWaypoint()
     if (wpath && !wpath->children().empty())
         return dynamic_cast<Waypoint*>(wpath->children().begin()->second);
     return nullptr;
+}
+
+void Actor::to_yaml(YAML::Node & parent)
+{
+    YAML::Node node;
+    node["type"] = getType();
+    YAML::Node color;
+    node["name"] = m_name;
+    color["r"] = m_color[0];
+    color["g"] = m_color[1];
+    color["b"] = m_color[2];
+    node["color"] = color;
+    YAML::Node waypaths;
+    node["components"] = waypaths;
+    Selectable::to_yaml(waypaths);
+    parent.push_back(node);
+}
+
+void Actor::from_yaml(const YAML::Node & node)
+{
+    m_name = node["name"].as<string>();
+    auto color = node["color"];
+    int r = color["r"].as<int>();
+    int g = color["g"].as<int>();
+    int b = color["b"].as<int>();
+    m_color = Eigen::Vector3i(r,g,b);
+    auto components = node["components"];
+    for (auto it = components.begin(); it != components.end(); ++it)
+    {
+        auto child = *it;
+        if (child["type"].as<string>() == "Waypath")
+        {
+            Waypath * waypath = new Waypath(this);
+            waypath->from_yaml(child);
+        }
+        else if (child["type"].as<string>() == "Camera")
+        {
+            Camera * camera = new Camera(this);
+            camera->from_yaml(child);
+        }
+    }
+    updatePose();
 }

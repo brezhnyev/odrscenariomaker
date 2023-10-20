@@ -1,7 +1,6 @@
 #include "ScenarioProps.h"
 #include "Vehicle.h"
 #include "Camera.h"
-#include "Serializer.h"
 #include "Walker.h"
 #include "Waypoint.h"
 #include "Waypath.h"
@@ -147,17 +146,19 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         ifstream ifs(name.toStdString());
         m_scenario.clear();
         stringstream ssf; ssf << ifs.rdbuf();
-        Serializer::deserialize_yaml(m_scenario, ssf.str());
+        YAML::Node root = YAML::Load(ssf.str());
+        m_scenario.from_yaml(root);
 
         ifs.close();
         emit signal_update();
     });
 
     connect(saveScenario, &QPushButton::clicked, [this](){
-        string contents = Serializer::serialize_yaml(&m_scenario);
+        YAML::Node root;
+        m_scenario.to_yaml(root);
         QString name = QFileDialog::getSaveFileName(this, tr("Save Scenario"), "/home/scenario.yaml", tr("Scenarios (*.yaml)"));
         ofstream ofs(name.toStdString());
-        ofs << contents << endl;
+        ofs << root << endl;
         ofs.close();
 
         // export trajectories (aorta specific code)

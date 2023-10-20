@@ -7,8 +7,11 @@
 class Actor : public Selectable
 {
 public:
+    ~Actor() {}
     Actor(const std::string & name, Selectable * parent) : Selectable(parent), m_name(name) {}
-    virtual ~Actor() = 0;
+    void to_yaml(YAML::Node & parent) override;
+    void from_yaml(const YAML::Node & node) override;
+
     void setTrf(Eigen::Vector3f pos, Eigen::Vector3f ori)
     {
         m_pos = pos;
