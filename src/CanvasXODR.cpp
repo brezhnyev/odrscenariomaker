@@ -29,7 +29,61 @@ void CanvasXODR::init()
     m_sceneBbox.second[0] = -__DBL_MAX__;
     m_sceneBbox.second[1] = -__DBL_MAX__;
     m_sceneBbox.second[2] = -__DBL_MAX__;
-    // roads:
+
+    // draw boundaries:
+    listBounadries = glGenLists(1);
+    glNewList(listBounadries, GL_COMPILE);
+    glPushMatrix();
+    glTranslatef(0,0,0.1f);
+    for (auto && r : m_xodrBuilder.getBoundaries())
+    {
+        for (auto && g : r.second)
+        {
+            for (auto && s : g.second)
+            {
+                for (auto && l : s.second)
+                {
+                    glBegin(GL_LINE_STRIP);
+                    for (auto && p : l.second)
+                    {
+                        glVertex3f(p.x(), p.y(), p.z());
+                        addToSceneBbox(p);
+                    }
+                    glEnd();
+                }
+            }
+        }
+    }
+    glPopMatrix();
+    glEndList();
+
+    // draw centerlines:
+    listCenterlines = glGenLists(1);
+    glNewList(listCenterlines, GL_COMPILE);
+    glPushMatrix();
+    glTranslatef(0,0,0.1f);
+    for (auto && r : m_xodrBuilder.getCenters())
+    {
+        for (auto && g : r.second)
+        {
+            for (auto && s : g.second)
+            {
+                for (auto && l : s.second)
+                {
+                    glBegin(GL_POINTS);
+                    for (auto && p : l.second)
+                    {
+                        glVertex3f(p.x(), p.y(), p.z());
+                    }
+                    glEnd();
+                }
+            }
+        }
+    }
+    glPopMatrix();
+    glEndList();
+
+    // roads, come as last otherwise may affect visualization of boundaries (was the case on intel card):
     listRoad = glGenLists(1);
     glNewList(listRoad, GL_COMPILE);
     for (auto && r : m_xodrBuilder.getBoundaries())
@@ -55,58 +109,6 @@ void CanvasXODR::init()
             }
         }
     }
-    glEndList();
-
-    // draw boundaries:
-    listBounadries = glGenLists(1);
-    glNewList(listBounadries, GL_COMPILE);
-    glPushMatrix();
-    glTranslatef(0,0,0.1f);
-
-    for (auto && r : m_xodrBuilder.getBoundaries())
-    {
-        for (auto && g : r.second)
-        {
-            for (auto && s : g.second)
-            {
-                for (auto && l : s.second)
-                {
-                    glBegin(GL_LINE_STRIP);
-                    for (auto && p : l.second)
-                    {
-                        glVertex3f(p.x(), p.y(), p.z());
-                        addToSceneBbox(p);
-                    }
-                    glEnd();
-                }
-            }
-        }
-    }
-    glEndList();
-
-    // draw centerlines:
-    listCenterlines = glGenLists(1);
-    glNewList(listCenterlines, GL_COMPILE);
-    for (auto && r : m_xodrBuilder.getCenters())
-    {
-        for (auto && g : r.second)
-        {
-            for (auto && s : g.second)
-            {
-                for (auto && l : s.second)
-                {
-                    glBegin(GL_POINTS);
-                    for (auto && p : l.second)
-                    {
-                        glVertex3f(p.x(), p.y(), p.z());
-                    }
-                    glEnd();
-                }
-            }
-        }
-    }
-    glPopMatrix();
-
     glEndList();
 }
 
