@@ -47,7 +47,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     connect(m_treeView, &TreeView::signal_select,     [this](int id){ m_viewer->slot_select(id); update(); });
 
     QDockWidget * propsDock = new QDockWidget(tr("Properties"), this);
-    addDockWidget(Qt::RightDockWidgetArea, propsDock);
+    addDockWidget(Qt::LeftDockWidgetArea, propsDock);
     connect(m_viewer, &Viewer::signal_select, 
     [&, this, propsDock](int id){
         auto item = m_scenario.findSelectable(id);
@@ -166,6 +166,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         propsDock->setMaximumWidth(200);    
         propsDock->setMinimumWidth(200);
     });
+    m_treeView->slot_addItem(m_scenario.getID());
 
     QDockWidget *playDock = new QDockWidget("Animation");
     QVBoxLayout * playLayout = new QVBoxLayout();
