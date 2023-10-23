@@ -1,8 +1,7 @@
 #include <string>
 #include <iostream>
 
-const char * xosc_template_header = R"(
-<?xml version='1.0' encoding='UTF-8'?>
+const char * xosc_template_header = R"(<?xml version='1.0' encoding='UTF-8'?>
 <OpenSCENARIO>
   <FileHeader author="Capgemini" date="" description="" revMajor="1" revMinor="0"/>
   <ParameterDeclarations>
@@ -52,6 +51,7 @@ const char * xosc_template_pedestrian = R"(
   // </Entities>
 
 const char * xosc_template_footer = R"(
+  <StopTrigger/>
   </Storyboard>
 </OpenSCENARIO>)";
 

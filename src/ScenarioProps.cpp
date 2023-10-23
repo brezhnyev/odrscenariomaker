@@ -21,6 +21,8 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <ctime>
+#include <iomanip>
 
 using namespace std;
 
@@ -280,13 +282,20 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             if (pos != string::npos)
             {
                 stringstream ss;
-                ss << value;
+                ss << fixed << value;
                 text.insert(pos+placeholder.size(), ss.str());
             }
         };
 
         ofstream ofs_xosc(name.toStdString()+".xosc");
-        ofs_xosc << xosc_template_header << endl;
+        string xosc_header(xosc_template_header);
+        fillplaceholder(xosc_header, "LogicFile filepath=\"", m_scenario.getTownName());
+        time_t unixt = time(nullptr);
+        char timeString [256];
+        std::strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%S", std::gmtime(&unixt));
+        fillplaceholder(xosc_header, "date=\"", string(timeString));
+        fillplaceholder(xosc_header, "description=\"", "Usecase_"+ string(timeString));
+        ofs_xosc << xosc_header << endl;
         ofs_xosc << xosc_template_start_entities << endl;
         vector<string> objectNames;
         for (auto && it : m_scenario.children())
@@ -324,7 +333,9 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             }
         }
         ofs_xosc << xosc_template_end_entities << endl;
-        ofs_xosc << xosc_template_start_storyboard << endl;
+        string xosc_storyboard(xosc_template_start_storyboard);
+        fillplaceholder(xosc_storyboard, "dateTime=\"", string(timeString));
+        ofs_xosc << xosc_storyboard << endl;
         auto onit = objectNames.begin(); // onit == object names iterator
         for (auto && it : m_scenario.children())
         {
