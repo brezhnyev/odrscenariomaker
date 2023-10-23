@@ -187,7 +187,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     playLayout->addWidget(isRealtime);
     playLayout->addWidget(freq);
 
-    connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton, isSync, isRealtime, freq]()
+    connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton, isSync, isRealtime, freq, treeDock, propsDock]()
     {
         if (0 == playStatus)
         {
@@ -195,6 +195,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             isSync->setEnabled(false);
             isRealtime->setEnabled(false);
             freq->setEnabled(false);
+            treeDock->setEnabled(false);
+            propsDock->setEnabled(false);
         }
         else if (1 == playStatus)
         {
@@ -243,15 +245,16 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
     QPushButton *stopButton = new QPushButton(playDock);
     stopButton->setText("Stop");
-    connect(stopButton, &QPushButton::clicked, [&, isSync, isRealtime, freq]()
+    connect(stopButton, &QPushButton::clicked, [&, isSync, isRealtime, freq, treeDock, propsDock]()
     {
         playStatus = 0;
         isSync->setEnabled(true);
         isRealtime->setEnabled(true);
         freq->setEnabled(true);
         playCondVar.notify_all();
-        }
-    );
+        treeDock->setEnabled(true);   
+        propsDock->setEnabled(true);
+    });
 
     connect(isSync, &QCheckBox::stateChanged, [&, isRealtime ](int state)
     { 
