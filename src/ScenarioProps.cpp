@@ -345,12 +345,18 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             {
                 Actor * actor = dynamic_cast<Actor*>(it.second);
                 fillplaceholder(xosc_action_member, "Private entityRef=\"", *onit);
-                fillplaceholder(xosc_action_member, "x=\"", actor->get_pos().x());
-                fillplaceholder(xosc_action_member, "y=\"", actor->get_pos().y());
-                fillplaceholder(xosc_action_member, "z=\"", actor->get_pos().z());
-                fillplaceholder(xosc_action_member, "r=\"", DEG2RAD*actor->get_ori().x());
-                fillplaceholder(xosc_action_member, "p=\"", DEG2RAD*actor->get_ori().y());
-                fillplaceholder(xosc_action_member, "h=\"", DEG2RAD*actor->get_ori().z());
+                auto waypath = actor->getFirstWaypath();
+                if (waypath)
+                {
+                    auto pos = waypath->getStartingPosition();
+                    fillplaceholder(xosc_action_member, "x=\"", pos.x());
+                    fillplaceholder(xosc_action_member, "y=\"", pos.y());
+                    fillplaceholder(xosc_action_member, "z=\"", pos.z());
+                    auto dir = waypath->getStartingDirection();
+                    fillplaceholder(xosc_action_member, "r=\"", 0);
+                    fillplaceholder(xosc_action_member, "p=\"", atan2(dir.z(), hypot(dir.x(), dir.y())));
+                    fillplaceholder(xosc_action_member, "h=\"", atan2(dir.y(), dir.x()));
+                }
                 Waypoint * wpoint = actor->getFirstWaypoint();
                 if (wpoint)
                 {
