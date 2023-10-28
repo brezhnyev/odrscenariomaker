@@ -14,13 +14,13 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
     lh->addWidget(new QLabel("Waypath " + QString::number(p.getID()), this));
     QPushButton * updateWaypath = new QPushButton("Update Waypath", this);
     lh->addWidget(updateWaypath);
-    QPushButton * delThis = new QPushButton("Delete", this);
-    lh->addWidget(new QGroupBox(this));
-    lh->addWidget(delThis);
+    QPushButton * delButton = new QPushButton("Delete", this);
+    delButton->setStyleSheet("background-color: red");
+    lh->addWidget(delButton);
     lh->addStretch(1);
 
     setLayout(lh);
-    connect(delThis, &QPushButton::clicked, [this]()
+    connect(delButton, &QPushButton::clicked, [this]()
     {
         int id = m_waypath.getID();
         if (id == -1)

@@ -45,7 +45,7 @@ WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
         emit signal_delete(id);
         close();
     });
-    lh->addWidget(new QGroupBox(this));
+    delButton->setStyleSheet("background-color: red");
     lh->addWidget(delButton);
     lh->addStretch(1);
 

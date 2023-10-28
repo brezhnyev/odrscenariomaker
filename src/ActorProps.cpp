@@ -69,6 +69,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
 
     m_delButton = new QPushButton();
     m_delButton->setText("Delete");
+    m_delButton->setStyleSheet("background-color: red");
 
     connect(m_delButton, &QPushButton::clicked, [this]()
     { 
@@ -138,7 +139,6 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     addTypes(ls);
 
     auto mainLayout = layout();
-    ((QVBoxLayout*)mainLayout)->addWidget(new QGroupBox(this));
     mainLayout->addWidget(m_delButton);
     ((QVBoxLayout*)mainLayout)->addStretch(1);
 }
@@ -193,7 +193,6 @@ WalkerProps::WalkerProps(Walker & walker) : ActorProps(walker), m_walker(walker)
     addTypes(ls);
     
     auto mainLayout = layout();
-    ((QVBoxLayout*)mainLayout)->addWidget(new QGroupBox(this));
     mainLayout->addWidget(m_delButton);
     ((QVBoxLayout*)mainLayout)->addStretch(1);
 }

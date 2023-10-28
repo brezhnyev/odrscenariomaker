@@ -17,8 +17,6 @@ class Scenario : public Selectable
 {
 public:
     Scenario(Selectable * parent) : Selectable(parent) {};
-    Scenario(const Scenario &); // copy c-tor (need to redefine since we can load)
-    Scenario & operator=(const Scenario &);
     std::string getType() const override { return "Scenario"; }
     void to_yaml(YAML::Node & parent) override;
     void from_yaml(const YAML::Node & node) override;

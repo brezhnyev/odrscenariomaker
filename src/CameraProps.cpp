@@ -72,8 +72,8 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     connect(height, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_height(val); emit signal_update(); });
 
     QPushButton * delButton = new QPushButton("Delete", this);
-    mainLayout->addStretch(1);
     mainLayout->addWidget(delButton);
+    mainLayout->addStretch(1);
     connect(delButton, &QPushButton::clicked, [this]()
     { 
         int id = m_camera.getID();

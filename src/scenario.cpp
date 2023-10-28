@@ -10,38 +10,6 @@
 using namespace std;
 using namespace Eigen;
 
-Scenario::Scenario(const Scenario & other) : Selectable(other)
-{
-    *this = other;
-}
-
-Scenario & Scenario::operator=(const Scenario & other)
-{
-    Selectable::operator=(other);
-    m_rosbagFile = other.m_rosbagFile;
-    m_rosbagTopics = other.m_rosbagTopics;
-    m_townName = other.m_townName;
-    m_rosbagOffset = other.m_rosbagOffset;
-
-    for (auto && child : m_children)
-        child.second->setParent(this);
-
-    parse([](Selectable * object)
-    {
-        Waypath * path = dynamic_cast<Waypath*>(object);
-        if (path)
-        {
-            path->updateSmoothPath();
-        }
-        Actor * actor = dynamic_cast<Actor*>(object);
-        if (actor)
-        {
-            actor->updatePose();
-        }
-    });
-    return *this;
-}
-
 // get active elements -------------
 Actor * Scenario::getActiveActor()
 {

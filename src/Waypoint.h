@@ -17,7 +17,6 @@ class WaypointNonSelectable
 public:
     WaypointNonSelectable() {}
     WaypointNonSelectable(Eigen::Vector3f pos, float speed) : m_pos(pos), m_speed(speed) {}
-    void flipY() { m_pos[1] = -m_pos[1]; }
 
     ADDVAR(protected, Eigen::Vector3f, pos, Eigen::Vector3f(0.0f, 0.0f, 0.0f));
     ADDVAR(protected, float, speed, 0.0f);

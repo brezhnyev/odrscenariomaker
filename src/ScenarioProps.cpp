@@ -89,6 +89,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     });
 
     QPushButton * clearScenario = new QPushButton("Clear Scenario", this);
+    clearScenario->setStyleSheet("background-color: red");
     mainLayout->addWidget(clearScenario);
 
     // Add drop-down list to select Ego:
