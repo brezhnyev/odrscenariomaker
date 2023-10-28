@@ -283,26 +283,27 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             {
                 stringstream ss;
                 ss << fixed << value;
-                text.insert(pos+placeholder.size(), ss.str());
+                if (placeholder.find("=\"") != string::npos)
+                    text.insert(pos+placeholder.size(), ss.str());
+                else
+                    text.insert(pos, ss.str());
             }
         };
 
         ofstream ofs_xosc(name.toStdString()+".xosc");
-        string xosc_header(xosc_template_header);
-        fillplaceholder(xosc_header, "LogicFile filepath=\"", m_scenario.getTownName());
+        string xosc(xosc_template);
+        fillplaceholder(xosc, "LogicFile filepath=\"", m_scenario.getTownName());
         time_t unixt = time(nullptr);
         char timeString [256];
         std::strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%S", std::gmtime(&unixt));
-        fillplaceholder(xosc_header, "date=\"", string(timeString));
-        fillplaceholder(xosc_header, "description=\"", "Usecase_"+ string(timeString));
-        ofs_xosc << xosc_header << endl;
-        ofs_xosc << xosc_template_start_entities << endl;
+        fillplaceholder(xosc, "date=\"", string(timeString));
+        fillplaceholder(xosc, "description=\"", "Usecase_"+ string(timeString));
         vector<string> objectNames;
-        for (auto && it : m_scenario.children())
+        for (auto && child : m_scenario.children())
         {
-            if (it.second->getType() == "Vehicle")
+            if (child.second->getType() == "Vehicle")
             {
-                Vehicle * vehicle = dynamic_cast<Vehicle*>(it.second);
+                Vehicle * vehicle = dynamic_cast<Vehicle*>(child.second);
                 string xosc_vehicle(xosc_template_vehicle);
                 string scenarioObjectName = vehicle->get_isEgo() ? "hero" : "Vehicle_" + to_string(vehicle->getID());
                 objectNames.push_back(scenarioObjectName);
@@ -315,11 +316,11 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
                 string typevalue = vehicle->get_isEgo() ? "ego_vehicle" : "simulation";
                 fillplaceholder(xosc_vehicle, "value=\"", typevalue);
                 // maxSteering, wheelDiameter also possible if we keep this info in Vehicle in future
-                ofs_xosc << xosc_vehicle << endl;
+                fillplaceholder(xosc, "  </Entities>", xosc_vehicle);
             }
-            if (it.second->getType() == "Walker")
+            if (child.second->getType() == "Walker")
             {
-                Walker * walker = dynamic_cast<Walker*>(it.second);
+                Walker * walker = dynamic_cast<Walker*>(child.second);
                 string xosc_walker(xosc_template_pedestrian);
                 string scenarioObjectName = "Ped_" + to_string(walker->getID());
                 objectNames.push_back(scenarioObjectName);
@@ -329,46 +330,82 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
                 fillplaceholder(xosc_walker, "width=\"", 2*walker->get_bbox().x());
                 fillplaceholder(xosc_walker, "length=\"", 2*walker->get_bbox().y());
                 fillplaceholder(xosc_walker, "height=\"", 2*walker->get_bbox().z());
-                ofs_xosc << xosc_walker << endl;
+                fillplaceholder(xosc, "  </Entities>", xosc_walker);
             }
         }
-        ofs_xosc << xosc_template_end_entities << endl;
-        string xosc_storyboard(xosc_template_start_storyboard);
-        fillplaceholder(xosc_storyboard, "dateTime=\"", string(timeString));
-        ofs_xosc << xosc_storyboard << endl;
+        string xosc_global_action(xosc_template_global_action);
+        fillplaceholder(xosc_global_action, "dateTime=\"", string(timeString));
+        fillplaceholder(xosc, "      </Actions>", xosc_global_action);
         auto onit = objectNames.begin(); // onit == object names iterator
-        for (auto && it : m_scenario.children())
+        for (auto && child : m_scenario.children())
         {
-            Vehicle * v = dynamic_cast<Vehicle*>(it.second);
-            string xosc_action_member(xosc_template_action_member);
-            if (it.second->getType() == "Vehicle" || it.second->getType() == "Walker")
+            if (child.second->getType() == "Vehicle" || child.second->getType() == "Walker")
             {
-                Actor * actor = dynamic_cast<Actor*>(it.second);
+                Actor * actor = dynamic_cast<Actor*>(child.second);
+                string xosc_action_member(xosc_template_action_member);
                 fillplaceholder(xosc_action_member, "Private entityRef=\"", *onit);
                 auto waypath = actor->getFirstWaypath();
-                if (waypath)
+                if (waypath && !waypath->children().empty())
                 {
                     auto pos = waypath->getStartingPosition();
-                    fillplaceholder(xosc_action_member, "x=\"", pos.x());
-                    fillplaceholder(xosc_action_member, "y=\"", pos.y());
-                    fillplaceholder(xosc_action_member, "z=\"", pos.z());
+                    fillplaceholder(xosc_action_member, " x=\"", pos.x());
+                    fillplaceholder(xosc_action_member, " y=\"", pos.y());
+                    fillplaceholder(xosc_action_member, " z=\"", pos.z());
                     auto dir = waypath->getStartingDirection();
-                    fillplaceholder(xosc_action_member, "r=\"", 0);
-                    fillplaceholder(xosc_action_member, "p=\"", atan2(dir.z(), hypot(dir.x(), dir.y())));
-                    fillplaceholder(xosc_action_member, "h=\"", atan2(dir.y(), dir.x()));
+                    fillplaceholder(xosc_action_member, " r=\"", 0);
+                    fillplaceholder(xosc_action_member, " p=\"", atan2(dir.z(), hypot(dir.x(), dir.y())));
+                    fillplaceholder(xosc_action_member, " h=\"", atan2(dir.y(), dir.x()));
+                    // fillplaceholder(xosc_action_member, "<AbsoluteTargetSpeed value=\"", wpoint->get_speed());
                 }
-                Waypoint * wpoint = actor->getFirstWaypoint();
-                if (wpoint)
-                {
-                    fillplaceholder(xosc_action_member, "<AbsoluteTargetSpeed value=\"", wpoint->get_speed());
-                }
-                ofs_xosc << xosc_action_member << endl;
+                fillplaceholder(xosc, "      </Actions>", xosc_action_member);
                 ++onit;
             }
         }
-        ofs_xosc << xosc_template_end_init_storyboard << endl;
-        ofs_xosc << xosc_template_story << endl;
-        ofs_xosc << xosc_template_footer << endl;
+        onit = objectNames.begin(); // onit == object names iterator
+        for (auto && child : m_scenario.children())
+        {
+            string xosc_story(xosc_template_story);
+            string xosc_waypath_event(xosc_template_waypath_event);
+            if (child.second->getType() == "Vehicle" || child.second->getType() == "Walker")
+            {
+                fillplaceholder(xosc_story, "name=\"", "Story " + *onit);
+                Actor * actor = dynamic_cast<Actor*>(child.second);
+                for (auto && child : actor->children())
+                {
+                    if (child.second->getType() == "Waypath")
+                    {
+                        Waypath * waypath = dynamic_cast<Waypath*>(child.second);
+                        for (auto && child : waypath->children())
+                        {
+                            if (child.second->getType() == "Waypoint")
+                            {
+                                Waypoint * waypoint = dynamic_cast<Waypoint*>(child.second);
+                                string xosc_waypoint(xosc_template_waypoint);
+                                auto pos = waypoint->get_pos();
+                                fillplaceholder(xosc_waypoint, " x=\"", pos.x());
+                                fillplaceholder(xosc_waypoint, " y=\"", pos.y());
+                                fillplaceholder(xosc_waypoint, " z=\"", pos.z());
+                                fillplaceholder(xosc_waypath_event, "                      </Route>", xosc_waypoint);
+                                string xosc_speed_event(xosc_template_speed_event);
+                                fillplaceholder(xosc_speed_event, " entityRef=\"", *onit);
+                                fillplaceholder(xosc_speed_event, " x=\"", pos.x());
+                                fillplaceholder(xosc_speed_event, " y=\"", pos.y());
+                                fillplaceholder(xosc_speed_event, " z=\"", pos.z() + actor->get_bbox().z());
+                                fillplaceholder(xosc_speed_event, "AbsoluteTargetSpeed value=\"", waypoint->get_speed());
+                                fillplaceholder(xosc_speed_event, "Event name=\"", "Actor_speed_at_" + to_string(waypoint->getID()));
+                                fillplaceholder(xosc_speed_event, "Action name=\"", "Actor_speed_at_" + to_string(waypoint->getID()));
+                                fillplaceholder(xosc_story, "        </Maneuver>", xosc_speed_event);
+                            }
+                        }
+                    }
+                }
+            }
+            fillplaceholder(xosc_story, "        </Maneuver>", xosc_waypath_event);
+            fillplaceholder(xosc_story, " entityRef=\"", *onit);
+            fillplaceholder(xosc, "  <StopTrigger/>", xosc_story);
+            ++onit;
+        }
+        ofs_xosc << xosc << endl;
         ofs_xosc.close();
     });
 }
