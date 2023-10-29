@@ -26,6 +26,9 @@ void Camera::drawGeometry() const
 {
     glDisable(GL_TEXTURE_2D);
 
+    float currentColor[4];
+    glGetFloatv(GL_CURRENT_COLOR, currentColor);
+
     glPushMatrix(); // parent
     Actor * parent = dynamic_cast<Actor*>(m_parent);
     if (parent)
@@ -52,7 +55,6 @@ void Camera::drawGeometry() const
     float fx = v[0];
     float fy = v[1];
     float fz = fy*m_height/m_width; // also take the aspect into consideration
-
 
     if (m_selected)
     {
@@ -86,6 +88,8 @@ void Camera::drawGeometry() const
 
     glPopMatrix();
     glPopMatrix(); // parent transform (if any)
+
+    glColor4fv(currentColor);
 }
 
 void Camera::draw() const

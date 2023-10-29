@@ -11,9 +11,9 @@ using namespace Eigen;
 
 void Actor::updatePose()
 {
-    if (m_children.empty())
+    Waypath * firstWaypath = getFirstWaypath();
+    if (!firstWaypath)
         return;
-    Waypath * firstWaypath = static_cast<Waypath*>(m_children.begin()->second);
     set_pos(firstWaypath->getStartingPosition());
     Vector3f dir = firstWaypath->getStartingDirection();
     float pitch = asin(dir[2]/dir.norm())*RAD2DEG;

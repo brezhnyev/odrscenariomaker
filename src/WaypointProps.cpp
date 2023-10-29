@@ -27,11 +27,8 @@ WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
     posInfo->setLayout(l1);
 
     QVBoxLayout * lh = new QVBoxLayout();
-    QLabel * idInfo = new QLabel(this);
-    idInfo->setText("Waypoint " + QString::number(p.getID()));
-    lh->addWidget(idInfo);
+    lh->addWidget(new QLabel("Waypoint ID: " + QString::number(p.getID()), this));
     lh->addWidget(posInfo);
-
 
     QPushButton * delButton = new QPushButton(this);
     delButton->setText("Delete");

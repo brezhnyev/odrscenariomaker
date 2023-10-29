@@ -12,7 +12,6 @@ public:
     WaypathProps(Waypath & p);
 
 signals:
-    void signal_update();
     void signal_delete(int);
 
 private:

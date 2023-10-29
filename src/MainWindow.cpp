@@ -40,7 +40,6 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     {
         m_treeView->slot_addItem(id);
         m_scenario.getActiveWaypath()->updateSmoothPath();
-        m_scenario.getActiveActor()->updatePose();
         update();
     });
     connect(m_viewer,   &Viewer::signal_select,       [this](int id){ m_treeView->slot_select(id); });
@@ -67,16 +66,12 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
                 activeWaypath->updateSmoothPath();
                 update();
             }));
-            m_c.push_back(connect(m_viewer, &Viewer::signal_activeSelectableMovedBy, [this](float dx, float dy, float dz)
+            m_c.push_back(connect(m_viewer, &Viewer::signal_moveSelectedTo, [this](float x, float y, float z)
             {
                 Selectable * s = m_scenario.getSelected();
-                if (s && dynamic_cast<Waypoint*>(s))
-                {
-                    Vector3f pos = dynamic_cast<Waypoint*>(s)->get_pos();
-                    m_pointProps->update(pos[0] + dx, pos[1] + dy, pos[2] + dz);
-                    m_scenario.getActiveWaypath()->updateSmoothPath();
-                    update();
-                }
+                m_pointProps->update(x, y, z);
+                m_scenario.getActiveWaypath()->updateSmoothPath();
+                update();
             }));
         }
         else if (item->getType() == "Waypath")
@@ -84,7 +79,6 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             closeActive();
             m_activeDlg = m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item));
             propsDock->setWidget(m_pathProps);
-            m_c.push_back(connect(m_pathProps, &WaypathProps::signal_update, [this](){ m_scenario.getActiveActor()->updatePose(); update(); }));
             m_c.push_back(connect(m_pathProps, &WaypathProps::signal_delete, [this](int id)
             { 
                 deleteItem(id);
@@ -100,25 +94,22 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             {
                 deleteItem(id);
             }));
-            m_c.push_back(connect(m_viewer, &Viewer::signal_activeSelectableMovedBy, [this](float dx, float dy, float dz)
+            m_c.push_back(connect(m_viewer, &Viewer::signal_moveSelectedTo, [this](float x, float y, float z)
             {
-                Selectable * s = m_scenario.getSelected();
-                if (s && dynamic_cast<Camera*>(s))
+                Camera * cam = dynamic_cast<Camera*>(m_scenario.getSelected());
+                assert(cam);
+                Vector4f v(x, y, z, 1.0f);
+                Actor * parent = dynamic_cast<Actor*>(cam->getParent());
+                if (parent)
                 {
-                    Camera * cam = dynamic_cast<Camera*>(s);
-                    Selectable * parent = cam->getParent();
-                    Vector3f v(dx, dy, dz);
-                    if (parent && parent->getType() == "Vehicle")
-                    {
-                        Vehicle * pv = dynamic_cast<Vehicle*>(parent);
-                        Vector3f ori = pv->get_ori();
-                        Matrix3f m = AngleAxisf(ori[2]*DEG2RAD, Vector3f::UnitZ())*AngleAxisf(ori[1]*DEG2RAD, Vector3f::UnitY())*AngleAxisf(ori[0]*DEG2RAD, Vector3f::UnitX()).toRotationMatrix();
-                        v = m.transpose()*v;
-                    }
-                    Vector3f pos = cam->get_pos();
-                    m_camProps->update(pos[0] + v[0], pos[1] + v[1], pos[2] + v[2]);
-                    update();
+                    Matrix4f parentTrf; parentTrf.setIdentity();
+                    Vector3f ori = parent->get_ori();
+                    parentTrf.block(0,0,3,3) = AngleAxisf(ori[2]*DEG2RAD, Vector3f::UnitZ())*AngleAxisf(ori[1]*DEG2RAD, Vector3f::UnitY())*AngleAxisf(ori[0]*DEG2RAD, Vector3f::UnitX()).toRotationMatrix();
+                    parentTrf.block(0,3,3,1) = parent->get_pos();
+                    v = parentTrf.inverse()*v;
                 }
+                m_camProps->update(v.x(), v.y(), v.z());
+                update();
             }));
         }
         else if (item->getType() == "Vehicle")

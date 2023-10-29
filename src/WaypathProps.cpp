@@ -11,9 +11,10 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
 {
     QVBoxLayout * lh = new QVBoxLayout();
 
-    lh->addWidget(new QLabel("Waypath " + QString::number(p.getID()), this));
-    QPushButton * updateWaypath = new QPushButton("Update Waypath", this);
-    lh->addWidget(updateWaypath);
+    lh->addWidget(new QLabel("Waypath ID: " + QString::number(p.getID()), this));
+    QLabel * info = new QLabel("Use Shift+Left Mouse to set points in 3D View");
+    info->setWordWrap(true);
+    lh->addWidget(info);
     QPushButton * delButton = new QPushButton("Delete", this);
     delButton->setStyleSheet("background-color: red");
     lh->addWidget(delButton);
@@ -29,10 +30,5 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
         }
         emit signal_delete(id);
         close();
-    });
-    connect(updateWaypath, &QPushButton::clicked, [this]()
-    {
-        m_waypath.updateSmoothPath();
-        emit signal_update();
     });
 }

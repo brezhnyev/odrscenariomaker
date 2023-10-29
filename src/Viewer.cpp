@@ -74,8 +74,7 @@ void Viewer::postSelection(const QPoint &point)
         Camera * cam = dynamic_cast<Camera*>(m_scenario.getActiveActor());
         if (cam)
         {
-            cam->set_pos(Vector3f(0,0,0));
-            signal_activeSelectableMovedBy(sp.x, sp.y, sp.z);
+            signal_moveSelectedTo(sp.x, sp.y, sp.z);
         }
         else
         {
@@ -120,15 +119,43 @@ void Viewer::mouseMoveEvent(QMouseEvent * e)
     {
         if (x != -1)
         {
-            // bool found;
-            // Vec sp = camera()->pointUnderPixel(QPoint(-e->pos().x(), -e->pos().y()), found);
-            // if (found)
-            //     cout << sp.x << " " << sp.y << " " << sp.z << endl;
-            // cout << selectedName() << endl;
+            // Important: the pointUnderPixel only has effect in postSelection
+            // evntl. when all names are filled with drawWithNames for glReadPixels !!
             int dx = int(e->pos().x()) - x;
             int dy = int(e->pos().y()) - y;
             if (e->modifiers() == Qt::ShiftModifier)
-                signal_activeSelectableMovedBy(0.01f*dx, -0.01f*dy, 0);
+            {
+                // Lets try to fetch the selected object as close to mouse pointer:
+                Selectable * object = m_scenario.getSelected();
+                Vector3f pos;
+                if (object->getType() == "Waypoint")
+                {
+                    Waypoint * waypoint = dynamic_cast<Waypoint*>(object);
+                    pos = waypoint->get_pos();
+                }
+                if (object->getType() == "Camera")
+                {
+                    Camera * camera = dynamic_cast<Camera*>(object);
+                    pos = camera->get_pos();
+                    Actor * parent = dynamic_cast<Actor*>(camera->getParent());
+                    if (parent)
+                    {
+                        Matrix4f parentTrf; parentTrf.setIdentity();
+                        Vector3f ori = parent->get_ori();
+                        parentTrf.block(0,0,3,3) = AngleAxisf(ori[2]*DEG2RAD, Vector3f::UnitZ())*AngleAxisf(ori[1]*DEG2RAD, Vector3f::UnitY())*AngleAxisf(ori[0]*DEG2RAD, Vector3f::UnitX()).toRotationMatrix();
+                        parentTrf.block(0,3,3,1) = parent->get_pos();
+                        pos = (parentTrf*Vector4f(pos[0], pos[1], pos[2], 1.0f)).block(0,0,3,1);
+                    }
+                }
+                qglviewer::Vec orig, dir;
+                camera()->convertClickToLine(QPoint(e->pos().x(), e->pos().y()), orig, dir); // in World CS
+                Vector3f V = pos - Vector3f(orig.x, orig.y, orig.z);
+                Vector3f P = Vector3f(orig.x, orig.y, orig.z) + Vector3f(dir.x, dir.y, dir.z)*V.norm();
+                // Since we cannot sample the underlying geometry, lets keep z same as original:
+                P.z() = pos.z();
+                // Potentially its possible to sample XODR's z similar how we do it in RAIV
+                signal_moveSelectedTo(P.x(), P.y(), P.z());
+            }
             else
             {
                 // lets implement the orbiting navigation since not present in QGLViewer:

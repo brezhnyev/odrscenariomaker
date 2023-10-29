@@ -23,6 +23,12 @@ public:
     void draw() const override;
     void drawGeometry() const override;
 
+    struct SpeedPoint
+    {
+        Eigen::Vector3f pos;
+        float speed;
+    };
+
 private:
-    std::vector<WaypointNonSelectable> m_smoothPath;
+    std::vector<SpeedPoint> m_smoothPath;
 };

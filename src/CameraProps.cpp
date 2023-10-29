@@ -74,6 +74,7 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     QPushButton * delButton = new QPushButton("Delete", this);
     mainLayout->addWidget(delButton);
     mainLayout->addStretch(1);
+    delButton->setStyleSheet("background-color: red");
     connect(delButton, &QPushButton::clicked, [this]()
     { 
         int id = m_camera.getID();
