@@ -87,13 +87,13 @@ void play(Scenario & scenario)
         return;
     }
 
-    if (!scenario.getTownName().empty())
+    if (!scenario.get_townName().empty())
     {
-        try { client.LoadWorld(scenario.getTownName()); }
+        try { client.LoadWorld(scenario.get_townName()); }
         catch(...) { cout << "Check Town name spelling! The town does not exist." << endl; return; }
     }
 
-    auto world = scenario.getTownName().empty() ? client.GetWorld() : client.LoadWorld(scenario.getTownName());
+    auto world = scenario.get_townName().empty() ? client.GetWorld() : client.LoadWorld(scenario.get_townName());
  
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();

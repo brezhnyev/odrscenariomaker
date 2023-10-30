@@ -39,8 +39,8 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
     generalLayout->addWidget(new QLabel("Carla Town name:"));
     QLineEdit * townName = new QLineEdit();
     generalLayout->addWidget(townName);
-    townName->setText(m_scenario.getTownName().c_str());
-    connect(townName, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.setTownName(text.toStdString()); });
+    townName->setText(m_scenario.get_townName().c_str());
+    connect(townName, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.set_townName(text.toStdString()); });
     QPushButton * loadScenario = new QPushButton("Load Scenario", this);
     generalLayout->addWidget(loadScenario);
     QPushButton * saveScenario = new QPushButton("Save Scenario", this);
@@ -119,7 +119,8 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         }
     }
 
-    connect(vehiclesList, &QComboBox::currentTextChanged, [this](const QString & qentry){
+    connect(vehiclesList, &QComboBox::currentTextChanged, [this](const QString & qentry)
+    {
         string entry = qentry.toStdString();
         for (auto & c : m_scenario.children())
         {
@@ -142,8 +143,9 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             signal_clear();
     });
 
-    connect(loadScenario, &QPushButton::clicked, [this, townName](){
-        QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"));
+    connect(loadScenario, &QPushButton::clicked, [this, townName]()
+    {
+        QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"), nullptr, QFileDialog::DontUseNativeDialog);
         if (name.isEmpty()) return;
         
         ifstream ifs(name.toStdString());
@@ -153,13 +155,18 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         m_scenario.from_yaml(root);
 
         ifs.close();
+
+        m_scenario.set_scenarioFileName(name.toStdString());
         emit signal_update(name);
     });
 
-    connect(saveScenario, &QPushButton::clicked, [this](){
+    connect(saveScenario, &QPushButton::clicked, [this]()
+    {
         YAML::Node root;
         m_scenario.to_yaml(root);
-        QString name = QFileDialog::getSaveFileName(this, tr("Save Scenario"), "/home/scenario.yaml", tr("Scenarios (*.yaml)"));
+        string scenarioFileName = m_scenario.get_scenarioFileName();
+        string path = scenarioFileName.empty() ? "/home/scenario.yaml" : scenarioFileName;
+        QString name = QFileDialog::getSaveFileName(this, tr("Save Scenario"), path.c_str(), tr("Scenarios (*.yaml)"), nullptr,  QFileDialog::DontUseNativeDialog);
         ofstream ofs(name.toStdString());
         ofs << root << endl;
         ofs.close();
@@ -293,7 +300,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 
         ofstream ofs_xosc(name.toStdString()+".xosc");
         string xosc(xosc_template);
-        fillplaceholder(xosc, "LogicFile filepath=\"", m_scenario.getTownName());
+        fillplaceholder(xosc, "LogicFile filepath=\"", m_scenario.get_townName());
         time_t unixt = time(nullptr);
         char timeString [256];
         std::strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%S", std::gmtime(&unixt));

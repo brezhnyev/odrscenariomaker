@@ -1,9 +1,9 @@
 #pragma once
 
+#include "globals.h"
 #include "Selectable.h"
 
 #include <eigen3/Eigen/Eigen>
-
 #include <vector>
 
 #define DEG2RAD M_PI/180
@@ -25,18 +25,9 @@ public:
     Waypath *   getActiveWaypath();
     Waypoint *  getActiveWaypoint();
 
-    void        setRosbagFile(const std::string & text)     { m_rosbagFile = text;  }
-    void        setRosbagTopics(std::vector<std::string> topics)    { m_rosbagTopics = topics; }
-    void        setRosbagOffset(float offset)               { m_rosbagOffset=offset;}
-    void        setTownName(std::string name)               { m_townName = name;    }
-    std::string getRosbagFile()                             { return m_rosbagFile;  }
-    std::vector<std::string> getRosbagTopics()              { return m_rosbagTopics;}
-    float       getRosbagOffset()                           { return m_rosbagOffset;}
-    std::string getTownName()                               { return m_townName;    }
-
-protected:
-    std::string                 m_rosbagFile;
-    std::vector<std::string>    m_rosbagTopics;
-    std::string                 m_townName;
-    float                       m_rosbagOffset{0.0f};
+    ADDVAR(protected, std::string, rosbagFile, "");
+    ADDVAR(protected, std::vector<std::string>, rosbagTopics, std::vector<std::string>());
+    ADDVAR(protected, std::string, townName, "");
+    ADDVAR(protected, float, rosbagOffset, 0.0f);
+    ADDVAR(protected, std::string, scenarioFileName, "");
 };  
