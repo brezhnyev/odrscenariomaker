@@ -29,7 +29,6 @@ void Vehicle::drawGeometry() const
     glPushMatrix();
     glRotatef(m_ori[2],0,0,1);
 
-
     if (m_selected)
         glLineWidth(5);
     else
@@ -63,7 +62,6 @@ void Vehicle::drawGeometry() const
     glVertex3f(1.0f*m_bbox[2], 0.0f, 0.0f);
     glVertex3f(2.0f*m_bbox[0], 0.0f, 0.0f);
     glEnd();
-
     glLineWidth(1);
 
     glPopMatrix();

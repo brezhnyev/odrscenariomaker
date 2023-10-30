@@ -153,7 +153,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         m_scenario.from_yaml(root);
 
         ifs.close();
-        emit signal_update();
+        emit signal_update(name);
     });
 
     connect(saveScenario, &QPushButton::clicked, [this](){

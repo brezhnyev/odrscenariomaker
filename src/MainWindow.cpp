@@ -144,9 +144,14 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             m_activeDlg = m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
             propsDock->setWidget(m_scenarioProps);
             m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addItem(id); update(); }));
-            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addWalker, [this](int id){ m_treeView->slot_addItem(id); update(); }));
+            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addWalker, [this](int id) { m_treeView->slot_addItem(id); update(); }));
             m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id);  update(); }));
-            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_update, [this](){ m_treeView->slot_addItem(m_scenario.getID()); update(); }));
+            m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_update, [this](QString scenarioFileName)
+            {
+                m_treeView->slot_addItem(m_scenario.getID());
+                setWindowTitle(QString("ODRSM - ") + scenarioFileName);
+                update();
+            }));
             m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_clear, [this]()
             {
                 m_scenario.clear();

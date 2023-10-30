@@ -14,7 +14,7 @@ signals:
     void signal_addVehicle(int);
     void signal_addWalker(int);
     void signal_addCamera(int);
-    void signal_update();
+    void signal_update(QString);
     void signal_clear();
 
 protected:

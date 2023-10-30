@@ -8,7 +8,7 @@
 class World3D : public Selectable
 {
 public:
-    World3D();
+    World3D() : Selectable(nullptr) {};
     ~World3D();
     World3D(const std::string & objfile);
     void draw() const override;
