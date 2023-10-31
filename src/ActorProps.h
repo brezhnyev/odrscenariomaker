@@ -12,7 +12,7 @@ class ActorProps : public QWidget
     Q_OBJECT
 public:
     virtual ~ActorProps() = 0;
-    ActorProps(Actor & actor);
+    ActorProps(Actor & actor, std::list<QMetaObject::Connection> &);
     QPushButton * m_colorPicker; // apparently must be member, otherwise cannot properly capture in labda -> crash
 
 signals:
@@ -20,9 +20,10 @@ signals:
     void signal_delete(int);
     void signal_addWaypath(int);
     void signal_addCamera(int);
+    void signal_uncheckEgo();
 
 protected:
-    void addTypes(const QStringList & ls);
+    void addTypes(const QStringList & ls, std::list<QMetaObject::Connection> &);
 
 protected:
     QPushButton * m_delButton{nullptr};
@@ -33,7 +34,7 @@ class VehicleProps : public ActorProps
 {
     Q_OBJECT
 public:
-    VehicleProps(Vehicle & actor);
+    VehicleProps(Vehicle & actor, std::list<QMetaObject::Connection> &);
 
 private:
     Vehicle & m_vehicle;
@@ -44,7 +45,7 @@ class WalkerProps : public ActorProps
 {
     Q_OBJECT
 public:
-    WalkerProps(Walker & actor);
+    WalkerProps(Walker & actor, std::list<QMetaObject::Connection> &);
 
 private:
     Walker & m_walker;

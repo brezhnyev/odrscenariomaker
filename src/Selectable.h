@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <stack>
 #include <functional>
 #include "yaml-cpp/yaml.h"
 
@@ -32,9 +33,10 @@ public:
 
 
     int row() const;
-    int columnCount() const { return 2; }
+    int columnCount() const { return 1; } // previously used 2 to diplay id, see data() function
     std::string data(int index) const;
-
+    const uint64_t m_magicNumber;
+    
 protected:
     static int                  s_ID;
     int                         m_id;
@@ -42,9 +44,14 @@ protected:
     std::map<int, Selectable*>  m_children;
     Selectable *                m_parent{nullptr};
 
+    static std::stack<std::string> s_undo;
+    static std::stack<std::string> s_redo;
+    static bool s_allowUndo;
+
 protected:
     virtual void drawGeometry() const {};
     Selectable * getActiveChild(int depth, int cDepth = 0);
+    void makeUndoSnapshot(Selectable *);
 };
 
 class Root : public Selectable

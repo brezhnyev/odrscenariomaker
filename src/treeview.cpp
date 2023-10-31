@@ -33,15 +33,15 @@ void TreeView::slot_delItem(int id)
 
 void TreeView::slot_select(int id)
 {
-    QModelIndex index = m_treeModel->getIndexById(id);
-    selectionModel()->clear();
     blockSignals(true);
+    QModelIndex index = m_treeModel->getIndexById(id);
+    selectionModel()->clearSelection();
     selectionModel()->select(index, QItemSelectionModel::Rows | QItemSelectionModel::Select);
-    blockSignals(false);
     // expand selected recursively:
     while (index.isValid())
     {
         expand(index);
         index = m_treeModel->parent(index);
     }
+    blockSignals(false);
 }

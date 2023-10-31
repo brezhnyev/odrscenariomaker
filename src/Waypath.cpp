@@ -45,7 +45,7 @@ void Waypath::updateSmoothPath()
 
         CatmullRom curve;
         const int STEPS = 100;
-        curve.set_steps(STEPS); // generate STEPS interpolate points between the last 4 way points
+        curve.set_steps(STEPS);
 
         // specifics of the cpp-spline library: we need to add the first and last waypoints twice:
         Waypoint * firstWP = static_cast<Waypoint*>(m_children.begin()->second);

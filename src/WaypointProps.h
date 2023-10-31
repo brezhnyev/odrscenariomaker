@@ -11,7 +11,7 @@ class WaypointProps : public QWidget
 {
     Q_OBJECT
 public:
-    WaypointProps(Waypoint & p);
+    WaypointProps(Waypoint & p, std::list<QMetaObject::Connection> &);
     void update(float x, float y, float z);
 
 signals:

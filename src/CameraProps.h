@@ -11,7 +11,7 @@ class CameraProps : public QWidget
 {
     Q_OBJECT
 public:
-    CameraProps(Camera & actor);
+    CameraProps(Camera & actor, std::list<QMetaObject::Connection> &);
     void update(float x, float y, float z);
 
 signals:

@@ -7,11 +7,10 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QMessageBox>
 
-WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
+WaypathProps::WaypathProps(Waypath & p, std::list<QMetaObject::Connection> & cons) : m_waypath(p)
 {
     QVBoxLayout * lh = new QVBoxLayout();
 
-    lh->addWidget(new QLabel("Waypath ID: " + QString::number(p.getID()), this));
     QLabel * info = new QLabel("Use Shift+Left Mouse to set points in 3D View");
     info->setWordWrap(true);
     lh->addWidget(info);
@@ -21,7 +20,7 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
     lh->addStretch(1);
 
     setLayout(lh);
-    connect(delButton, &QPushButton::clicked, [this]()
+    cons.push_back(connect(delButton, &QPushButton::clicked, [this]()
     {
         int id = m_waypath.getID();
         if (id == -1)
@@ -30,5 +29,5 @@ WaypathProps::WaypathProps(Waypath & p) : m_waypath(p)
         }
         emit signal_delete(id);
         close();
-    });
+    }));
 }

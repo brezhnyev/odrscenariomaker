@@ -29,18 +29,16 @@ using namespace std;
 #define MINMAXPOS 1000000
 
 
-ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
+ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connection> & cons) : m_scenario(scenario)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
-    mainLayout->addWidget(new QLabel(QString(scenario.getType().c_str()) + " ID: " + QString::number(scenario.getID()), this));
-
     QGroupBox * general = new QGroupBox();
     QVBoxLayout * generalLayout = new QVBoxLayout();
     generalLayout->addWidget(new QLabel("Carla Town name:"));
     QLineEdit * townName = new QLineEdit();
     generalLayout->addWidget(townName);
     townName->setText(m_scenario.get_townName().c_str());
-    connect(townName, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.set_townName(text.toStdString()); });
+    cons.push_back(connect(townName, &QLineEdit::textChanged, [this](const QString & text){ m_scenario.set_townName(text.toStdString()); }));
     QPushButton * loadScenario = new QPushButton("Load Scenario", this);
     generalLayout->addWidget(loadScenario);
     QPushButton * saveScenario = new QPushButton("Save Scenario", this);
@@ -51,7 +49,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 
     QPushButton * addVehicle = new QPushButton("Add vehicle", this);
     mainLayout->addWidget(addVehicle);
-    connect(addVehicle, &QPushButton::clicked, [this]()
+    cons.push_back(connect(addVehicle, &QPushButton::clicked, [this]()
     { 
         int id = (new Vehicle(&m_scenario))->getID();
         if (id == -1)
@@ -60,11 +58,11 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             return;
         }
         emit signal_addVehicle(id);
-    });
+    }));
 
     QPushButton * addWalker = new QPushButton("Add walker", this);
     mainLayout->addWidget(addWalker);
-    connect(addWalker, &QPushButton::clicked, [this]()
+    cons.push_back(connect(addWalker, &QPushButton::clicked, [this]()
     { 
         int id = (new Walker(&m_scenario))->getID();
         if (id == -1)
@@ -73,11 +71,11 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             return;
         }
         emit signal_addWalker(id);
-    });
+    }));
 
     QPushButton * addCamera = new QPushButton("Add Camera", this);
     mainLayout->addWidget(addCamera);
-    connect(addCamera, &QPushButton::clicked, [this]()
+    cons.push_back(connect(addCamera, &QPushButton::clicked, [this]()
     {
         int id = (new Camera(&m_scenario))->getID();
         if (id == -1)
@@ -86,64 +84,20 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
             return;
         }
         emit signal_addCamera(id);
-    });
+    }));
 
     QPushButton * clearScenario = new QPushButton("Clear Scenario", this);
     clearScenario->setStyleSheet("background-color: red");
     mainLayout->addWidget(clearScenario);
 
-    // Add drop-down list to select Ego:
-    mainLayout->addWidget(new QLabel("Set Ego by Vehicle ID:"));
-    QStringList ls;
-    ls << "No";
-    for (auto && c : m_scenario.children())
-    {
-        if (c.second->getType() == "Vehicle")
-        {
-            Vehicle * vehicle = dynamic_cast<Vehicle*>(c.second);
-            QString entry((to_string(vehicle->getID())).c_str());
-            ls << entry;
-        }
-    }
-    QComboBox * vehiclesList = new QComboBox(this);
-    vehiclesList->addItems(ls);
-    mainLayout->addWidget(vehiclesList);
-
-    for (auto & c : m_scenario.children())
-    {
-        if (c.second->getType() == "Vehicle")
-        {
-            Vehicle * v = dynamic_cast<Vehicle*>(c.second);
-            if (v->get_isEgo())
-                vehiclesList->setCurrentText(to_string(v->getID()).c_str());
-        }
-    }
-
-    connect(vehiclesList, &QComboBox::currentTextChanged, [this](const QString & qentry)
-    {
-        string entry = qentry.toStdString();
-        for (auto & c : m_scenario.children())
-        {
-            if (c.second->getType() == "Vehicle")
-            {
-                Vehicle * v = dynamic_cast<Vehicle*>(c.second);
-                v->set_isEgo(false);
-                if (qentry != "No" && qentry.toInt() == v->getID())
-                    v->set_isEgo(true);
-            }
-        }
-    });
-
     mainLayout->addStretch(1);
 
-    connect(clearScenario, &QPushButton::clicked, [this]()
+    cons.push_back(connect(clearScenario, &QPushButton::clicked, [this]()
     {
-        QMessageBox::StandardButton reply = QMessageBox::question(this, "No undo option", "The scenario will be lost. Proceed?");
-        if (reply == QMessageBox::Yes)
-            signal_clear();
-    });
+        signal_clear();
+    }));
 
-    connect(loadScenario, &QPushButton::clicked, [this, townName]()
+    cons.push_back(connect(loadScenario, &QPushButton::clicked, [this, townName]()
     {
         QString name = QFileDialog::getOpenFileName(this, tr("Open Scenario"), "/home", tr("Scenarios (*.yaml)"), nullptr, QFileDialog::DontUseNativeDialog);
         if (name.isEmpty()) return;
@@ -158,9 +112,9 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
 
         m_scenario.set_scenarioFileName(name.toStdString());
         emit signal_update(name);
-    });
+    }));
 
-    connect(saveScenario, &QPushButton::clicked, [this]()
+    cons.push_back(connect(saveScenario, &QPushButton::clicked, [this]()
     {
         YAML::Node root;
         m_scenario.to_yaml(root);
@@ -415,5 +369,5 @@ ScenarioProps::ScenarioProps(Scenario & scenario) : m_scenario(scenario)
         }
         ofs_xosc << xosc << endl;
         ofs_xosc.close();
-    });
+    }));
 }

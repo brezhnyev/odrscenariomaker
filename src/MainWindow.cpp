@@ -4,6 +4,7 @@
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QCheckBox>
+#include <QtGui/QtEvents>
 
 #include <iostream>
 #include <thread>
@@ -34,6 +35,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     m_treeView = new TreeView(m_scenario.getParent());
     QDockWidget *treeDock = new QDockWidget(tr("Actors"), this);
     addDockWidget(Qt::LeftDockWidgetArea, treeDock);
+    m_treeView->setMinimumSize(100, 0.5*size().height());
+    m_treeView->resize(100, 0.4*size().height());
     treeDock->setWidget(m_treeView);
 
     connect(m_viewer,   &Viewer::signal_addWaypoint, [this](int id)
@@ -56,7 +59,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         if (item->getType() == "Waypoint")
         {
             closeActive();
-            m_activeDlg = m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item));
+            m_activeDlg = m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item), m_c);
             propsDock->setWidget(m_pointProps);
             m_c.push_back(connect(m_pointProps, &WaypointProps::signal_update, [this](){ m_scenario.getActiveWaypath()->updateSmoothPath(); update(); }));
             m_c.push_back(connect(m_pointProps, &WaypointProps::signal_delete, [this](int id)
@@ -77,7 +80,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         else if (item->getType() == "Waypath")
         {
             closeActive();
-            m_activeDlg = m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item));
+            m_activeDlg = m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item), m_c);
             propsDock->setWidget(m_pathProps);
             m_c.push_back(connect(m_pathProps, &WaypathProps::signal_delete, [this](int id)
             { 
@@ -87,7 +90,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         else if (item->getType() == "Camera")
         {
             closeActive();
-            m_activeDlg = m_camProps = new CameraProps(*dynamic_cast<Camera*>(item));
+            m_activeDlg = m_camProps = new CameraProps(*dynamic_cast<Camera*>(item), m_c);
             propsDock->setWidget(m_camProps);
             m_c.push_back(connect(m_camProps, &CameraProps::signal_update, [this](){ update(); }));
             m_c.push_back(connect(m_camProps, &CameraProps::signal_delete, [this](int id)
@@ -115,7 +118,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         else if (item->getType() == "Vehicle")
         {
             closeActive();
-            m_activeDlg = m_vehicleProps = new VehicleProps(*dynamic_cast<Vehicle*>(item));
+            m_activeDlg = m_vehicleProps = new VehicleProps(*dynamic_cast<Vehicle*>(item), m_c);
             propsDock->setWidget(m_vehicleProps);
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_delete, [this](int id)
             {
@@ -124,11 +127,20 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_update, [this](){ update(); })); // color update
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id); update(); }));
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_addCamera , [this](int id){ m_treeView->slot_addItem(id);  update(); }));
+            m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_uncheckEgo, [this]()
+            {
+                for (auto && c : m_scenario.children())
+                {
+                    Vehicle * v = dynamic_cast<Vehicle*>(c.second);
+                    if (v)
+                        v->set_isEgo(false);
+                }
+            }));
         }
         else if (item->getType() == "Walker")
         {
             closeActive();
-            m_activeDlg = m_walkerProps = new WalkerProps(*dynamic_cast<Walker*>(item));
+            m_activeDlg = m_walkerProps = new WalkerProps(*dynamic_cast<Walker*>(item), m_c);
             propsDock->setWidget(m_walkerProps);
             m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_delete, [this](int id)
             {
@@ -141,7 +153,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
         else if (item->getType() == "Scenario")
         {
             closeActive();
-            m_activeDlg = m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item));
+            m_activeDlg = m_scenarioProps = new ScenarioProps(*dynamic_cast<Scenario*>(item), m_c);
             propsDock->setWidget(m_scenarioProps);
             m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addVehicle, [this](int id){ m_treeView->slot_addItem(id); update(); }));
             m_c.push_back(connect(m_scenarioProps, &ScenarioProps::signal_addWalker, [this](int id) { m_treeView->slot_addItem(id); update(); }));
@@ -269,4 +281,22 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     playWidget->setLayout(playLayout);
     playDock->setWidget(playWidget);
     addDockWidget(Qt::LeftDockWidgetArea, playDock);
+}
+
+void MainWindow::keyPressEvent(QKeyEvent * e)
+{
+    if (e->key() == Qt::Key_Z && e->modifiers() == Qt::ControlModifier)
+    {
+        m_scenario.undo();
+        m_treeView->slot_addItem(m_scenario.getID());
+        update();
+    }
+    if (e->key() == Qt::Key_Y && e->modifiers() == Qt::ControlModifier)
+    {
+        m_scenario.redo();
+        m_treeView->slot_addItem(m_scenario.getID());
+        update();
+    }
+
+    QMainWindow::keyPressEvent(e);
 }

@@ -9,7 +9,7 @@ class WaypathProps : public QWidget
 {
     Q_OBJECT
 public:
-    WaypathProps(Waypath & p);
+    WaypathProps(Waypath & p, std::list<QMetaObject::Connection> &);
 
 signals:
     void signal_delete(int);

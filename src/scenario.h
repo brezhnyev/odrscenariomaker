@@ -25,9 +25,15 @@ public:
     Waypath *   getActiveWaypath();
     Waypoint *  getActiveWaypoint();
 
+    void undo();
+    void redo();
+
     ADDVAR(protected, std::string, rosbagFile, "");
     ADDVAR(protected, std::vector<std::string>, rosbagTopics, std::vector<std::string>());
     ADDVAR(protected, std::string, townName, "");
     ADDVAR(protected, float, rosbagOffset, 0.0f);
     ADDVAR(protected, std::string, scenarioFileName, "");
+
+private:
+    void loadScenario(const YAML::Node & node);
 };  

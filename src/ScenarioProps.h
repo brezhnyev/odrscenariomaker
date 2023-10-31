@@ -8,7 +8,7 @@ class ScenarioProps : public QWidget
 {
     Q_OBJECT
 public:
-    ScenarioProps(Scenario & actor);
+    ScenarioProps(Scenario & actor, std::list<QMetaObject::Connection> &);
 
 signals:
     void signal_addVehicle(int);

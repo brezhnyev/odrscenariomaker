@@ -76,10 +76,15 @@ QModelIndex TreeModel::parent(const QModelIndex &index) const
     if (!index.isValid())
         return QModelIndex();
 
+    // KB: Qt provides index with invalid internal pointer (dangling pointer)!
+    // no better solution was found than check agains a magic number (quasi check sum)
     TreeItem *self = static_cast<TreeItem*>(index.internalPointer());
+    if (self->m_magicNumber != 1176543210987654320LL)
+        return QModelIndex();
     TreeItem *parentItem = self->getParent();
+    if (parentItem->m_magicNumber != 1176543210987654320LL)
+        return QModelIndex();
 
-    assert(parentItem);
     if (!parentItem)
         return QModelIndex();
 

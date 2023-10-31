@@ -15,7 +15,7 @@
 
 #define MINMAXPOS 1000000
 
-CameraProps::CameraProps(Camera & camera) : m_camera(camera)
+CameraProps::CameraProps(Camera & camera, std::list<QMetaObject::Connection> & cons) : m_camera(camera)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
 
@@ -33,9 +33,9 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     posInfo->setLayout(l1);
     mainLayout->addWidget(posInfo);
 
-    connect(x, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_pos(Eigen::Vector3f(val, y->value(), z->value())); emit signal_update(); });
-    connect(y, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_pos(Eigen::Vector3f(x->value(), val, z->value())); emit signal_update(); });
-    connect(z, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_pos(Eigen::Vector3f(x->value(), y->value(), val)); emit signal_update(); });
+    cons.push_back(connect(x, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_pos(Eigen::Vector3f(val, y->value(), z->value())); emit signal_update(); }));
+    cons.push_back(connect(y, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_pos(Eigen::Vector3f(x->value(), val, z->value())); emit signal_update(); }));
+    cons.push_back(connect(z, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_pos(Eigen::Vector3f(x->value(), y->value(), val)); emit signal_update(); }));
 
     QVBoxLayout * l2 = new QVBoxLayout();
     LDoubleSpinBox * roll = new LDoubleSpinBox(this, camera.get_ori().x(), -360, 360, 0.1, "roll");
@@ -51,9 +51,9 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     oriInfo->setLayout(l2);
     mainLayout->addWidget(oriInfo);
 
-    connect(roll,  &LDoubleSpinBox::valueChanged, [pitch,yaw,this ](double val){ m_camera.set_ori(Eigen::Vector3f(val, pitch->value(), yaw->value()));  emit signal_update(); });
-    connect(pitch, &LDoubleSpinBox::valueChanged, [roll,yaw, this ](double val){ m_camera.set_ori(Eigen::Vector3f(roll->value(), val,  yaw->value()));  emit signal_update(); });
-    connect(yaw,   &LDoubleSpinBox::valueChanged, [roll,pitch,this](double val){ m_camera.set_ori(Eigen::Vector3f(roll->value(), pitch->value(), val)); emit signal_update(); });
+    cons.push_back(connect(roll,  &LDoubleSpinBox::valueChanged, [pitch,yaw,this ](double val){ m_camera.set_ori(Eigen::Vector3f(val, pitch->value(), yaw->value()));  emit signal_update(); }));
+    cons.push_back(connect(pitch, &LDoubleSpinBox::valueChanged, [roll,yaw, this ](double val){ m_camera.set_ori(Eigen::Vector3f(roll->value(), val,  yaw->value()));  emit signal_update(); }));
+    cons.push_back(connect(yaw,   &LDoubleSpinBox::valueChanged, [roll,pitch,this](double val){ m_camera.set_ori(Eigen::Vector3f(roll->value(), pitch->value(), val)); emit signal_update(); }));
 
     QVBoxLayout * l3 = new QVBoxLayout();
     LDoubleSpinBox * FOV = new LDoubleSpinBox(this, m_camera.get_FOV(), 0, 180, 1, "FOV");
@@ -67,15 +67,15 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
     intrinsics->setLayout(l3);
     mainLayout->addWidget(intrinsics);
 
-    connect(FOV, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_FOV(val); emit signal_update(); });
-    connect(width, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_width(val); emit signal_update(); });
-    connect(height, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_height(val); emit signal_update(); });
+    cons.push_back(connect(FOV, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_FOV(val); emit signal_update(); }));
+    cons.push_back(connect(width, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_width(val); emit signal_update(); }));
+    cons.push_back(connect(height, &LDoubleSpinBox::valueChanged, [this](double val){ m_camera.set_height(val); emit signal_update(); }));
 
     QPushButton * delButton = new QPushButton("Delete", this);
     mainLayout->addWidget(delButton);
     mainLayout->addStretch(1);
     delButton->setStyleSheet("background-color: red");
-    connect(delButton, &QPushButton::clicked, [this]()
+    cons.push_back(connect(delButton, &QPushButton::clicked, [this]()
     { 
         int id = m_camera.getID();
         if (id == -1)
@@ -85,7 +85,7 @@ CameraProps::CameraProps(Camera & camera) : m_camera(camera)
         }
         emit signal_delete(id);
         close();
-    });
+    }));
 
     setLayout(mainLayout);
 }

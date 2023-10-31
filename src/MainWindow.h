@@ -19,6 +19,8 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 public:
     MainWindow(const std::string & xodrfile, std::string obj = "", QWidget * parent = nullptr);
+    void keyPressEvent(QKeyEvent*) override;
+
     void update()
     {
         m_treeView->update();

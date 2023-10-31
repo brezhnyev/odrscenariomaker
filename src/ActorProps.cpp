@@ -10,6 +10,7 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QColorDialog>
+#include <QtWidgets/QCheckBox>
 
 #include <eigen3/Eigen/Eigen>
 
@@ -20,10 +21,9 @@
 
 ActorProps::~ActorProps() {}
 
-ActorProps::ActorProps(Actor & actor) : m_actor(actor)
+ActorProps::ActorProps(Actor & actor, std::list<QMetaObject::Connection> & cons) : m_actor(actor)
 {
     QVBoxLayout * mainLayout = new QVBoxLayout();
-    mainLayout->addWidget(new QLabel(QString(actor.getType().c_str()) + " ID: " + QString::number(actor.getID()), this));
     setLayout(mainLayout);
 
     QPushButton * addWaypath = new QPushButton("Add waypath", this);
@@ -32,7 +32,7 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
     QPushButton * addCamera = new QPushButton("Add Camera", this);
     mainLayout->addWidget(addCamera);
 
-    connect(addWaypath, &QPushButton::clicked, [this]()
+    cons.push_back(connect(addWaypath, &QPushButton::clicked, [this]()
     { 
         int id = (new Waypath(&m_actor))->getID();
         if (id == -1)
@@ -41,8 +41,8 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
             return;
         }
         emit signal_addWaypath(id);
-    });
-    connect(addCamera, &QPushButton::clicked, [this]()
+    }));
+    cons.push_back(connect(addCamera, &QPushButton::clicked, [this]()
     {
         int id = (new Camera(&m_actor))->getID();
         if (id == -1)
@@ -51,27 +51,27 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
             return;
         }
         emit signal_addCamera(id);
-    });
+    }));
 
     m_colorPicker = new QPushButton(this);
     std::string scolor = m_actor.colorToString();
     m_colorPicker->setStyleSheet("background-color: rgb("+QString(m_actor.colorToString().c_str()) + ")");
     m_colorPicker->setText("Color");
-    connect(m_colorPicker, &QPushButton::clicked, [this]()
+    cons.push_back(connect(m_colorPicker, &QPushButton::clicked, [this]()
     {
         QColor color = QColorDialog::getColor();
         QString scolor(QString::number(color.red()) + "," + QString::number(color.green()) + "," + QString::number(color.blue()));
         m_colorPicker->setStyleSheet("background-color: rgb("+scolor+")");
         m_actor.set_color(Eigen::Vector3i(color.red(), color.green(), color.blue()));
         emit signal_update();
-    });
+    }));
     mainLayout->addWidget(m_colorPicker);
 
     m_delButton = new QPushButton();
     m_delButton->setText("Delete");
     m_delButton->setStyleSheet("background-color: red");
 
-    connect(m_delButton, &QPushButton::clicked, [this]()
+    cons.push_back(connect(m_delButton, &QPushButton::clicked, [this]()
     { 
         int id = m_actor.getID();
         if (id == -1)
@@ -81,20 +81,20 @@ ActorProps::ActorProps(Actor & actor) : m_actor(actor)
         }
         emit signal_delete(id);
         close();
-    });
+    }));
 }
 
-void ActorProps::addTypes(const QStringList & ls)
+void ActorProps::addTypes(const QStringList & ls, std::list<QMetaObject::Connection> & cons)
 {
     QComboBox * typeCombo = new QComboBox(this);
     typeCombo->addItems(ls);
     auto mainLayout = layout();
     mainLayout->addWidget(typeCombo);
     typeCombo->setCurrentIndex(typeCombo->findText(QString(m_actor.get_name().c_str())));
-    connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.set_name(name.toStdString()); });
+    cons.push_back(connect(typeCombo, &QComboBox::currentTextChanged, [this, typeCombo](const QString & name){ m_actor.set_name(name.toStdString()); }));
 }
 
-VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(vehicle)
+VehicleProps::VehicleProps(Vehicle & vehicle, std::list<QMetaObject::Connection> & cons) : ActorProps(vehicle, cons), m_vehicle(vehicle)
 {
     QStringList ls;
     ls << 
@@ -136,15 +136,30 @@ VehicleProps::VehicleProps(Vehicle & vehicle) : ActorProps(vehicle), m_vehicle(v
     "vehicle.volkswagen.t2" <<
     "vehicle.yamaha.yzf";
 
-    addTypes(ls);
+    addTypes(ls, cons);
 
     auto mainLayout = layout();
+
+    QCheckBox * chbox = new QCheckBox("Ego vehicle ", this);
+    if (m_vehicle.get_isEgo())
+        chbox->setChecked(true);
+    mainLayout->addWidget(chbox);
+
+    cons.push_back(connect(chbox, &QCheckBox::toggled, [this](bool toggle)
+    {
+        if (toggle)
+        {
+            emit signal_uncheckEgo();
+        }
+        m_vehicle.set_isEgo(toggle);
+    }));
+
     mainLayout->addWidget(m_delButton);
     ((QVBoxLayout*)mainLayout)->addStretch(1);
 }
 
 
-WalkerProps::WalkerProps(Walker & walker) : ActorProps(walker), m_walker(walker)
+WalkerProps::WalkerProps(Walker & walker, std::list<QMetaObject::Connection> & cons) : ActorProps(walker, cons), m_walker(walker)
 {
     QStringList ls;
     ls << 
@@ -190,7 +205,7 @@ WalkerProps::WalkerProps(Walker & walker) : ActorProps(walker), m_walker(walker)
     "walker.pedestrian.0040" <<
     "walker.pedestrian.0041";
 
-    addTypes(ls);
+    addTypes(ls, cons);
     
     auto mainLayout = layout();
     mainLayout->addWidget(m_delButton);

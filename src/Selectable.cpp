@@ -7,14 +7,19 @@
 using namespace std;
 
 int Selectable::s_ID = 0;
+stack<string> Selectable::s_undo;
+stack<string> Selectable::s_redo;
+bool Selectable::s_allowUndo = true;
 
 Selectable::~Selectable() {}
 
-Selectable::Selectable(Selectable * parent) : m_selected(false), m_parent(parent)
-{ 
+Selectable::Selectable(Selectable * parent) : m_selected(false), m_parent(parent), m_magicNumber(1176543210987654320LL)
+{
     m_id = s_ID; ++s_ID;
-    if (parent)
-        parent->m_children[m_id] = this;
+    if (s_allowUndo)
+        makeUndoSnapshot(parent);
+    if (m_parent)
+        m_parent->m_children[m_id] = this;
 }
 
 void Selectable::draw() const
@@ -101,6 +106,8 @@ Selectable * Selectable::findSelectable(int id)
 
 void Selectable::clear()
 {
+    if (s_allowUndo)
+        makeUndoSnapshot(this);
     parse([](Selectable * object)
     {
         object->children().clear();
@@ -138,21 +145,34 @@ int Selectable::row() const
 
 std::string Selectable::data(int index) const
 {
-    assert(index < 2);
+    assert(index < 1);
 
     if (m_parent)
     {
         if (index == 0)
             return getType();
-        if (index == 1)
-            return std::to_string(m_id);
+        // if (index == 1)
+        //     return std::to_string(m_id);
     }
     else
     {
         if (index == 0)
             return "Type";
-        if (index == 1)
-            return "Id";
+        // if (index == 1)
+        //     return "Id";
     }
     return "";
+}
+
+void Selectable::makeUndoSnapshot(Selectable * parent)
+{
+    while (parent && parent->getType() != "Scenario") parent = parent->getParent();
+    if (parent) // can be either nullptr or Scenario
+    {
+        s_redo = stack<string>();
+        YAML::Node root;
+        parent->to_yaml(root);
+        stringstream ss; ss << root;
+        s_undo.push(ss.str());
+    }
 }

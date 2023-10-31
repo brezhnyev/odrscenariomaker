@@ -11,7 +11,7 @@
 
 #define MINMAXPOS 1000000
 
-WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
+WaypointProps::WaypointProps(Waypoint & p, std::list<QMetaObject::Connection> & cons) : m_waypoint(p)
 {
     QVBoxLayout * l1 = new QVBoxLayout();
     x = new LDoubleSpinBox(this, p.get_pos().x(), -MINMAXPOS, MINMAXPOS, 0.1, "X");
@@ -27,12 +27,11 @@ WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
     posInfo->setLayout(l1);
 
     QVBoxLayout * lh = new QVBoxLayout();
-    lh->addWidget(new QLabel("Waypoint ID: " + QString::number(p.getID()), this));
     lh->addWidget(posInfo);
 
     QPushButton * delButton = new QPushButton(this);
     delButton->setText("Delete");
-    connect(delButton, &QPushButton::clicked, [this]()
+    cons.push_back(connect(delButton, &QPushButton::clicked, [this]()
     {
         int id = m_waypoint.getID();
         if (id == -1)
@@ -41,15 +40,15 @@ WaypointProps::WaypointProps(Waypoint & p) : m_waypoint(p)
         }
         emit signal_delete(id);
         close();
-    });
+    }));
     delButton->setStyleSheet("background-color: red");
     lh->addWidget(delButton);
     lh->addStretch(1);
 
-    connect(x, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_pos(Eigen::Vector3f(val, y->value(), z->value())); emit signal_update(); });
-    connect(y, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_pos(Eigen::Vector3f(x->value(), val, z->value())); emit signal_update(); });
-    connect(z, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_pos(Eigen::Vector3f(x->value(), y->value(), val)); emit signal_update(); });
-    connect(speed, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_speed(val); emit signal_update(); });
+    cons.push_back(connect(x, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_pos(Eigen::Vector3f(val, y->value(), z->value())); emit signal_update(); }));
+    cons.push_back(connect(y, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_pos(Eigen::Vector3f(x->value(), val, z->value())); emit signal_update(); }));
+    cons.push_back(connect(z, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_pos(Eigen::Vector3f(x->value(), y->value(), val)); emit signal_update(); }));
+    cons.push_back(connect(speed, &LDoubleSpinBox::valueChanged, [this](double val){ m_waypoint.set_speed(val); emit signal_update(); }));
     
     setLayout(lh);
 }

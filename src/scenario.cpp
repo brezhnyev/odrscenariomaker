@@ -45,6 +45,14 @@ void Scenario::to_yaml(YAML::Node & parent)
 
 void Scenario::from_yaml(const YAML::Node & node)
 {
+    makeUndoSnapshot(this);
+    s_allowUndo = false;
+    loadScenario(node);
+    s_allowUndo = true;
+}
+
+void Scenario::loadScenario(const YAML::Node & node)
+{
     m_townName = node["townname"].as<string>();
     m_rosbagFile = node["rosbagfile"].as<string>();
     auto topics = node["rosbagtopics"];
@@ -74,4 +82,40 @@ void Scenario::from_yaml(const YAML::Node & node)
             camera->from_yaml(child);
         }
     }
+}
+
+void Scenario::undo()
+{
+    if (s_undo.empty())
+        return;
+
+    YAML::Node root;
+    to_yaml(root);
+    stringstream ss; ss << root;
+    s_redo.push(ss.str());
+
+    s_allowUndo = false;
+    clear();
+    root = YAML::Load(s_undo.top());
+    loadScenario(root);
+    s_allowUndo = true;
+    s_undo.pop();
+}
+
+void Scenario::redo()
+{
+    if (s_redo.empty())
+        return;
+
+    YAML::Node root;
+    to_yaml(root);
+    stringstream ss; ss << root;
+    s_undo.push(ss.str());
+
+    s_allowUndo = false;
+    clear();
+    root = YAML::Load(s_redo.top());
+    loadScenario(root);
+    s_allowUndo = true;
+    s_redo.pop();
 }
