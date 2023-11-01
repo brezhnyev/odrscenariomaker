@@ -59,7 +59,7 @@ ActorProps::ActorProps(Actor & actor, std::list<QMetaObject::Connection> & cons)
     m_colorPicker->setText("Color");
     cons.push_back(connect(m_colorPicker, &QPushButton::clicked, [this]()
     {
-        QColor color = QColorDialog::getColor();
+        QColor color = QColorDialog::getColor(QColorDialog::DontUseNativeDialog);
         QString scolor(QString::number(color.red()) + "," + QString::number(color.green()) + "," + QString::number(color.blue()));
         m_colorPicker->setStyleSheet("background-color: rgb("+scolor+")");
         m_actor.set_color(Eigen::Vector3i(color.red(), color.green(), color.blue()));
