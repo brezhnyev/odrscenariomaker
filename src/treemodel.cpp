@@ -63,9 +63,7 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent) con
     else
         parentItem = static_cast<TreeItem*>(parent.internalPointer());
 
-    auto it = parentItem->children().begin();
-    advance(it, row);
-    TreeItem *childItem = it->second;
+    TreeItem *childItem = parentItem->children()[row];
     if (childItem)
         return createIndex(row, column, childItem);
     return QModelIndex();

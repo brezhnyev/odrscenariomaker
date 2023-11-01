@@ -1,6 +1,6 @@
 #pragma once
 
-#include <map>
+#include <deque>
 #include <stack>
 #include <functional>
 #include "yaml-cpp/yaml.h"
@@ -21,16 +21,15 @@ public:
     virtual void from_yaml(const YAML::Node & parent) {};
 
     void deleteSelectable(int);
-    void deleteSelectable(Selectable *);
+    void deleteThis();
 
     Selectable * findSelectable(int id);
     int getID() const                       { return m_id; }
-    std::map<int, Selectable*> & children() { return m_children; }
+    std::deque<Selectable*> & children()    { return m_children; }
     void clear();
     void parse(std::function<void(Selectable*)> fun);
     Selectable * getParent() const          { return m_parent; }
     Selectable * getSelected();
-
 
     int row() const;
     int columnCount() const { return 1; } // previously used 2 to diplay id, see data() function
@@ -38,10 +37,10 @@ public:
     const uint64_t m_magicNumber;
     
 protected:
-    static int                  s_ID;
-    int                         m_id;
+    static uint32_t             s_ID;
+    uint32_t                    m_id;
     bool                        m_selected;
-    std::map<int, Selectable*>  m_children;
+    std::deque<Selectable*>     m_children;
     Selectable *                m_parent{nullptr};
 
     static std::stack<std::string> s_undo;

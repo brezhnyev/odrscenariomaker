@@ -48,14 +48,14 @@ void Waypath::updateSmoothPath()
         curve.set_steps(STEPS);
 
         // specifics of the cpp-spline library: we need to add the first and last waypoints twice:
-        Waypoint * firstWP = static_cast<Waypoint*>(m_children.begin()->second);
+        Waypoint * firstWP = static_cast<Waypoint*>(*m_children.begin());
         curve.add_way_point(Vector(firstWP->get_pos().x(), firstWP->get_pos().y(), firstWP->get_pos().z()));
         for (auto && c : m_children)
         {
-            Waypoint * wp = static_cast<Waypoint*>(c.second);
+            Waypoint * wp = static_cast<Waypoint*>(c);
             curve.add_way_point(Vector(wp->get_pos().x(), wp->get_pos().y(), wp->get_pos().z()));
         }
-        Waypoint * lastWP = static_cast<Waypoint*>(m_children.rbegin()->second);
+        Waypoint * lastWP = static_cast<Waypoint*>(*m_children.rbegin());
         curve.add_way_point(Vector(lastWP->get_pos().x(), lastWP->get_pos().y(), lastWP->get_pos().z()));
 
         auto it1 = m_children.begin();
@@ -69,8 +69,8 @@ void Waypath::updateSmoothPath()
                 ++i;
                 continue;
             }
-            Waypoint * wp1 = static_cast<Waypoint*>(it1->second);
-            Waypoint * wp2 = static_cast<Waypoint*>(it2->second);
+            Waypoint * wp1 = static_cast<Waypoint*>(*it1);
+            Waypoint * wp2 = static_cast<Waypoint*>(*it2);
             float speed = (1.0f - (float)s/STEPS)*wp1->get_speed() + (float)s/STEPS*wp2->get_speed();
             SpeedPoint wp{Vector3f(curve.node(i).x, curve.node(i).y, curve.node(i).z), speed};
             m_smoothPath.push_back(wp);
@@ -106,7 +106,7 @@ Vector3f Waypath::getStartingPosition()
     if (children().size() < 1)
         return Vector3f(0,0,0);
 
-    return static_cast<Waypoint*>(m_children.begin()->second)->get_pos();
+    return static_cast<Waypoint*>(*m_children.begin())->get_pos();
 }
 
 Vector3f Waypath::getEndingPosition()
@@ -159,7 +159,7 @@ string Waypath::serialize() const
     stringstream ss;
     for (auto && child : m_children)
     {
-        auto p = dynamic_cast<Waypoint*>(child.second)->get_pos();
+        auto p = dynamic_cast<Waypoint*>(child)->get_pos();
         ss << p.x() << " " << p.y() << " " << p.z() << " ";
     }
     return ss.str();

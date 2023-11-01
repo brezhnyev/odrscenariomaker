@@ -40,7 +40,7 @@ void Scenario::to_yaml(YAML::Node & parent)
     parent["rosbagoffset"] = m_rosbagOffset;
     YAML::Node actors;
     parent["components"] = actors;
-    for (auto && child : m_children) child.second->to_yaml(actors);
+    for (auto && child : m_children) child->to_yaml(actors);
 }
 
 void Scenario::from_yaml(const YAML::Node & node)

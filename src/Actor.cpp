@@ -34,8 +34,8 @@ Eigen::Vector3i Actor::stringToColor()
 Waypath * Actor::getFirstWaypath()
 {
     for (auto && c : children())
-        if (c.second->getType() == "Waypath")
-            return dynamic_cast<Waypath*>(c.second);
+        if (c->getType() == "Waypath")
+            return dynamic_cast<Waypath*>(c);
     return nullptr;
 }
 
@@ -43,7 +43,7 @@ Waypoint * Actor::getFirstWaypoint()
 {
     Waypath * wpath = getFirstWaypath();
     if (wpath && !wpath->children().empty())
-        return dynamic_cast<Waypoint*>(wpath->children().begin()->second);
+        return dynamic_cast<Waypoint*>(wpath->children()[0]);
     return nullptr;
 }
 

@@ -39,7 +39,6 @@ WaypointProps::WaypointProps(Waypoint & p, std::list<QMetaObject::Connection> & 
             QMessageBox::warning(this, "Error deleting Element", "Failed to delete Waypoint: index not found!");
         }
         emit signal_delete(id);
-        close();
     }));
     delButton->setStyleSheet("background-color: red");
     lh->addWidget(delButton);

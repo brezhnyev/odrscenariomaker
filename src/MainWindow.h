@@ -26,10 +26,12 @@ public:
         m_treeView->update();
         m_viewer->update();
     }
-    void deleteItem(int id)
+    void deleteItem(Selectable * object)
     {
-        m_scenario.deleteSelectable(id);
+        uint32_t id = object->getID();
+        object->deleteThis();
         m_treeView->slot_delItem(id);
+        closeActive();
         update();
     }
     void closeActive()

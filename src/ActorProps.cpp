@@ -80,7 +80,6 @@ ActorProps::ActorProps(Actor & actor, std::list<QMetaObject::Connection> & cons)
             return;
         }
         emit signal_delete(id);
-        close();
     }));
 }
 

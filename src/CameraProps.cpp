@@ -84,7 +84,6 @@ CameraProps::CameraProps(Camera & camera, std::list<QMetaObject::Connection> & c
             return;
         }
         emit signal_delete(id);
-        close();
     }));
 
     setLayout(mainLayout);

@@ -26,7 +26,7 @@ void TreeView::slot_addItem(int id)
 }
 
 void TreeView::slot_delItem(int id)
-{
+{   // id is not used now
     selectionModel()->clearSelection();
     m_treeModel->layoutChanged();
 }

@@ -130,19 +130,19 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
         ofs_waypath << "trajectory:" << endl;
         for (auto && it : m_scenario.children())
         {
-            Vehicle * v = dynamic_cast<Vehicle*>(it.second);
+            Vehicle * v = dynamic_cast<Vehicle*>(it);
             if (v)
             {
                 ofs_waypath << "\t" << v->get_name() << ": ";
                 for (auto && it : v->children())
                 {
-                    Waypath * w = dynamic_cast<Waypath*>(it.second);
+                    Waypath * w = dynamic_cast<Waypath*>(it);
                     if (w)
                     {
                         ofs_waypath << "[";
                         for (auto && it : w->children())
                         {
-                            Waypoint * p = dynamic_cast<Waypoint*>(it.second);
+                            Waypoint * p = dynamic_cast<Waypoint*>(it);
                             auto pos = p->get_pos();
                             ofs_waypath << pos[0] << "," << pos[1] << "," << (pos[2] + 0.5*v->get_bbox()[2]) << ", "; 
                         }
@@ -171,7 +171,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
             indent += "\t";
             for (auto && it : m_scenario.children())
             {
-                Vehicle * v = dynamic_cast<Vehicle*>(it.second);
+                Vehicle * v = dynamic_cast<Vehicle*>(it);
                 if (v && (infoType == "car_positions" || infoType == "emergency_positions"))
                 {
                     string name = v->get_name();
@@ -182,7 +182,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
 
                     for (auto && it : v->children())
                     {
-                        Waypath * w = dynamic_cast<Waypath*>(it.second);
+                        Waypath * w = dynamic_cast<Waypath*>(it);
                         if (w)
                         {
                             if (w->children().empty())
@@ -202,7 +202,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
                         }
                     }
                 }
-                Camera * c = dynamic_cast<Camera*>(it.second);
+                Camera * c = dynamic_cast<Camera*>(it);
                 if (infoType == "edge_camera" && c)
                 {
                     ofs_initpos << indent;
@@ -263,9 +263,9 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
         vector<string> objectNames;
         for (auto && child : m_scenario.children())
         {
-            if (child.second->getType() == "Vehicle")
+            if (child->getType() == "Vehicle")
             {
-                Vehicle * vehicle = dynamic_cast<Vehicle*>(child.second);
+                Vehicle * vehicle = dynamic_cast<Vehicle*>(child);
                 string xosc_vehicle(xosc_template_vehicle);
                 string scenarioObjectName = vehicle->get_isEgo() ? "hero" : "Vehicle_" + to_string(vehicle->getID());
                 objectNames.push_back(scenarioObjectName);
@@ -280,9 +280,9 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
                 // maxSteering, wheelDiameter also possible if we keep this info in Vehicle in future
                 fillplaceholder(xosc, "  </Entities>", xosc_vehicle);
             }
-            if (child.second->getType() == "Walker")
+            if (child->getType() == "Walker")
             {
-                Walker * walker = dynamic_cast<Walker*>(child.second);
+                Walker * walker = dynamic_cast<Walker*>(child);
                 string xosc_walker(xosc_template_pedestrian);
                 string scenarioObjectName = "Ped_" + to_string(walker->getID());
                 objectNames.push_back(scenarioObjectName);
@@ -301,9 +301,9 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
         auto onit = objectNames.begin(); // onit == object names iterator
         for (auto && child : m_scenario.children())
         {
-            if (child.second->getType() == "Vehicle" || child.second->getType() == "Walker")
+            if (child->getType() == "Vehicle" || child->getType() == "Walker")
             {
-                Actor * actor = dynamic_cast<Actor*>(child.second);
+                Actor * actor = dynamic_cast<Actor*>(child);
                 string xosc_action_member(xosc_template_action_member);
                 fillplaceholder(xosc_action_member, "Private entityRef=\"", *onit);
                 auto waypath = actor->getFirstWaypath();
@@ -328,20 +328,20 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
         {
             string xosc_story(xosc_template_story);
             string xosc_waypath_event(xosc_template_waypath_event);
-            if (child.second->getType() == "Vehicle" || child.second->getType() == "Walker")
+            if (child->getType() == "Vehicle" || child->getType() == "Walker")
             {
                 fillplaceholder(xosc_story, "name=\"", "Story " + *onit);
-                Actor * actor = dynamic_cast<Actor*>(child.second);
+                Actor * actor = dynamic_cast<Actor*>(child);
                 for (auto && child : actor->children())
                 {
-                    if (child.second->getType() == "Waypath")
+                    if (child->getType() == "Waypath")
                     {
-                        Waypath * waypath = dynamic_cast<Waypath*>(child.second);
+                        Waypath * waypath = dynamic_cast<Waypath*>(child);
                         for (auto && child : waypath->children())
                         {
-                            if (child.second->getType() == "Waypoint")
+                            if (child->getType() == "Waypoint")
                             {
-                                Waypoint * waypoint = dynamic_cast<Waypoint*>(child.second);
+                                Waypoint * waypoint = dynamic_cast<Waypoint*>(child);
                                 string xosc_waypoint(xosc_template_waypoint);
                                 auto pos = waypoint->get_pos();
                                 fillplaceholder(xosc_waypoint, " x=\"", pos.x());

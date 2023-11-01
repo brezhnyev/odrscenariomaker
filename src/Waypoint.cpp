@@ -6,6 +6,24 @@ using namespace std;
 
 Waypoint::Waypoint(Eigen::Vector3f pos, float speed, Selectable * parent) : Selectable(parent), m_pos(pos), m_speed(speed)
 {
+    // generically we push back the new object (see Selectable c-tor)
+    // For Waypoint we will augment this logics by following:
+    // If Waypath is selected - the new Waypoint will be placed in front of the waypoints
+    // If existing Waypoint is selected - the new Waypoint will be placed after it
+    if (parent->children().size() == 1)
+        return;
+
+    Selectable * object = parent->getSelected();
+    if (object->getType() == "Waypath")
+    {
+        parent->children().push_front(parent->children().back());
+    }
+    else
+    {
+        auto it = find_if(parent->children().begin(), parent->children().end(), [object](Selectable * o){ return o == object; });
+        parent->children().insert(it+1, parent->children().back());
+    }
+    parent->children().pop_back();
 }
 
 void Waypoint::drawGeometry() const

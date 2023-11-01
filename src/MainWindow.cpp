@@ -62,10 +62,10 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             m_activeDlg = m_pointProps = new WaypointProps(*dynamic_cast<Waypoint*>(item), m_c);
             propsDock->setWidget(m_pointProps);
             m_c.push_back(connect(m_pointProps, &WaypointProps::signal_update, [this](){ m_scenario.getActiveWaypath()->updateSmoothPath(); update(); }));
-            m_c.push_back(connect(m_pointProps, &WaypointProps::signal_delete, [this](int id)
+            m_c.push_back(connect(m_pointProps, &WaypointProps::signal_delete, [this, item](int id)
             {
                 Waypath * activeWaypath = dynamic_cast<Waypath*>(m_scenario.getActiveWaypath());
-                deleteItem(id);
+                deleteItem(item);
                 activeWaypath->updateSmoothPath();
                 update();
             }));
@@ -82,9 +82,9 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             closeActive();
             m_activeDlg = m_pathProps = new WaypathProps(*dynamic_cast<Waypath*>(item), m_c);
             propsDock->setWidget(m_pathProps);
-            m_c.push_back(connect(m_pathProps, &WaypathProps::signal_delete, [this](int id)
+            m_c.push_back(connect(m_pathProps, &WaypathProps::signal_delete, [this, item](int id)
             { 
-                deleteItem(id);
+                deleteItem(item);
             }));
         }
         else if (item->getType() == "Camera")
@@ -93,9 +93,9 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             m_activeDlg = m_camProps = new CameraProps(*dynamic_cast<Camera*>(item), m_c);
             propsDock->setWidget(m_camProps);
             m_c.push_back(connect(m_camProps, &CameraProps::signal_update, [this](){ update(); }));
-            m_c.push_back(connect(m_camProps, &CameraProps::signal_delete, [this](int id)
+            m_c.push_back(connect(m_camProps, &CameraProps::signal_delete, [this, item](int id)
             {
-                deleteItem(id);
+                deleteItem(item);
             }));
             m_c.push_back(connect(m_viewer, &Viewer::signal_moveSelectedTo, [this](float x, float y, float z)
             {
@@ -120,9 +120,9 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             closeActive();
             m_activeDlg = m_vehicleProps = new VehicleProps(*dynamic_cast<Vehicle*>(item), m_c);
             propsDock->setWidget(m_vehicleProps);
-            m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_delete, [this](int id)
+            m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_delete, [this, item](int id)
             {
-                deleteItem(id);
+                deleteItem(item);
             }));
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_update, [this](){ update(); })); // color update
             m_c.push_back(connect(m_vehicleProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id); update(); }));
@@ -131,7 +131,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             {
                 for (auto && c : m_scenario.children())
                 {
-                    Vehicle * v = dynamic_cast<Vehicle*>(c.second);
+                    Vehicle * v = dynamic_cast<Vehicle*>(c);
                     if (v)
                         v->set_isEgo(false);
                 }
@@ -142,9 +142,9 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             closeActive();
             m_activeDlg = m_walkerProps = new WalkerProps(*dynamic_cast<Walker*>(item), m_c);
             propsDock->setWidget(m_walkerProps);
-            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_delete, [this](int id)
+            m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_delete, [this, item](int id)
             {
-                deleteItem(id);
+                deleteItem(item);
             }));
             m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_update, [this](){ update(); })); // color update
             m_c.push_back(connect(m_walkerProps, &VehicleProps::signal_addWaypath, [this](int id){ m_treeView->slot_addItem(id); update(); }));
@@ -172,7 +172,6 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             }));
         }
         propsDock->setMaximumWidth(200);    
-        propsDock->setMinimumWidth(200);
     });
     m_treeView->slot_addItem(m_scenario.getID());
 
@@ -194,6 +193,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     playLayout->addWidget(isSync);
     playLayout->addWidget(isRealtime);
     playLayout->addWidget(freq);
+    playDock->setMaximumWidth(200);
 
     connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton, isSync, isRealtime, freq, treeDock, propsDock]()
     {
@@ -296,6 +296,21 @@ void MainWindow::keyPressEvent(QKeyEvent * e)
         m_scenario.redo();
         m_treeView->slot_addItem(m_scenario.getID());
         update();
+    }
+    if (e->key() == Qt::Key_Delete && m_scenario.getSelected())
+    {
+        if (m_scenario.getSelected() != &m_scenario)
+        {
+            Waypath * activeWaypath = dynamic_cast<Waypath*>(m_scenario.getActiveWaypath());
+            if (activeWaypath)
+            {
+                deleteItem(m_scenario.getSelected());
+                activeWaypath->updateSmoothPath();
+                update();
+            }
+            else
+                deleteItem(m_scenario.getSelected());
+        }
     }
 
     QMainWindow::keyPressEvent(e);

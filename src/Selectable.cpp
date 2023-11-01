@@ -6,7 +6,7 @@
 
 using namespace std;
 
-int Selectable::s_ID = 0;
+uint32_t Selectable::s_ID = 0;
 stack<string> Selectable::s_undo;
 stack<string> Selectable::s_redo;
 bool Selectable::s_allowUndo = true;
@@ -19,22 +19,22 @@ Selectable::Selectable(Selectable * parent) : m_selected(false), m_parent(parent
     if (s_allowUndo)
         makeUndoSnapshot(parent);
     if (m_parent)
-        m_parent->m_children[m_id] = this;
+        m_parent->children().push_back(this);
 }
 
 void Selectable::draw() const
 {
-    for (auto && c : m_children) c.second->draw();
+    for (auto && c : m_children) c->draw();
 }
 
 void Selectable::drawWithNames() const
 {
-    for (auto && c : m_children) c.second->drawWithNames();
+    for (auto && c : m_children) c->drawWithNames();
 }
 
 void Selectable::to_yaml(YAML::Node & parent)
 {
-    for (auto && child : m_children) child.second->to_yaml(parent);
+    for (auto && child : m_children) child->to_yaml(parent);
 }
 
 void Selectable::deleteSelectable(int id)
@@ -42,15 +42,15 @@ void Selectable::deleteSelectable(int id)
     Selectable * s = findSelectable(id);
     Selectable * p = s->m_parent;
     s->clear();
-    p->m_children.erase(id);
+    auto it = find_if(p->m_children.begin(), p->m_children.end(), [id](const Selectable * o){ return o->getID() == id; });
+    p->m_children.erase(it);
 }
 
-void Selectable::deleteSelectable(Selectable * s)
+void Selectable::deleteThis()
 {
-    int id = s->getID();
-    Selectable * p = s->m_parent;
-    s->clear();
-    s->m_children.erase(id);
+    clear();
+    auto it = find_if(m_parent->m_children.begin(), m_parent->m_children.end(), [this](const Selectable * o){ return o == this; });
+    m_parent->m_children.erase(it);
 }
 
 void Selectable::select(int id)
@@ -70,7 +70,7 @@ Selectable * Selectable::getActiveChild(int depth, int cDepth)
         return this;
     for (auto && child : m_children)
     {
-        Selectable * sel = child.second->getActiveChild(depth, cDepth+1);
+        Selectable * sel = child->getActiveChild(depth, cDepth+1);
         if (sel)
         {
             if (cDepth == depth)
@@ -86,7 +86,7 @@ void Selectable::parse(function<void(Selectable *)> fun)
 {
     for (auto && child : m_children)
     {
-        child.second->parse(fun);
+        child->parse(fun);
     }
     fun(this);
 }
@@ -94,12 +94,10 @@ void Selectable::parse(function<void(Selectable *)> fun)
 Selectable * Selectable::findSelectable(int id)
 {
     if (id == m_id) return this;
-
     Selectable * selection = nullptr;
-
     for (auto && child : m_children)
     {
-        if (selection = child.second->findSelectable(id)) break;
+        if (selection = child->findSelectable(id)) break;
     }
     return selection;
 }
@@ -135,7 +133,7 @@ int Selectable::row() const
     int r = 0;
     for (auto & c : m_parent->children())
     {
-        if (c.second == this)
+        if (c == this)
             return r;
         ++r;
     }

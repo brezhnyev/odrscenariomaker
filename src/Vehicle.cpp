@@ -79,7 +79,7 @@ void Vehicle::drawWithNames() const
     glPushName(m_id);
     drawGeometry();
     glPopName();
-    for (auto && child : m_children) child.second->drawWithNames();
+    for (auto && child : m_children) child->drawWithNames();
 }
 
 void Vehicle::to_yaml(YAML::Node & parent)

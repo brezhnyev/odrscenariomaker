@@ -142,14 +142,14 @@ void play(Scenario & scenario)
 
     for (auto && child : scenario.children())
     {
-        Camera * scenario_camera = dynamic_cast<Camera*>(child.second);
+        Camera * scenario_camera = dynamic_cast<Camera*>(child);
         if (scenario_camera)
         {
             addCam(scenario_camera, nullptr);
         }
         else // Vehicle or Walker 
         {
-            Actor * scenario_actor = dynamic_cast<Actor*>(child.second);
+            Actor * scenario_actor = dynamic_cast<Actor*>(child);
             if (scenario_actor)
             {
                 auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_actor->get_name()))[0];
@@ -186,7 +186,7 @@ void play(Scenario & scenario)
                     }
                     for (auto && child : scenario_actor->children())
                     {
-                        Camera * camera = dynamic_cast<Camera*>(child.second);
+                        Camera * camera = dynamic_cast<Camera*>(child);
                         if (camera)
                         {
                             addCam(camera, actor);
@@ -261,7 +261,7 @@ void play(Scenario & scenario)
             if (!playStatus)
                 break;
 
-            if (scenario_actor.second->getType() != "Vehicle")
+            if (scenario_actor->getType() != "Vehicle")
                 continue;
 
             cc::Vehicle * carla_vehicle = dynamic_cast<cc::Vehicle*>(vehicles[carla_actor_c].get());
@@ -270,7 +270,7 @@ void play(Scenario & scenario)
             auto heading = (carla_vehicle->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
             auto speed =  carla_vehicle->GetVelocity().Length();
 
-            Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(scenario_actor.second);
+            Vehicle & scenario_vehicle = *dynamic_cast<Vehicle*>(scenario_actor);
             Waypath * waypath = scenario_vehicle.getFirstWaypath(); // cannot process multiple paths now
             if (!waypath) // can be camera
                 continue;
@@ -310,7 +310,7 @@ void play(Scenario & scenario)
         carla_actor_c = 0;
         for (auto && scenario_actor : scenario.children())
         {
-            if (scenario_actor.second->getType() != "Walker")
+            if (scenario_actor->getType() != "Walker")
                 continue;
 
             cc::Walker * carla_walker = dynamic_cast<cc::Walker*>(walkers[carla_actor_c].get());
@@ -319,7 +319,7 @@ void play(Scenario & scenario)
             auto heading = (carla_walker->GetTransform().GetForwardVector()).MakeUnitVector(); // it may already be unit vector
             auto speed =  carla_walker->GetVelocity().Length();
 
-            Walker & scenario_walker = *dynamic_cast<Walker*>(scenario_actor.second); 
+            Walker & scenario_walker = *dynamic_cast<Walker*>(scenario_actor); 
             Waypath * waypath = scenario_walker.getFirstWaypath(); // cannot process multiple paths now
             if (!waypath)
                 continue;
