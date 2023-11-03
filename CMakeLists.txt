@@ -84,6 +84,7 @@ set(SOURCE
     src/ScenarioProps.cpp
     src/World3D.cpp
     src/CameraProps.cpp
+    src/clients/CarlaClient.cpp
 )
 
 if (USE_CARLA)
