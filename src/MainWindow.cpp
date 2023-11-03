@@ -14,22 +14,12 @@
 using namespace std;
 using namespace Eigen;
 
-extern int playStatus;
-extern condition_variable playCondVar;
-extern mutex playCondVarMtx;
-extern int FPS;
-extern bool realtime_playback;
-extern bool is_synchronous;
-
-#ifdef USE_CARLA
-extern void play(Scenario & scenario);
-#else
-void play(Scenario & scenario) {} // dummy play to link successfully
-#endif
 
 MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent) : QMainWindow(parent), m_scenario(new Root())
 {
-    m_viewer = new Viewer(m_scenario, xodrfile, objfile);
+    m_client = new CarlaClient(this);
+    m_viewer = new Viewer(m_scenario, m_client->get_camTrf(), xodrfile, objfile);
+
     setCentralWidget(m_viewer);
 
     m_treeView = new TreeView(m_scenario.getParent());
@@ -184,66 +174,69 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
     QCheckBox * isSync = new QCheckBox("synch mode", playDock);
     QCheckBox * isRealtime = new QCheckBox("real time", playDock);
+    QCheckBox * useCarla = new QCheckBox("use carla", playDock);
     QSpinBox * freq = new QSpinBox(playDock);
-    isSync->setChecked(true);
-    isRealtime->setChecked(realtime_playback);
-    freq->setRange(1,100);
-    freq->setSingleStep(1);
-    freq->setValue(30);
     playLayout->addWidget(isSync);
     playLayout->addWidget(isRealtime);
     playLayout->addWidget(freq);
+    playLayout->addWidget(useCarla);
     playDock->setMaximumWidth(200);
 
-    connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton, isSync, isRealtime, freq, treeDock, propsDock]()
+    connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton, isSync, isRealtime, freq, useCarla, treeDock, propsDock]()
     {
-        if (0 == playStatus)
+        if (Client::STOP == m_client->get_playStatus())
         {
-            playStatus = 2;
+            m_client->set_playStatus(Client::PLAY);
             isSync->setEnabled(false);
             isRealtime->setEnabled(false);
             freq->setEnabled(false);
+#ifdef USE_CARLA
+            useCarla->setEnabled(false);
+#endif
             treeDock->setEnabled(false);
             propsDock->setEnabled(false);
         }
-        else if (1 == playStatus)
+        else if (Client::PAUSE == m_client->get_playStatus())
         {
-            playStatus = 2;
-            playCondVar.notify_all();
+            m_client->set_playStatus(Client::PLAY);
+            m_client->get_playCondVar().notify_all();
             return;
         }
-        else if (2 == playStatus)
+        else if (Client::PLAY == m_client->get_playStatus())
         {
-            playStatus = 1;
-            playCondVar.notify_all();
+            m_client->set_playStatus(Client::PAUSE);
+            m_client->get_playCondVar().notify_all();
             return;
         }
 
-        std::thread t1([this]()
+        std::thread t1([this, useCarla]()
         {
-            play(m_scenario);
+            if (useCarla->isChecked())
+                m_client->play(m_scenario);
+            else
+                m_client->playDummy(m_scenario);
         });
         t1.detach();
 
         std::thread t2([&, playButton]()
         {
-            if (2 == playStatus) // we wait for the first tick (since scene loading/actors spawning can take time)
+            if (Client::PLAY == m_client->get_playStatus()) // we wait for the first tick (since scene loading/actors spawning can take time)
             {
-                unique_lock<mutex> lk(playCondVarMtx);
-                playCondVar.wait(lk);
+                unique_lock<mutex> lk(m_client->get_playCondVarMtx());
+                m_client->get_playCondVar().wait(lk);
             }
             time_t ts = time(nullptr);
             while (true)
             {
-                usleep(1000000);
+                usleep(100000);
                 playButton->setText("Play/Pause: " + QString(to_string(time(nullptr) - ts).c_str()) + " s");
-                if (0 == playStatus)
+                if (Client::STOP == m_client->get_playStatus())
                     break;
-                if (1 == playStatus)
+                if (Client::PAUSE == m_client->get_playStatus())
                 {
                     time_t tp = time(nullptr);
-                    unique_lock<mutex> lk(playCondVarMtx);
-                    playCondVar.wait(lk);
+                    unique_lock<mutex> lk(m_client->get_playCondVarMtx());
+                    m_client->get_playCondVar().wait(lk);
                     ts += time(nullptr) - tp;
                 }
             }
@@ -253,25 +246,45 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
     QPushButton *stopButton = new QPushButton(playDock);
     stopButton->setText("Stop");
-    connect(stopButton, &QPushButton::clicked, [&, isSync, isRealtime, freq, treeDock, propsDock]()
+    connect(stopButton, &QPushButton::clicked, [&, isSync, isRealtime, freq, useCarla, treeDock, propsDock]()
     {
-        playStatus = 0;
+        m_client->set_playStatus(Client::STOP);
         isSync->setEnabled(true);
         isRealtime->setEnabled(true);
         freq->setEnabled(true);
-        playCondVar.notify_all();
+#ifdef USE_CARLA
+        useCarla->setEnabled(true);
+#endif
+        m_client->get_playCondVar().notify_all();
         treeDock->setEnabled(true);   
         propsDock->setEnabled(true);
     });
 
     connect(isSync, &QCheckBox::stateChanged, [&, isRealtime ](int state)
     { 
-        is_synchronous = state;
+        m_client->set_isSynchronous(state);
         isRealtime->setChecked(false);
         isRealtime->setEnabled(state);
     });
-    connect(isRealtime, &QCheckBox::stateChanged, [&](int state){ realtime_playback = state; });
-    connect(freq, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [&](int val){ FPS = val; });
+    connect(isRealtime, &QCheckBox::stateChanged, [&](int state){ m_client->set_realtimePlayback(state); });
+    connect(freq, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this](int val){ m_client->set_FPS(val); });
+    connect(useCarla, &QCheckBox::stateChanged, [isSync, isRealtime, this](int state)
+    {
+        isSync->setEnabled(state);
+        isRealtime->setEnabled(state);
+    });
+
+    isSync->setChecked(true);
+    isRealtime->setChecked(m_client->get_realtimePlayback());
+    freq->setRange(1,100);
+    freq->setSingleStep(1);
+    freq->setValue(30);
+#ifdef USE_CARLA
+    useCarla->setChecked(true);
+#else
+    useCarla->setChecked(true);
+    useCarla->setEnabled(false);
+#endif
 
     playLayout->addWidget(playButton);
     playLayout->addWidget(stopButton);

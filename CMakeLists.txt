@@ -88,7 +88,7 @@ set(SOURCE
 )
 
 if (USE_CARLA)
-set(SOURCE ${SOURCE} src/carlaClient.cpp)
+set(SOURCE ${SOURCE})
 endif()
 
 add_executable(${PROJECT_NAME} ${SOURCE})

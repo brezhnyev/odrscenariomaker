@@ -1,4 +1,5 @@
 #include "Client.h"
+#include "MainWindow.h"
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/BlueprintLibrary.h>
@@ -53,11 +54,10 @@ using namespace Eigen;
 
 typedef carla::SharedPtr<cc::Actor> ShrdPtrActor;
 
-template<typename T>
-void CarlaClient<T>::play(Scenario & scenario)
+void CarlaClient::play(Scenario & scenario)
 {
-    playStatus = 2; // 0 stop, 1 pause, 2 play
-    camTrf.setIdentity();
+    m_playStatus = PLAY; // 0 stop, 1 pause, 2 play
+    m_camTrf.setIdentity();
 
     auto client = cc::Client("127.0.0.1", 2000);
     auto const TIMEOUT = 10s;
@@ -85,7 +85,7 @@ void CarlaClient<T>::play(Scenario & scenario)
  
     // Synchronous mode:
     auto defaultSettings = world.GetSettings();
-    crpc::EpisodeSettings wsettings(m_isSynchronous, false, 1.0 / FPS); // (synchrone, noRender, interval)
+    crpc::EpisodeSettings wsettings(m_isSynchronous, false, 1.0 / m_FPS); // (synchrone, noRender, interval)
     world.ApplySettings(wsettings, carla::time_duration::seconds(10));
     auto weather = world.GetWeather();
     weather.fog_density = 0.0f; // higher saturation
@@ -213,17 +213,17 @@ void CarlaClient<T>::play(Scenario & scenario)
 
     thread camThread([&]()
     {
-        while (playStatus)
+        while (PLAY == m_playStatus)
         {
-            unique_lock<mutex> lk(playCondVarMtx);
-            playCondVar.wait(lk);
+            unique_lock<mutex> lk(m_playCondVarMtx);
+            m_playCondVar.wait(lk);
             // set the camera:
             auto spectator = world.GetSpectator();
             cg::Transform transform;
             Matrix4f rotM1; rotM1.setIdentity(); rotM1.block(0,0,3,3) = AngleAxisf( M_PI_2, Vector3f::UnitY()).toRotationMatrix();
             Matrix4f rotM2; rotM2.setIdentity(); rotM2.block(0,0,3,3) = AngleAxisf(-M_PI_2, Vector3f::UnitZ()).toRotationMatrix();
             Matrix4f mirror; mirror.setIdentity(); mirror(1,1) = -1;
-            Matrix4f CAM = mirror*camTrf.inverse()*rotM2*rotM1;
+            Matrix4f CAM = mirror*m_camTrf.inverse()*rotM2*rotM1;
             transform.location = cg::Location(CAM(0,3), CAM(1,3), CAM(2,3));
             float pitch = asin(CAM(2,0));
             float yaw = atan2(CAM(1,0), CAM(0,0));
@@ -234,21 +234,18 @@ void CarlaClient<T>::play(Scenario & scenario)
         }
     });
 
-    while (playStatus)
+    while (m_playStatus != STOP)
     {
         std::chrono::time_point<std::chrono::system_clock> timenow = std::chrono::system_clock::now();
-        if (1 == playStatus)
+        if (PAUSE == m_playStatus)
         {
-            unique_lock<mutex> lk(playCondVarMtx);
-            playCondVar.wait(lk);
+            unique_lock<mutex> lk(m_playCondVarMtx);
+            m_playCondVar.wait(lk);
         }
         
         size_t carla_actor_c = 0;
         for (auto && scenario_actor : scenario.children())
         {
-            if (!playStatus)
-                break;
-
             if (scenario_actor->getType() != "Vehicle")
                 continue;
 
@@ -267,7 +264,7 @@ void CarlaClient<T>::play(Scenario & scenario)
             Eigen::Vector3f peigen(trf.location.x, -trf.location.y, trf.location.z);
             float targetSpeed;
             Eigen::Vector3f targetDir;
-            if (!waypath->getNext(peigen, targetDir, targetSpeed, speed, FPS))
+            if (!waypath->getNext(peigen, targetDir, targetSpeed, speed, m_FPS))
             {
                 cc::Vehicle::Control control;
                 control.brake = 1.0f;
@@ -317,7 +314,7 @@ void CarlaClient<T>::play(Scenario & scenario)
             float targetSpeed;
             Eigen::Vector3f targetDir;
             cc::Walker::Control wc = carla_walker->GetWalkerControl();
-            if (!waypath->getNext(peigen, targetDir, targetSpeed, speed, FPS))
+            if (!waypath->getNext(peigen, targetDir, targetSpeed, speed, m_FPS))
             {
                 wc.speed = 0;
             }
@@ -334,19 +331,19 @@ void CarlaClient<T>::play(Scenario & scenario)
                 break;
         }
         m_window->update();
-        if (m_isSynchronous)
+        if (m_isSynchronous )
         {
             try { world.Tick(carla::time_duration(1s)); }
             catch(exception & e) { cout << "Ignoring exception: " << e.what() << endl; }
-            playCondVar.notify_all();
+            m_playCondVar.notify_all();
             auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
             if (m_realtimePlayback)
-                usleep(std::max(0.0, (1.0 * 1e6 / FPS - diff)));
+                usleep(std::max(0.0, (1.0 * 1e6 / m_FPS - diff)));
         }
         else
         {
             world.WaitForTick(carla::time_duration(1s));
-            playCondVar.notify_all();
+            m_playCondVar.notify_all();
         }
     }
 
@@ -357,6 +354,88 @@ void CarlaClient<T>::play(Scenario & scenario)
     for (auto v : vehicles) v->Destroy();
     for (auto w : walkers) w->Destroy();
     camThread.join();
+
+    for (auto && child : scenario.children())
+    {
+        if (child->getType() == "Vehicle" || child->getType() == "Walker")
+        {
+            for (auto && wp : child->children())
+            {
+                if (wp->getType() == "Waypath")
+                {
+                    Waypath * waypath = dynamic_cast<Waypath*>(wp);
+                    waypath->updateSmoothPath(); // resets the Actor to initial position
+                }
+            }
+        }
+        m_window->update();
+    }
+
+    usleep(1e6);
+}
+
+
+
+void CarlaClient::playDummy(Scenario & scenario)
+{
+    m_playStatus = PLAY; // 0 stop, 1 pause, 2 play
+    m_camTrf.setIdentity();
+
+    while (m_playStatus != STOP)
+    {
+        std::chrono::time_point<std::chrono::system_clock> timenow = std::chrono::system_clock::now();
+        if (PAUSE == m_playStatus)
+        {
+            unique_lock<mutex> lk(m_playCondVarMtx);
+            m_playCondVar.wait(lk);
+        }
+        
+        for (auto && child : scenario.children())
+        {
+            if (child->getType() != "Vehicle" && child->getType() != "Walker")
+                continue;
+
+            Actor * actor = dynamic_cast<Actor*>(child);
+
+            Waypath * waypath = actor->getFirstWaypath(); // cannot process multiple paths now
+            if (!waypath) // can be camera
+                continue;
+
+            // Get the next waypoints in some distance away:
+            Eigen::Vector3f peigen = actor->getPos();
+            float targetSpeed;
+            Eigen::Vector3f targetDir;
+            if (!waypath->getNext(peigen, targetDir, targetSpeed, 1, m_FPS))
+            {
+                continue;
+            }
+            peigen += targetDir * targetSpeed*(1.0f/m_FPS);
+            float yaw = atan2(targetDir[1], targetDir[0]);
+            actor->setTrf(peigen, Vector3f(0, 0, yaw*RAD2DEG));
+        }
+
+        m_window->update();
+
+        m_playCondVar.notify_all();
+        auto diff = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - timenow).count();
+        usleep(std::max(0.0, (1.0 * 1e6 / m_FPS - diff)));
+    }
+
+    for (auto && child : scenario.children())
+    {
+        if (child->getType() == "Vehicle" || child->getType() == "Walker")
+        {
+            for (auto && wp : child->children())
+            {
+                if (wp->getType() == "Waypath")
+                {
+                    Waypath * waypath = dynamic_cast<Waypath*>(wp);
+                    waypath->updateSmoothPath(); // resets the Actor to initial position
+                }
+            }
+        }
+        m_window->update();
+    }
 
     usleep(1e6);
 }

@@ -14,7 +14,7 @@ class Viewer : public QGLViewer
 {
     Q_OBJECT
 public:
-    Viewer(Scenario & scenario, const std::string & xodrfile, std::string objfile = "");
+    Viewer(Scenario & scenario, Eigen::Matrix4f & spectatorMtx, std::string xodrfile, std::string objfile = "");
     ~Viewer() override {};
     void draw() override;
     void drawWithNames() override;
@@ -46,4 +46,5 @@ private:
     int x{-1};
     int y{-1};
     bool            m_renderAxis{false};
+    Eigen::Matrix4f & m_spectatorMtrx;
 };

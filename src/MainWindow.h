@@ -7,6 +7,7 @@
 #include "CameraProps.h"
 #include "ActorProps.h"
 #include "ScenarioProps.h"
+#include "clients/Client.h"
 
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QLabel>
@@ -57,5 +58,6 @@ private:
     WalkerProps    *m_walkerProps{nullptr};
     ScenarioProps  *m_scenarioProps{nullptr};
     QWidget        *m_activeDlg{nullptr};
+    Client         *m_client{nullptr};
     std::list<QMetaObject::Connection> m_c;
 };

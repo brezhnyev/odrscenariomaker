@@ -19,10 +19,9 @@ using namespace std;
 //using namespace qglviewer; // otherwise names clash with Camera
 using namespace Eigen;
 
-extern Matrix4f camTrf;
-extern int playStatus;
 
-Viewer::Viewer(Scenario & scenario, const string & xodrfile, string objfile) : m_scenario(scenario), m_canvas(xodrfile), m_world3d(objfile)
+Viewer::Viewer(Scenario & scenario, Eigen::Matrix4f & spectatorMtx, string xodrfile, string objfile) : 
+    m_scenario(scenario), m_canvas(xodrfile), m_world3d(objfile), m_spectatorMtrx(spectatorMtx)
 {
 }
 
@@ -50,7 +49,7 @@ void Viewer::draw()
     m_canvas.draw();
     m_scenario.draw();
     m_world3d.draw();
-    camera()->getModelViewMatrix(camTrf.data());
+    camera()->getModelViewMatrix(m_spectatorMtrx.data());
     if (m_renderAxis)
         renderAxis();
 }

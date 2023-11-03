@@ -5,32 +5,38 @@
 #include <condition_variable>
 #include <mutex>
 
-template<typename T>
+class MainWindow;
+
 class Client
 {
 public:
-  virtual void play(Scenario & scenario);
+  enum ePlayStatus { STOP, PAUSE, PLAY };
+  Client(MainWindow * w) : m_window(w) {}
+  virtual void play(Scenario & scenario)=0;
+  virtual void playDummy(Scenario & scenario)=0;
 
-  ADDVAR(protected, int, playStatus, 0);
-  ADDVAR(protected, Eigen::Matrix4f, camTrf, Eigen::Matrix4f());
-  ADDVAR(protected, T*, window, nullptr);
+  ADDVAR(protected, ePlayStatus, playStatus, STOP);
+  ADDVRR(protected, Eigen::Matrix4f, camTrf, Eigen::Matrix4f());
+  ADDVAR(protected, MainWindow *, window, nullptr);
   ADDVAR(protected, int, FPS, 10);
   ADDVAR(protected, bool, realtimePlayback, true);
   ADDVAR(protected, bool, isSynchronous, true);
 
-  const std::condition_variable & getPlayCV() { return m_playCondVar; }
-  const std::mutex & getPlayCVMtx() { return m_playCondVarMtx; }
+  std::condition_variable & get_playCondVar() { return m_playCondVar; }
+  std::mutex & get_playCondVarMtx() { return m_playCondVarMtx; }
 
 protected:
   std::condition_variable m_playCondVar;
   std::mutex m_playCondVarMtx;
 };
 
-template<typename T>
-class CarlaClient : public Client<T>
+class CarlaClient : public Client
 {
 public:
-    void play(Scenario & scenario);
+  CarlaClient(MainWindow * w) : Client(w) {}
+  void play(Scenario & scenario) override;
+  void playDummy(Scenario & scenario) override;
 };
+
 
 #endif

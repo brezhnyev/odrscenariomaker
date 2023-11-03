@@ -22,6 +22,8 @@ public:
         m_pos = Eigen::Vector3f(x,y,z);
         m_ori = Eigen::Vector3f(roll, pitch, yaw);
     }
+    Eigen::Vector3f getPos() { return m_pos; }
+    Eigen::Vector3f getOri() { return m_ori; }
     void updatePose();
     Waypath * getFirstWaypath();
     Waypoint * getFirstWaypoint();
