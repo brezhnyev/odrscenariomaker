@@ -34,7 +34,11 @@ class CarlaClient : public Client
 {
 public:
   CarlaClient(MainWindow * w) : Client(w) {}
+#ifdef USE_CARLA
   void play(Scenario & scenario) override;
+#else
+  void play(Scenario & scenario) {}
+#endif
   void playDummy(Scenario & scenario) override;
 };
 

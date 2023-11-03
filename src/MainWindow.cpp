@@ -282,7 +282,7 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 #ifdef USE_CARLA
     useCarla->setChecked(true);
 #else
-    useCarla->setChecked(true);
+    useCarla->setChecked(false);
     useCarla->setEnabled(false);
 #endif
 

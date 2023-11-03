@@ -22,6 +22,7 @@ Waypoint::Waypoint(Eigen::Vector3f pos, float speed, Selectable * parent) : Sele
     {
         auto it = find_if(parent->children().begin(), parent->children().end(), [object](Selectable * o){ return o == object; });
         parent->children().insert(it+1, parent->children().back());
+        m_speed = dynamic_cast<Waypoint*>(object)->get_speed();
     }
     parent->children().pop_back();
 }

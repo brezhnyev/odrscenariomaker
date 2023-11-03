@@ -1,24 +1,6 @@
 #include "Client.h"
 #include "MainWindow.h"
 
-#include <carla/client/ActorBlueprint.h>
-#include <carla/client/BlueprintLibrary.h>
-#include <carla/client/Client.h>
-#include <carla/client/detail/Client.h>
-#include <carla/client/Map.h>
-#include <carla/client/TimeoutException.h>
-#include <carla/client/WalkerAIController.h>
-#include <carla/geom/Transform.h>
-#include <carla/rpc/EpisodeSettings.h>
-#include <carla/rpc/WheelPhysicsControl.h>
-#include <carla/rpc/VehicleLightState.h>
-
-#include <carla/client/Sensor.h>
-#include <carla/image/ImageIO.h>
-#include <carla/image/ImageView.h>
-#include <carla/sensor/data/Image.h>
-#include <carla/sensor/data/IMUMeasurement.h>
-
 #include <chrono>
 #include <iostream>
 #include <random>
@@ -43,14 +25,34 @@
 
 #include <eigen3/Eigen/Eigen>
 
+using namespace std::chrono_literals;
+using namespace std;
+using namespace Eigen;
+
+#ifdef USE_CARLA
+
+#include <carla/client/ActorBlueprint.h>
+#include <carla/client/BlueprintLibrary.h>
+#include <carla/client/Client.h>
+#include <carla/client/detail/Client.h>
+#include <carla/client/Map.h>
+#include <carla/client/TimeoutException.h>
+#include <carla/client/WalkerAIController.h>
+#include <carla/geom/Transform.h>
+#include <carla/rpc/EpisodeSettings.h>
+#include <carla/rpc/WheelPhysicsControl.h>
+#include <carla/rpc/VehicleLightState.h>
+
+#include <carla/client/Sensor.h>
+#include <carla/image/ImageIO.h>
+#include <carla/image/ImageView.h>
+#include <carla/sensor/data/Image.h>
+#include <carla/sensor/data/IMUMeasurement.h>
+
 namespace cc = carla::client;
 namespace cg = carla::geom;
 namespace csd = carla::sensor::data;
 namespace crpc = carla::rpc;
-
-using namespace std::chrono_literals;
-using namespace std;
-using namespace Eigen;
 
 typedef carla::SharedPtr<cc::Actor> ShrdPtrActor;
 
@@ -373,7 +375,7 @@ void CarlaClient::play(Scenario & scenario)
 
     usleep(1e6);
 }
-
+#endif
 
 
 void CarlaClient::playDummy(Scenario & scenario)
