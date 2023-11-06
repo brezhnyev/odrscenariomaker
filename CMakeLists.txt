@@ -155,6 +155,7 @@ install(FILES "${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/libQGLViewer/QGLViewer/l
 install(FILES "${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/libQGLViewer/QGLViewer/libQGLViewer-qt5.so" DESTINATION lib)
 if (USE_CARLA)
 install(FILES "${CARLA_PATH}/Build/boost-1.72.0-c8-install/lib/libboost_filesystem.so" DESTINATION lib)
+install(FILES "${CARLA_PATH}/Build/boost-1.72.0-c8-install/lib/libboost_filesystem.so.1.72.0" DESTINATION lib)
 endif()
 
 include(InstallRequiredSystemLibraries)
