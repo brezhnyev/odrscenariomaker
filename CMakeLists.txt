@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(ODRScenarioMaker)
+project(ODRScenarioMaker VERSION 1.0)
 
 add_compile_options(-fPIC -fopenmp)
 
@@ -9,6 +9,16 @@ add_compile_options(-fPIC -fopenmp)
 #set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Wl,--warn-unresolved-symbols")
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_AUTOMOC ON)
+
+add_definitions(-DQT_NO_VERSION_TAGGING)
+
+# libQGLViewer 2.7.2 is still using qt-5, but is based on qmake+make build system
+# later versions are based on cmake configuration system, so can be added as cmake subdirectories
+set(OGLVV "2.7.2")
+# Split the version string by dot (.) into a list
+execute_process(COMMAND git checkout v${OGLVV} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/libQGLViewer)
+execute_process(COMMAND qmake WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/libQGLViewer/QGLViewer)
+execute_process(COMMAND make WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/libQGLViewer/QGLViewer)
 
 option(USE_CARLA "Will need carla specific client libs if set to true" ON)
 
@@ -23,6 +33,7 @@ find_package(Qt5 COMPONENTS Core Gui Widgets Xml OpenGL REQUIRED)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/yaml-cpp/include)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/cpp-spline/)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/xodr-builder/)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/libQGLViewer)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/.)
 if (USE_CARLA)
@@ -54,6 +65,8 @@ endif()
 include_directories(${Qt5Xml_INCLUDE_DIRS})
 include_directories(${Qt5OpenGL_INCLUDE_DIRS})
 include_directories(src)
+
+link_directories(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/libQGLViewer/QGLViewer)
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/yaml-cpp)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/xodr-builder)
@@ -124,3 +137,30 @@ set(LIBS ${LIBS}
 endif()
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+install(TARGETS ${PROJECT_NAME}
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin)
+string(REPLACE "." ";" OGLVVLIST ${OGLVV})
+list(GET OGLVVLIST 0 OGLVMJ)
+list(GET OGLVVLIST 1 OGLVMN)
+list(GET OGLVVLIST 2 OGLVPT)
+install(FILES "${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/libQGLViewer/QGLViewer/libQGLViewer-qt5.so.${OGLVMJ}.${OGLVMN}.${OGLVPT}" DESTINATION lib)
+install(FILES "${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/libQGLViewer/QGLViewer/libQGLViewer-qt5.so.${OGLVMJ}.${OGLVMN}" DESTINATION lib)
+install(FILES "${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/libQGLViewer/QGLViewer/libQGLViewer-qt5.so.${OGLVMJ}" DESTINATION lib)
+install(FILES "${CMAKE_CURRENT_LIST_DIR}/src/thirdparty/libQGLViewer/QGLViewer/libQGLViewer-qt5.so" DESTINATION lib)
+if (USE_CARLA)
+install(FILES "${CARLA_PATH}/Build/boost-1.72.0-c8-install/lib/libboost_filesystem.so" DESTINATION lib)
+endif()
+
+include(InstallRequiredSystemLibraries)
+SET(CPACK_GENERATOR "DEB")
+SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Capgemini") #required
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
+set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+include(CPack)
