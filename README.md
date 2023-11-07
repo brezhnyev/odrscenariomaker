@@ -99,11 +99,11 @@ ODRScenarioMaker /path/to/file.xodr (if installed)
 </pre>
 ![view](images/ODRSM_view.png)
 <br>
-Press H for help. This Help Dialog is provided by libQGLView and lists most of the mouse and keyboard combinations. Some of them are overwritten or disabled (ex. Esc is disabled not to quit on press). Read about navigation in the Mouse tab of the help Window. Use Shift to pick up objects (left mouse click) and to set rotation pivot (right mouse click). Some useful keys are F, A and G. <br>
+**Press H for help**. This Help Dialog is provided by libQGLView and lists most of the mouse and keyboard combinations. Some of them are overwritten or disabled (ex. Esc is disabled to avoid quitting on press). Read about navigation in the Mouse tab of the help Window. Use Shift to pick up objects (left mouse click) and to set rotation pivot (right mouse click). Some useful keys are F, A and G. <br>
 
-When you open the ODRScenarioMaker there will be only one element available: Scenario. The scenario can be loaded, saved, cleaned or can be populated with Actors: Vehicles, Walkers and Sensors (now only Cameras). Adding Actor will place it in (0,0,0) of CS first. The Vehicles and Walkers **cannot be moved with mouse** to position them! To set position of Vehicle or Walker you will need to add Waypath to them and then to add Waypoints to the Waypaths. Cameras on the contrary can be set with mouse click since they dont have Waypaths (they dont move on their own). However cameras can be created on an active Vehicle or Walker (i.e. attached to an Vehicle or Walker) and hence be travelling in the scene. The location of Camera is always in relative CS (either relative to World or relative to Vehicle/Walker). Use Shift+Left Mouse to pick up and move the Waypoints.
+When you open the ODRScenarioMaker there will be only one element available: Scenario. The scenario can be loaded, saved, cleaned or can be populated with Actors: Vehicles, Walkers and Sensors (now only Cameras). Adding Actor will place it in (0,0,0) of CS first. The Vehicles and Walkers **cannot be moved with mouse** to position them! To set position of Vehicle or Walker you will need to add Waypath to them and then to add Waypoints to the Waypaths. Cameras on the contrary can be set with mouse click since they dont have Waypaths (they dont move on their own). However cameras can be created on an active Vehicle or Walker (i.e. attached to an Vehicle or Walker) and hence be travelling in the scene. The location of Camera is always in relative CS (either relative to World or relative to Vehicle/Walker). Use Shift+Left Mouse to pick up and move the Waypoints and Sensors.
 
-**USE Ctr+Z and Ctr+Y to undo and redo!!! At the moment the operations only applicable on adding, deleting objects and cleaning scenario.**
+**USE Ctr+Z and Ctr+Y to undo and redo!!! At the moment the operations only applicable to adding, deleting objects and cleaning scenario.**
 
 ## Play back scenario
 To play back scenario there are two options available:
@@ -111,18 +111,42 @@ To play back scenario there are two options available:
 * Without carla simulator (ex. if no carla simulator is installed)
 To toggle between the two modies check the **use carla** flag.
 
-**To see any animation you need to make sure that the Waypoints have non-zero speed**
-When the play back is used with carla simulator the simulator must be running. Start carla simulator
+**To watch any animation, you need to make sure that the Waypoints have non-zero speed**
+When the play back is used with carla simulator the simulator must be running (watch below video with carla simulator). Start carla simulator
 <pre>
 ./CarlaUE4.sh
 </pre>
 Check the **use carla** flag and press "play" button.
-Playing back using carla simulator may disclose some set-up problems, for ex. some Actors are not spawned becase invalid spawn points were selected, or the path is broken by some static object which causes an Actor (usually Pedestrian) to stop in the middle of the path, etc., i.e. those problem you would not face without carla simulator.
+Playing back using carla simulator may disclose some set-up problems, for ex. some Actors are not spawned becase invalid spawn points were selected, or the path is broken by some static object which causes an Actor (usually Pedestrian) to stop in the middle of the path, etc., i.e. those problem you would not observe playing back without carla simulator.
+
+**Specify the town name in the "Carla Town Name" field in case you want to work with specific town!!!** Usually XODR loaded on start of ODRSM should fit the loaded town. If the field is left empty no town will be loaded and ODRSM will proceed with the currently loaded carla town. Loading XODR on start of ODRSM can be changed in future (ex. can be selected as an option like Carla town), however for this some changes in class architecture are needed.
 
 ## Saving XOSC file and playing back with scenario runner.
 Once the Scenario is set up and tested (eventually with carla simulator) the sceanrio can be saved. Now saving scenario will generate several files, one of them is .xosc file. This file can be played back with scenario-runner:
 <pre>
 python3 scenario_runner.py --openscenario /path/to/scenario.yaml.xosc
+</pre>
+
+## Loading scenarios
+At the moment the ODRSM is using its own syntax (yaml file) to read/load the sceanrios. **XOSC cannot be used to read the scenario now**. Ideally that ODRMS only deals with XOSC files: both for reading and writing. This may be one of the next TODOs. Example of the scenario file can be loaded now into ODRSM:
+<pre>
+type: Scenario
+townname: ""
+rosbagfile: ""
+rosbagoffset: 0
+components:
+  - type: Vehicle
+    name: vehicle.audi.a2
+    color:
+      r: 50
+      g: 100
+      b: 150
+    components:
+      - type: Waypath
+        components:
+          - type: Waypoint
+            location:
+              x: -8
 </pre>
 
 # Demos
@@ -131,7 +155,7 @@ python3 scenario_runner.py --openscenario /path/to/scenario.yaml.xosc
 ![add-vehicle](videos/OSRSM_demo_create_vehicle.mp4)
 
 ## Adding Cameras
-![add-cameras](videos/OSRSM_demo_running_carla.mp4)
+![add-cameras](videos/OSRSM_demo_create_cameras.mp4)
 
 ## Adding Walker
 ![add-walker](videos/OSRSM_demo_create_walker.mp4)
@@ -144,4 +168,4 @@ python3 scenario_runner.py --openscenario /path/to/scenario.yaml.xosc
 
 # Download
 Debian installation package for Ubuntu 20.04<br>
-![debian-ubuntu-20.04](resources/ODRScenarioMaker-1.0-Linux.deb)
+[debian-ubuntu-20.04](resources/ODRScenarioMaker-1.0-Linux.deb)
