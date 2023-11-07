@@ -1,81 +1,147 @@
-# Building ODRScenariomaker
-The ODRScenario maker is a GUI application for building scenarios that can run in Carla. The application consists of two parts: GUI and the carla-client part. The two are communicating via TCP/IP. This approach has cons and pros, however main reason to split was impossibility to compile Qt and Carla-related classes in one project.  
-The Serializer is the class shared by two parts of the application so it is made a library for the client to use it.  
-The same issues hold with the soft links: for the Carla-client there should be prepared two folders *include* and *lib*. Here is how the files should look like:  
+# What is ODRScenariomaker
+The ODRScenario maker is a GUI application for building scenarios that can be played back in Carla-simulator. The following is the tree of the inner structure of the project:
+
+# Pulling code
+Pull code and update the submodules as follows:
+<pre>
+git clone https://git.altran.de/shared/odrscenariomaker.git
+git submodule update --init --force --remote --recursive
+</pre>
+The ODRSM is using following submodules:
+* TinyXML
+* ODRParser (depends on TinyXML)
+* XodrBuilder (depends on ODRParser)
+* Yaml-cpp
+* libQGLViewer
+
+The following is the tree you will have after download:
 <pre>
 .
-├── Actor.cpp
-├── Actor.h
-├── ActorProps.cpp
-├── ActorProps.h
-├── Canvas.cpp
-├── Canvas.h
-├── client
-│   ├── CMakeLists.txt
-│   ├── include
-│   ├── lib
-│   └── play.cpp
 ├── CMakeLists.txt
-├── data
-│   └── Town02.jpg
-├── IPC.cpp
-├── IPC.h
-├── main.cpp
-├── MainWindow.cpp
-├── MainWindow.h
-├── ODRScenarioMaker
-├── release
-│   ├── client
-│   ├── CMakeCache.txt
-│   ├── CMakeFiles
-│   ├── cmake_install.cmake
-│   ├── libser.a
-│   ├── Makefile
-│   ├── ODRScenarioMaker
-│   ├── ODRScenarioMaker_autogen
-│   └── ser_autogen
-├── scenario.cpp
-├── scenario.h
-├── ScenarioProps.cpp
-├── ScenarioProps.h
-├── Selectable.cpp
-├── Selectable.h
-├── Serializer.cpp
+├── images
+│   ├── Add_Vehicle.jpg
+|    ...
+├── License.txt
+├── odr_carla_map
+│   ├── ...
+├── README.md
+└── src
+    ├── Actor.cpp
+    ├── Actor.h
+    ├── ActorProps.cpp
+    ├── ActorProps.h
+    ├── Camera.cpp
+    ├── Camera.h
+    ...
+    ├── Waypath.h
+    ├── WaypathProps.cpp
+    ├── WaypathProps.h
+    ├── Waypoint.cpp
+    ├── Waypoint.h
+    ├── WaypointProps.cpp
+    ├── WaypointProps.h
+    ├── World3D.cpp
+    └── World3D.h
 ...
 </pre>
 
-# Starting ODRScenarioMaker with standalone Carla Engine
-The ODRScenarioMaker is started in a standard was as a standalone application. At this point there is no need to have Carla Engine running, since the ODRScenarioMaker will not need carla during the setup/edditing.  
-Select the scenario (Scenario 0) and "Add Vehicle" on the right panel:
-![Add Vehicle](./images/Add_Vehicle.jpg)  
-The Vehicle will be displayed near to the start of the Coordinate System (maybe far away from where the Town map is). Click "A" on the keyboard and zoom in/out to find it:  
-![Vehicle location](./images/Vehicle_location.jpg)  
-Add Waypath for the selected Vehicle. Select the newly created Waypath in the tree. Now keeping *Shift* pressed the waypoints may be added (usually along the road):  
-![Add waypoints](./images/Add_waypoints.jpg)  
+# Configuration.
+Run cmake with following flags, otherwise use ccmake to set up the flags:
+<pre>
+cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_CARLA=ON -DCARLA_PATH=/absolute/path/to/carla
+</pre>
+In case there is no carla repo installed and/or no cpp client libraries are built, use following command:
+<pre>
+cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_CARLA=OFF
+</pre>
+In case Debug configuration is needed use Debug flag instead.
+<br>
+Running configuration will checkout proper commits for TinyXML (7.0.0) and libQGLViewer (2.7.2) and build the libQGLViewer library. The libQGLViewer librariy is an open source Qt-based GUI framework for handy making GUI applications with 3D views. The former versions of libQGLViewer were based on Qt5 and required consequent running qmake and make commands, so no native cmake subfolder integration was provided. Starting upper versions (~2.9) they changed to cmake configuration but at the same time started to use Qt6. So libQGLViewer is now checked at v2.7.2 and built ouside the cmake configuration system (i.e. is not included as subfolder).
 
-Another car maybe added with waypaths/waypoints. (Only one waypath will be played back now per vehicle)
+# Build
+Building as usual is make by running make command:
+<pre>
+make
+or
+make -j
+</pre>
 
-After the scenario is prepared the carla engine should be started. Go to the folder with Carla and start Carla with  
-**./CarlaEU4.sh**   
-The look of Carla on the first start:
+# Installation
+Installation is possible by running
+<pre>
+sudo make install
+</pre>
+However this is discouraged because no proper uninstall is guaranteed. In case you need to install ODRSM make debian package and install it:
+<pre>
+cpack (from release or debug folder)
+sudo apt install -f ./ODRScenarioMaker-1.0-Linux.deb
+</pre>
+The **-f** flag will install the required dependencies. The debian package file can be also used to distribute the application.
 
-![Before play](./images/before_play.jpg)  
-Another possible view (after first start is complete). Here the properly loaded Map is displayed:  
-![Before play2](./images/before_play2.jpg)  
+# Distribution
+## Debian package
+As was mentioned in Installing section one way to prepare a distribution is to make a debian package:
+<pre>
+cpack
+</pre>
+## AppImage
+To deploy application you can use the utility from the AppImage familiy:
+<pre>
+/path/to/linuxdeploy-x86_64.AppImage -e ./ODRScenarioMaker --appdir=./ODRSM
+</pre>
+The linuxdeploy can be downloaded as ready-to-use application. The linuxdeploy collects all dependencies into lib folder (default destination) and set the RPATH of the executable (ODRScenarioMaker) accordingly.
 
-Press **Play**. The two cars (Audi and VW mini bus) will move in opposite directions making two curves: 
+# Run application
+## Open and populate scenario.
+<pre>
+ODRScenarioMaker /path/to/file.xodr (if installed)
+./ODRScenarioMaker /path/to/file.xodr (if not installed)
+</pre>
+![view](images/ODRSM_view.png)
+<br>
+Press H for help. This Help Dialog is provided by libQGLView and lists most of the mouse and keyboard combinations. Some of them are overwritten or disabled (ex. Esc is disabled not to quit on press). Read about navigation in the Mouse tab of the help Window. Use Shift to pick up objects (left mouse click) and to set rotation pivot (right mouse click). Some useful keys are F, A and G. <br>
 
-![During play](./images/during_play.jpg)  
+When you open the ODRScenarioMaker there will be only one element available: Scenario. The scenario can be loaded, saved, cleaned or can be populated with Actors: Vehicles, Walkers and Sensors (now only Cameras). Adding Actor will place it in (0,0,0) of CS first. The Vehicles and Walkers **cannot be moved with mouse** to position them! To set position of Vehicle or Walker you will need to add Waypath to them and then to add Waypoints to the Waypaths. Cameras on the contrary can be set with mouse click since they dont have Waypaths (they dont move on their own). However cameras can be created on an active Vehicle or Walker (i.e. attached to an Vehicle or Walker) and hence be travelling in the scene. The location of Camera is always in relative CS (either relative to World or relative to Vehicle/Walker). Use Shift+Left Mouse to pick up and move the Waypoints.
 
-**KNOWN ISSUES**: closing the ODRScenarioMaker not always closes the TCP connection. So check the "client" application in system to avoid dozens of open TCP connections:
+**USE Ctr+Z and Ctr+Y to undo and redo!!! At the moment the operations only applicable on adding, deleting objects and cleaning scenario.**
 
-![client system heck](./images/system_check_client.jpg)  
+## Play back scenario
+To play back scenario there are two options available:
+* Using carla simulator
+* Without carla simulator (ex. if no carla simulator is installed)
+To toggle between the two modies check the **use carla** flag.
 
+**To see any animation you need to make sure that the Waypoints have non-zero speed**
+When the play back is used with carla simulator the simulator must be running. Start carla simulator
+<pre>
+./CarlaUE4.sh
+</pre>
+Check the **use carla** flag and press "play" button.
+Playing back using carla simulator may disclose some set-up problems, for ex. some Actors are not spawned becase invalid spawn points were selected, or the path is broken by some static object which causes an Actor (usually Pedestrian) to stop in the middle of the path, etc., i.e. those problem you would not face without carla simulator.
 
-# Starting ODRScenarioMaker with UE4Editor
-Very similar to the previous procedure, just instead of the standalone Carla the Carla-project should be started as mentioned in the "Legacy Way" from the "carla" folder:  
-**make launch-only**
-Press "Play" to start the server inside the UE4Editor:  
-![playing_in_UE4Editor](./images/playing_in_UE4Editor.jpg)  
-Start "play" in the ODRScenarioMaker:  
-![playing_ODR_UE4Editor](./images/playing_ODR_UE4Editor.jpg)  
+## Saving XOSC file and playing back with scenario runner.
+Once the Scenario is set up and tested (eventually with carla simulator) the sceanrio can be saved. Now saving scenario will generate several files, one of them is .xosc file. This file can be played back with scenario-runner:
+<pre>
+python3 scenario_runner.py --openscenario /path/to/scenario.yaml.xosc
+</pre>
+
+# Demos
+
+## Adding Vehicle
+![add-vehicle](videos/OSRSM_demo_create_vehicle.mp4)
+
+## Adding Cameras
+![add-cameras](videos/OSRSM_demo_running_carla.mp4)
+
+## Adding Walker
+![add-walker](videos/OSRSM_demo_create_walker.mp4)
+
+## Undo-redo (only for adding and deleing actors now)
+![undo-redo](videos/OSRSM_demo_undo_redo.mp4)
+
+## Running with Carla simulator
+![run-carla](videos/OSRSM_demo_running_carla.mp4)
+
+# Download
+Debian installation package for Ubuntu 20.04<br>
+![debian-ubuntu-20.04](resources/ODRScenarioMaker-1.0-Linux.deb)

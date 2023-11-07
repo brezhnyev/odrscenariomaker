@@ -145,8 +145,8 @@ void CarlaClient::play(Scenario & scenario)
                 auto blueprint = (*world.GetBlueprintLibrary()->Filter(scenario_actor->get_name()))[0];
                 if (blueprint.ContainsAttribute("color"))
                 {
-                    auto &attribute = blueprint.GetAttribute("color");
-                    blueprint.SetAttribute("color", scenario_actor->colorToString());
+                    // auto &attribute = blueprint.GetAttribute("color");
+                    blueprint.SetAttribute("color", scenario_actor->colorToString()); // does not have effect in Carla 0.9.12 (bug?)
                 }
                 ShrdPtrActor actor = nullptr;
                 // Initialize Actor with first position of the first Waypath:

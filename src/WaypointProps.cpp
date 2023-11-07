@@ -17,6 +17,7 @@ WaypointProps::WaypointProps(Waypoint & p, std::list<QMetaObject::Connection> & 
     x = new LDoubleSpinBox(this, p.get_pos().x(), -MINMAXPOS, MINMAXPOS, 0.1, "X");
     y = new LDoubleSpinBox(this, p.get_pos().y(), -MINMAXPOS, MINMAXPOS, 0.1, "Y");
     z = new LDoubleSpinBox(this, p.get_pos().z(), -MINMAXPOS, MINMAXPOS, 0.1, "Z");
+    float val = p.get_speed();
     LDoubleSpinBox * speed = new LDoubleSpinBox(this, p.get_speed(), -1000, 1000, 0.1, "Speed");
     l1->addWidget(x);
     l1->addWidget(y);

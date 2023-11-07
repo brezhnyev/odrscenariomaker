@@ -15,7 +15,6 @@ add_definitions(-DQT_NO_VERSION_TAGGING)
 # libQGLViewer 2.7.2 is still using qt-5, but is based on qmake+make build system
 # later versions are based on cmake configuration system, so can be added as cmake subdirectories
 set(OGLVV "2.7.2")
-# Split the version string by dot (.) into a list
 execute_process(COMMAND git checkout v${OGLVV} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/libQGLViewer)
 execute_process(COMMAND qmake WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/libQGLViewer/QGLViewer)
 execute_process(COMMAND make WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thirdparty/libQGLViewer/QGLViewer)
@@ -160,8 +159,9 @@ endif()
 
 include(InstallRequiredSystemLibraries)
 SET(CPACK_GENERATOR "DEB")
-SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Capgemini") #required
+SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Capgemini Engineering Germany") #required
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "qt5-default, libeigen3-dev, libjpeg-dev, libpng-dev, libtiff-dev")
 include(CPack)

@@ -4,7 +4,7 @@
 
 using namespace std;
 
-Waypoint::Waypoint(Eigen::Vector3f pos, float speed, Selectable * parent) : Selectable(parent), m_pos(pos), m_speed(speed)
+Waypoint::Waypoint(Eigen::Vector3f pos, Selectable * parent) : Selectable(parent), m_pos(pos)
 {
     // generically we push back the new object (see Selectable c-tor)
     // For Waypoint we will augment this logics by following:

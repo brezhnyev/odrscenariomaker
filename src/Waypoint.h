@@ -15,7 +15,7 @@ class Waypoint : public Selectable
 {
 public:
     Waypoint(Selectable * parent) : Selectable(parent) {};
-    Waypoint(Eigen::Vector3f pos, float speed, Selectable * parent);
+    Waypoint(Eigen::Vector3f pos, Selectable * parent);
     void draw() const override;
     void drawWithNames() const override;
     void drawGeometry() const override;
@@ -23,6 +23,6 @@ public:
     void to_yaml(YAML::Node & parent) override;
     void from_yaml(const YAML::Node & node) override;
 
-    ADDVAR(protected, float, speed, 0.0f);
+    ADDVAR(protected, float, speed, 1.0f);
     ADDVAR(protected, Eigen::Vector3f, pos, Eigen::Vector3f(0.0f, 0.0f, 0.0f));
 };

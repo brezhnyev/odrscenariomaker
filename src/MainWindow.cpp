@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QCheckBox>
@@ -166,20 +167,20 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     m_treeView->slot_addItem(m_scenario.getID());
 
     QDockWidget *playDock = new QDockWidget("Animation");
-    QVBoxLayout * playLayout = new QVBoxLayout();
+    QGridLayout * playLayout = new QGridLayout();
 
     QPushButton *playButton = new QPushButton(playDock);
     playButton->setText("Play");
     QLabel * rosbagImage = new QLabel(); // need to be created in the parent thread, creating in the thread does not update it
 
-    QCheckBox * isSync = new QCheckBox("synch mode", playDock);
+    QCheckBox * isSync = new QCheckBox("sync mode", playDock);
     QCheckBox * isRealtime = new QCheckBox("real time", playDock);
     QCheckBox * useCarla = new QCheckBox("use carla", playDock);
     QSpinBox * freq = new QSpinBox(playDock);
-    playLayout->addWidget(isSync);
-    playLayout->addWidget(isRealtime);
-    playLayout->addWidget(freq);
-    playLayout->addWidget(useCarla);
+    playLayout->addWidget(isSync, 0, 0, 1, 1);
+    playLayout->addWidget(isRealtime, 0, 1, 1, 1);
+    playLayout->addWidget(freq, 1, 0, 1, 1);
+    playLayout->addWidget(useCarla, 1, 1, 1, 1);
     playDock->setMaximumWidth(200);
 
     connect(playButton, &QPushButton::clicked, [&, rosbagImage, playButton, isSync, isRealtime, freq, useCarla, treeDock, propsDock]()
@@ -286,9 +287,9 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
     useCarla->setEnabled(false);
 #endif
 
-    playLayout->addWidget(playButton);
-    playLayout->addWidget(stopButton);
-    playLayout->addStretch(1);
+    playLayout->addWidget(playButton, 2, 0, 1, 2);
+    playLayout->addWidget(stopButton, 3, 0, 1, 2);
+    playLayout->rowStretch(1);
 
     QWidget * playWidget = new QWidget();
     playWidget->setLayout(playLayout);

@@ -83,7 +83,7 @@ void Viewer::postSelection(const QPoint &point)
                 QMessageBox::warning(this, "Error adding Element", "Add/activate waypath in Actor!");
                 return;
             }
-            int id = (new Waypoint(Vector3f(sp.x, sp.y, sp.z), 0, waypath))->getID();
+            int id = (new Waypoint(Vector3f(sp.x, sp.y, sp.z), waypath))->getID();
             emit signal_addWaypoint(id);
         }
     }
