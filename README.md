@@ -1,5 +1,5 @@
 # What is ODRScenariomaker
-The ODRScenario maker is a GUI application for building scenarios that can be played back in Carla-simulator. The following is the tree of the inner structure of the project:
+The ODRScenario maker is a GUI application for building scenarios that can be played back in Carla-simulator.
 
 # Pulling code
 Pull code and update the submodules as follows:
