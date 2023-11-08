@@ -13,18 +13,10 @@
 using namespace std;
 using namespace Eigen;
 
-int playStatus;
-condition_variable playCondVar;
-mutex playCondVarMtx;
-Matrix4f camTrf;
-MainWindow * mw;
-int FPS = 30;
-bool realtime_playback = true;
-bool is_synchronous = true;
-
 int main(int argc, char ** argv)
 {
     QApplication app(argc, argv);
+    MainWindow * mw;
 
     if (argc < 2)
     {
@@ -40,10 +32,6 @@ int main(int argc, char ** argv)
     mw->show();
 
     app.exec();
-
-    playStatus = 0;
-
-    usleep(1000000);
 
     return 0;
 }

@@ -1,5 +1,6 @@
 #include "treemodel.h"
 #include "Selectable.h"
+#include "globals.h"
 
 #include <QStringList>
 
@@ -75,12 +76,12 @@ QModelIndex TreeModel::parent(const QModelIndex &index) const
         return QModelIndex();
 
     // KB: Qt provides index with invalid internal pointer (dangling pointer)!
-    // no better solution was found than check agains a magic number (quasi check sum)
+    // no better solution was found than check against a magic number (quasi check sum)
     TreeItem *self = static_cast<TreeItem*>(index.internalPointer());
-    if (self->m_magicNumber != 1176543210987654320LL)
+    if (self->m_magicNumber != MAGICNUMBER)
         return QModelIndex();
     TreeItem *parentItem = self->getParent();
-    if (parentItem->m_magicNumber != 1176543210987654320LL)
+    if (parentItem->m_magicNumber != MAGICNUMBER)
         return QModelIndex();
 
     if (!parentItem)

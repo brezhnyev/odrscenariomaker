@@ -38,6 +38,8 @@ public slots:
 private:
     void renderAxis();
 
+    ADDVAR(protected, bool, allowSelect, true);
+
 private:
     Scenario &      m_scenario;
     CanvasXODR      m_canvas;

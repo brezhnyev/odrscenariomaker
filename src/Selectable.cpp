@@ -1,4 +1,5 @@
 #include "Selectable.h"
+#include "globals.h"
 
 #include <string>
 #include <algorithm>
@@ -13,7 +14,7 @@ bool Selectable::s_allowUndo = true;
 
 Selectable::~Selectable() {}
 
-Selectable::Selectable(Selectable * parent) : m_selected(false), m_parent(parent), m_magicNumber(1176543210987654320LL)
+Selectable::Selectable(Selectable * parent) : m_selected(false), m_parent(parent), m_magicNumber(MAGICNUMBER)
 {
     m_id = s_ID; ++s_ID;
     if (s_allowUndo)
@@ -110,6 +111,7 @@ void Selectable::clear()
     {
         object->children().clear();
         // exception: we cannot delete Scenario, its a stack varialbe, referenced in classes
+        // this logics can be changed in future (ex. we can open multiple scenarios)
         if (object->getType() != "Scenario")
             delete object;
     });

@@ -25,9 +25,8 @@ void Vehicle::drawGeometry() const
 
     glPushMatrix();
     glTranslatef(m_pos.x(), m_pos.y(), m_pos.z() + m_bbox[2]);
-
-    glPushMatrix();
     glRotatef(m_ori[2],0,0,1);
+    glScalef(m_bbox[0], m_bbox[1], m_bbox[2]);
 
     if (m_selected)
         glLineWidth(5);
@@ -38,10 +37,10 @@ void Vehicle::drawGeometry() const
     for (auto && c : box)
     {
         glBegin(GL_LINE_LOOP);
-        glVertex3f(c[0]*m_bbox[0], c[1]*m_bbox[1], c[2]*m_bbox[2]);
-        glVertex3f(c[3]*m_bbox[0], c[4]*m_bbox[1], c[5]*m_bbox[2]);
-        glVertex3f(c[6]*m_bbox[0], c[7]*m_bbox[1], c[8]*m_bbox[2]);
-        glVertex3f(c[9]*m_bbox[0], c[10]*m_bbox[1],c[11]*m_bbox[2]);
+        glVertex3f(c[0], c[1], c[2]);
+        glVertex3f(c[3], c[4], c[5]);
+        glVertex3f(c[6], c[7], c[8]);
+        glVertex3f(c[9], c[10],c[11]);
         glEnd();
     }
 
@@ -49,22 +48,21 @@ void Vehicle::drawGeometry() const
     for (auto && c : box)
     {
         glBegin(GL_QUADS);
-        glVertex3f(c[0]*m_bbox[0], c[1]*m_bbox[1], c[2]*m_bbox[2]);
-        glVertex3f(c[3]*m_bbox[0], c[4]*m_bbox[1], c[5]*m_bbox[2]);
-        glVertex3f(c[6]*m_bbox[0], c[7]*m_bbox[1], c[8]*m_bbox[2]);
-        glVertex3f(c[9]*m_bbox[0], c[10]*m_bbox[1], c[11]*m_bbox[2]);
+        glVertex3f(c[0], c[1], c[2]);
+        glVertex3f(c[3], c[4], c[5]);
+        glVertex3f(c[6], c[7], c[8]);
+        glVertex3f(c[9], c[10], c[11]);
         glEnd();
     }
 
     // Front:
     glLineWidth(5);
     glBegin(GL_LINES);
-    glVertex3f(1.0f*m_bbox[2], 0.0f, 0.0f);
-    glVertex3f(2.0f*m_bbox[0], 0.0f, 0.0f);
+    glVertex3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(2.0f, 0.0f, 0.0f);
     glEnd();
     glLineWidth(1);
 
-    glPopMatrix();
     glPopMatrix();
 }
 

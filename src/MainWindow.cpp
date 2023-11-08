@@ -210,6 +210,8 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             return;
         }
 
+        m_viewer->set_allowSelect(false);
+
         std::thread t1([this, useCarla]()
         {
             if (useCarla->isChecked())
@@ -230,11 +232,13 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
             while (true)
             {
                 usleep(100000);
-                playButton->setText("Play/Pause: " + QString(to_string(time(nullptr) - ts).c_str()) + " s");
                 if (Client::STOP == m_client->get_playStatus())
                     break;
+                if (Client::PLAY == m_client->get_playStatus())
+                    playButton->setText("Pause: " + QString(to_string(time(nullptr) - ts).c_str()) + " s");
                 if (Client::PAUSE == m_client->get_playStatus())
                 {
+                    playButton->setText("Play: " + QString(to_string(time(nullptr) - ts).c_str()) + " s");
                     time_t tp = time(nullptr);
                     unique_lock<mutex> lk(m_client->get_playCondVarMtx());
                     m_client->get_playCondVar().wait(lk);
@@ -247,18 +251,20 @@ MainWindow::MainWindow(const string & xodrfile, string objfile, QWidget * parent
 
     QPushButton *stopButton = new QPushButton(playDock);
     stopButton->setText("Stop");
-    connect(stopButton, &QPushButton::clicked, [&, isSync, isRealtime, freq, useCarla, treeDock, propsDock]()
+    connect(stopButton, &QPushButton::clicked, [&, isSync, isRealtime, freq, useCarla, treeDock, propsDock, playButton]()
     {
         m_client->set_playStatus(Client::STOP);
         isSync->setEnabled(true);
         isRealtime->setEnabled(true);
         freq->setEnabled(true);
+        playButton->setText("Play");
 #ifdef USE_CARLA
         useCarla->setEnabled(true);
 #endif
         m_client->get_playCondVar().notify_all();
         treeDock->setEnabled(true);   
         propsDock->setEnabled(true);
+        m_viewer->set_allowSelect(true);
     });
 
     connect(isSync, &QCheckBox::stateChanged, [&, isRealtime ](int state)
@@ -328,4 +334,13 @@ void MainWindow::keyPressEvent(QKeyEvent * e)
     }
 
     QMainWindow::keyPressEvent(e);
+}
+
+void MainWindow::closeEvent(QCloseEvent * event)
+{
+    // in case we close application but scenario is running:
+    m_client->set_playStatus(Client::STOP);
+    usleep(500000);
+
+    QMainWindow::closeEvent(event);
 }

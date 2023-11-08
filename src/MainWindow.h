@@ -21,6 +21,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(const std::string & xodrfile, std::string obj = "", QWidget * parent = nullptr);
     void keyPressEvent(QKeyEvent*) override;
+    void closeEvent(QCloseEvent*);
 
     void update()
     {

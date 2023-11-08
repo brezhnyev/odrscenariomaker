@@ -62,6 +62,9 @@ void Viewer::drawWithNames()
 
 void Viewer::postSelection(const QPoint &point)
 {
+    if (!m_allowSelect)
+        return; // when play back is on
+
     // Find the selectedPoint coordinates, using camera()->pointUnderPixel().
     bool found;
     qglviewer::Vec sp = QGLViewer::camera()->pointUnderPixel(point, found);

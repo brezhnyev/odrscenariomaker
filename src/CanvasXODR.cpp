@@ -30,7 +30,7 @@ void CanvasXODR::init()
     m_sceneBbox.second[1] = -__DBL_MAX__;
     m_sceneBbox.second[2] = -__DBL_MAX__;
 
-    // draw boundaries:
+    // prepare boundaries for graphic card:
     listBounadries = glGenLists(1);
     glNewList(listBounadries, GL_COMPILE);
     glPushMatrix();
@@ -57,7 +57,7 @@ void CanvasXODR::init()
     glPopMatrix();
     glEndList();
 
-    // draw centerlines:
+    // prepare centerlines for graphic card:
     listCenterlines = glGenLists(1);
     glNewList(listCenterlines, GL_COMPILE);
     glPushMatrix();
