@@ -361,11 +361,11 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
                         }
                     }
                 }
+                fillplaceholder(xosc_story, "        </Maneuver>", xosc_waypath_event);
+                fillplaceholder(xosc_story, " entityRef=\"", *onit);
+                fillplaceholder(xosc, "  <StopTrigger/>", xosc_story);
+                ++onit;
             }
-            fillplaceholder(xosc_story, "        </Maneuver>", xosc_waypath_event);
-            fillplaceholder(xosc_story, " entityRef=\"", *onit);
-            fillplaceholder(xosc, "  <StopTrigger/>", xosc_story);
-            ++onit;
         }
         ofs_xosc << xosc << endl;
         ofs_xosc.close();

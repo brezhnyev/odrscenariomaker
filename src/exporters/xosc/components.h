@@ -18,7 +18,7 @@ const char * xosc_template = R"(<?xml version='1.0' encoding='UTF-8'?>
       <Actions>
       </Actions>
     </Init>
-  <StopTrigger/>
+    <StopTrigger/>
   </Storyboard>
 </OpenSCENARIO>)";
 
@@ -211,22 +211,22 @@ const char * xosc_template_waypoint = R"(
 
 const char * xosc_template_hero_stop_act_trigger = R"(
         <StopTrigger>
-            <ConditionGroup>
-              <Condition name="Travelled Distance" delay="0.0" conditionEdge="rising">
-                <ByEntityCondition>
-                  <TriggeringEntities triggeringEntitiesRule="any">
-                    <EntityRef entityRef="hero"/>
-                  </TriggeringEntities>
-                  <EntityCondition>
-                    <TraveledDistanceCondition value="100.0"/>
-                  </EntityCondition>
-                </ByEntityCondition>
-              </Condition>
-              <Condition name="Max Simulation Time" delay="0.0" conditionEdge="rising">
-                <ByValueCondition>
-                  <SimulationTimeCondition rule="greaterThan" value="100.0" />
-                </ByValueCondition>
-              </Condition>
-            </ConditionGroup>
+          <ConditionGroup>
+            <Condition name="Travelled Distance" delay="0.0" conditionEdge="rising">
+              <ByEntityCondition>
+                <TriggeringEntities triggeringEntitiesRule="any">
+                  <EntityRef entityRef="hero"/>
+                </TriggeringEntities>
+                <EntityCondition>
+                  <TraveledDistanceCondition value="100.0"/>
+                </EntityCondition>
+              </ByEntityCondition>
+            </Condition>
+            <Condition name="Max Simulation Time" delay="0.0" conditionEdge="rising">
+              <ByValueCondition>
+                <SimulationTimeCondition rule="greaterThan" value="100.0" />
+              </ByValueCondition>
+            </Condition>
+          </ConditionGroup>
         </StopTrigger>
 )";
