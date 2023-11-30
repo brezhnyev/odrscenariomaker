@@ -330,6 +330,7 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
             string xosc_waypath_event(xosc_template_waypath_event);
             if (child->getType() == "Vehicle" || child->getType() == "Walker")
             {
+                string actor_type = child->getType();
                 fillplaceholder(xosc_story, "name=\"", "Story " + *onit);
                 Actor * actor = dynamic_cast<Actor*>(child);
                 for (auto && child : actor->children())
@@ -352,7 +353,10 @@ ScenarioProps::ScenarioProps(Scenario & scenario, std::list<QMetaObject::Connect
                                 fillplaceholder(xosc_speed_event, " entityRef=\"", *onit);
                                 fillplaceholder(xosc_speed_event, " x=\"", pos.x());
                                 fillplaceholder(xosc_speed_event, " y=\"", pos.y());
-                                fillplaceholder(xosc_speed_event, " z=\"", pos.z() + actor->get_bbox().z());
+                                if (actor_type == "Walker")
+                                    fillplaceholder(xosc_speed_event, " z=\"", pos.z() + actor->get_bbox().z());
+                                if (actor_type == "Vehicle")
+                                    fillplaceholder(xosc_speed_event, " z=\"", pos.z());
                                 fillplaceholder(xosc_speed_event, "AbsoluteTargetSpeed value=\"", waypoint->get_speed());
                                 fillplaceholder(xosc_speed_event, "Event name=\"", "Actor_speed_at_" + to_string(waypoint->getID()));
                                 fillplaceholder(xosc_speed_event, "Action name=\"", "Actor_speed_at_" + to_string(waypoint->getID()));
