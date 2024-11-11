@@ -160,19 +160,19 @@ components:
 # Demos
 
 ## Adding Vehicle
-![add-vehicle](videos/OSRSM_demo_create_vehicle.mp4)
+[add-vehicle](videos/OSRSM_demo_create_vehicle.mp4)
 
 ## Adding Cameras
-![add-cameras](videos/OSRSM_demo_create_cameras.mp4)
+[add-cameras](videos/OSRSM_demo_create_cameras.mp4)
 
 ## Adding Walker
-![add-walker](videos/OSRSM_demo_create_walker.mp4)
+[add-walker](videos/OSRSM_demo_create_walker.mp4)
 
 ## Undo-redo (only for adding and deleing actors now)
-![undo-redo](videos/OSRSM_demo_undo_redo.mp4)
+[undo-redo](videos/OSRSM_demo_undo_redo.mp4)
 
 ## Running with Carla simulator
-![run-carla](videos/OSRSM_demo_running_carla.mp4)
+[run-carla](videos/OSRSM_demo_running_carla.mp4)
 
 # Download
 Debian installation package for Ubuntu 20.04<br>
