@@ -1,6 +1,6 @@
 [submodule "src/thirdparty/xodr-builder"]
 	path = src/thirdparty/xodr-builder
-	url = https://git.altran.de/adas/xodr-builder.git
+	url = https://github.com/brezhnyev/xodr-builder.git
 	branch = main
 [submodule "src/thirdparty/yaml-cpp"]
 	path = src/thirdparty/yaml-cpp
