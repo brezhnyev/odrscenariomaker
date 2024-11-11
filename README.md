@@ -2,10 +2,9 @@
 The ODRScenario maker is a GUI application for building scenarios that can be played back in Carla-simulator.
 
 # Pulling code
-Pull code and update the submodules as follows:
+Pull code with submodules as follows:
 <pre>
-git clone https://git.altran.de/shared/odrscenariomaker.git
-git submodule update --init --force --remote --recursive
+git clone --recurse-submodules https://github.com/brezhnyev/odrscenariomaker.git
 </pre>
 The ODRSM is using following submodules:
 * TinyXML
@@ -56,7 +55,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_CARLA=OFF
 </pre>
 In case Debug configuration is needed use Debug flag instead.
 <br>
-Running configuration will checkout proper commits for TinyXML (7.0.0) and libQGLViewer (2.7.2) and build the libQGLViewer library. The libQGLViewer librariy is an open source Qt-based GUI framework for handy making GUI applications with 3D views. The former versions of libQGLViewer were based on Qt5 and required consequent running qmake and make commands, so no native cmake subfolder integration was provided. Starting upper versions (~2.9) they changed to cmake configuration but at the same time started to use Qt6. So libQGLViewer is now checked at v2.7.2 and built ouside the cmake configuration system (i.e. is not included as subfolder).
+Running configuration will checkout proper commits for TinyXML (7.0.0) and libQGLViewer (2.7.2) and build the libQGLViewer library. The libQGLViewer librariy is an open source Qt-based GUI framework for handy making GUI applications with 3D views. The former versions of libQGLViewer were based on Qt5 and required consequent running qmake and make commands, so no native cmake subfolder integration was provided. Starting upper versions (~2.9) they changed to cmake configuration but at the same time started to use Qt6, so libQGLViewer is now checked at v2.7.2.
 
 # Dependencies
 * cmake
@@ -65,6 +64,7 @@ Running configuration will checkout proper commits for TinyXML (7.0.0) and libQG
 * libeigen3-dev
 * libpng-dev
 * libtiff-dev
+* libjpeg-dev
 
 # Build
 Building as usual is make by running make command:
