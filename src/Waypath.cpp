@@ -7,7 +7,7 @@
 #include <sstream>
 #include <iostream>
 
-using namespace Eigen;
+//using namespace Eigen;
 using namespace std;
 
 void Waypath::drawGeometry() const
@@ -72,7 +72,7 @@ void Waypath::updateSmoothPath()
             Waypoint * wp1 = static_cast<Waypoint*>(*it1);
             Waypoint * wp2 = static_cast<Waypoint*>(*it2);
             float speed = (1.0f - (float)s/STEPS)*wp1->get_speed() + (float)s/STEPS*wp2->get_speed();
-            SpeedPoint wp{Vector3f(curve.node(i).x, curve.node(i).y, curve.node(i).z), speed};
+            SpeedPoint wp{Eigen::Vector3f(curve.node(i).x, curve.node(i).y, curve.node(i).z), speed};
             m_smoothPath.push_back(wp);
         }
     }
@@ -83,8 +83,9 @@ void Waypath::updateSmoothPath()
     }
 }
 
-Vector3f Waypath::getStartingDirection()
+Eigen::Vector3f Waypath::getStartingDirection()
 {
+    using namespace Eigen;
     if (m_smoothPath.size() < 2)
         return Vector3f(0,0,0);
     Vector3f dir = m_smoothPath[1].pos - m_smoothPath[0].pos;
@@ -92,8 +93,9 @@ Vector3f Waypath::getStartingDirection()
     return dir;
 }
 
-Vector3f Waypath::getEndingDirection()
+Eigen::Vector3f Waypath::getEndingDirection()
 {
+    using namespace Eigen;
     if (m_smoothPath.size() < 2)
         return Vector3f(0,0,0);
     Vector3f dir = (m_smoothPath.end()-1)->pos - (m_smoothPath.end()-2)->pos;
@@ -101,22 +103,22 @@ Vector3f Waypath::getEndingDirection()
     return dir;
 }
 
-Vector3f Waypath::getStartingPosition()
+Eigen::Vector3f Waypath::getStartingPosition()
 {
     if (children().size() < 1)
-        return Vector3f(0,0,0);
+        return Eigen::Vector3f(0,0,0);
 
     return static_cast<Waypoint*>(*m_children.begin())->get_pos();
 }
 
-Vector3f Waypath::getEndingPosition()
+Eigen::Vector3f Waypath::getEndingPosition()
 {
     if (m_smoothPath.size() < 1)
-        return Vector3f(0,0,0);
+        return Eigen::Vector3f(0,0,0);
     return m_smoothPath.back().pos;
 }
 
-bool Waypath::getNext(Vector3f & pos, Vector3f & dir, float & targetSpeed, float currentSpeed, int fps)
+bool Waypath::getNext(Eigen::Vector3f & pos, Eigen::Vector3f & dir, float & targetSpeed, float currentSpeed, int fps)
 {
     if (m_smoothPath.empty())
     {
